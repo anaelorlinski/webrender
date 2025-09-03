@@ -131,6 +131,7 @@ func (ctx drawContext) drawPage(page *bo.PageBox) {
 	marks := page.Style.GetMarks()
 	stackingContext := NewStackingContextFromPage(page)
 	ctx.drawBackground(stackingContext.box.Box().Background, false, page.Bleed(), marks)
+	ctx.setMaskBorder(page)
 	ctx.drawBackground(page.CanvasBackground, false, bo.Bleed{}, pr.Marks{})
 	ctx.drawBorder(page)
 	ctx.drawStackingContext(stackingContext)
@@ -195,6 +196,7 @@ func (ctx drawContext) drawStackingContext(stackingContext StackingContext) {
 		if bo.BlockT.IsInstance(box_) || bo.MarginT.IsInstance(box_) ||
 			bo.InlineBlockT.IsInstance(box_) || bo.TableCellT.IsInstance(box_) ||
 			bo.FlexContainerT.IsInstance(box_) || bo.GridContainerT.IsInstance(box_) || bo.ReplacedT.IsInstance(box_) {
+			ctx.setMaskBorder(box_)
 			// The canvas background was removed by layout_backgrounds.
 			ctx.drawBackgroundDefaut(box_.Box().Background)
 			ctx.drawBorder(box_)
@@ -217,6 +219,7 @@ func (ctx drawContext) drawStackingContext(stackingContext StackingContext) {
 
 			// Point 4
 			for _, block := range stackingContext.blockLevelBoxes {
+				ctx.setMaskBorder(block)
 				if box_, ok := block.(bo.TableBoxITF); ok {
 					ctx.drawTable(box_.Table())
 				} else {
@@ -687,6 +690,7 @@ func (ctx drawContext) drawInlineLevel(page *bo.PageBox, box_ Box, offsetX fl, t
 		}
 		ctx.drawStackingContext(stackingContext)
 	} else {
+		ctx.setMaskBorder(box_)
 		box := box_.Box()
 		ctx.drawBackgroundDefaut(box.Background)
 		ctx.drawBorder(box_)

@@ -134,7 +134,7 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 	discard = discard || box.Style.GetContinue() == "discard"
 	draw_bottom_decoration := discard || box.Style.GetBoxDecorationBreak() == "clone"
 
-	row_gap, column_gap := box.Style.GetRowGap(), box.Style.GetColumnGap()
+	rowGap, columnGap := box.Style.GetRowGap(), box.Style.GetColumnGap()
 
 	if draw_bottom_decoration {
 		bottomSpace += box.PaddingBottom.V() + box.BorderBottomWidth + box.MarginBottom.V()
@@ -218,34 +218,31 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 
 	childSkipStack := skipStack
 
-	if row_gap.S == "normal" {
-		row_gap.Value = 0
-	} else if row_gap.Unit == pr.Perc {
+	// resolve gaps and stores it into rowGap.Value
+	if rowGap.S == "normal" {
+		rowGap.Value = 0
+	} else if rowGap.Unit == pr.Perc {
 		if box.Height == pr.AutoF {
-			row_gap.Value = 0
+			rowGap.Value = 0
 		} else {
-			row_gap.Value = row_gap.Value / 100 * box.Height.V()
+			rowGap.Value = rowGap.Value / 100 * box.Height.V()
 		}
-	} else {
-		row_gap.Value = row_gap.Value
 	}
-	if column_gap.S == "normal" {
-		column_gap.Value = 0
-	} else if column_gap.Unit == pr.Perc {
+	if columnGap.S == "normal" {
+		columnGap.Value = 0
+	} else if columnGap.Unit == pr.Perc {
 		if box.Width == pr.AutoF {
-			column_gap.Value = 0
+			columnGap.Value = 0
 		} else {
-			column_gap.Value = column_gap.Value / 100 * box.Width.V()
+			columnGap.Value = columnGap.Value / 100 * box.Width.V()
 		}
-	} else {
-		column_gap.Value = column_gap.Value
 	}
 
 	var mainGap, crossGap pr.Float
 	if main == pr.PWidth {
-		mainGap, crossGap = column_gap.Value, row_gap.Value
+		mainGap, crossGap = columnGap.Value, rowGap.Value
 	} else {
-		mainGap, crossGap = row_gap.Value, column_gap.Value
+		mainGap, crossGap = rowGap.Value, columnGap.Value
 	}
 
 	positionX := (parentBox.PositionX + parentBox.BorderLeftWidth + parentBox.PaddingLeft.V())

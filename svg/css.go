@@ -167,7 +167,7 @@ func expandProperty(d declaration) []declaration {
 	return out
 }
 
-func (attrs nodeAttributes) applyStyle(baseURL string, node *html.Node, normal, important matcher) {
+func (attrs nodeAttributes) applyStyle(_ string, node *html.Node, normal, important matcher) {
 	var normalAttr, importantAttr []declaration
 	if styleAttr := attrs["style"]; styleAttr != "" {
 		normalAttr, importantAttr = parseDeclarations(pa.Tokenize([]byte(styleAttr), false))

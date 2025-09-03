@@ -351,7 +351,7 @@ func inlineLineWidths(context *layoutContext, box_ Box, outer, isLineStart,
 			if firstLine {
 				lines_ = lines_[0:1]
 			}
-			lines := make([]pr.MaybeFloat, len(lines_))
+			lines = make([]pr.MaybeFloat, len(lines_))
 			for i, v := range lines_ {
 				lines[i] = orNil(v)
 			}

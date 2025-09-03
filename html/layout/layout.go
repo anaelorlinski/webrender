@@ -404,7 +404,7 @@ func (l *layoutContext) createFlexFormattingContext() {
 	l.excludedShapes = &l.excludedShapesLists[len(l.excludedShapesLists)-1]
 }
 
-func (l *layoutContext) finishFlexFormattingContext(rootBox_ Box) {
+func (l *layoutContext) finishFlexFormattingContext(_ Box) {
 	l.excludedShapesLists = l.excludedShapesLists[:len(l.excludedShapesLists)-1]
 	if L := len(l.excludedShapesLists); L != 0 {
 		l.excludedShapes = &l.excludedShapesLists[L-1]

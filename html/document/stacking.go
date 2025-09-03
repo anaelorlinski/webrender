@@ -88,10 +88,6 @@ func insertStackingContext(a *[]StackingContext, i int, item StackingContext) {
 	*a = slices.Insert(*a, i, item)
 }
 
-func insertBox(a *[]Box, i int, item Box) {
-	*a = slices.Insert(*a, i, item)
-}
-
 func NewStackingContextFromBox(box Box, page *bo.PageBox, childContexts *[]StackingContext) StackingContext {
 	var children []StackingContext // What will be passed to this box
 	if childContexts == nil {

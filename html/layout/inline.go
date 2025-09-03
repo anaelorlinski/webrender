@@ -782,10 +782,6 @@ func breakWaitingChildren(context *layoutContext, box Box, bottomSpace pr.Float,
 	return nil
 }
 
-func lastRune(s []rune) rune {
-	return s[len(s)-1]
-}
-
 // Same behavior as splitInlineLevel.
 // the returned newBox has same concrete type has box_
 func splitInlineBox(context *layoutContext, box_ Box, positionX, maxX, bottomSpace pr.Float, skipStack tree.ResumeStack,
