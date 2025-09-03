@@ -120,7 +120,7 @@ func TestAddFontFaceAspect(t *testing.T) {
 	}
 
 	_ = fcG.AddFontFace(desc, utils.DefaultUrlFetcher)
-	face := fcG.resolveFace('a', FontDescription{Family: []string{"weasyprint"}, Style: FSyItalic, Weight: 700, Stretch: FSeCondensed})
+	face := fcG.resolveFace('a', FontDescription{Family: []string{"weasyprint"}, Style: FSty_Italic, Weight: 700, Stretch: FStr_Condensed})
 	family, aspect := fcG.fm.FontMetadata(face.Font)
 	tu.AssertEqual(t, family, "weasyprint")
 	tu.AssertEqual(t, aspect, font.Aspect{
@@ -219,8 +219,8 @@ func TestMetricsLinuxFonts(t *testing.T) {
 	fcGotext := NewFontConfigurationGotext(fontmapGotext)
 
 	desc := FontDescription{
-		Style:   FSyNormal,
-		Stretch: FSeNormal,
+		Style:   FSty_Normal,
+		Stretch: FStr_Normal,
 	}
 
 	// we assume we have the following fonts

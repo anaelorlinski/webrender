@@ -18,7 +18,7 @@ func roundMeta(pages []Page) {
 	for _, page := range pages {
 		anc := page.anchors
 		for anchorName, v := range anc {
-			anc[anchorName] = [2]fl{round(v[0]), round(v[1])}
+			anc[anchorName] = [4]fl{round(v[0]), round(v[1]), round(v[2]), round(v[3])}
 		}
 		links := page.links
 		for i, link := range links {
@@ -315,7 +315,7 @@ func TestLinks(t *testing.T) {
 		}
 		var (
 			gotLinksByPage   [][]Link
-			gotAnchorsByPage []map[string][2]fl
+			gotAnchorsByPage []map[string][4]fl
 		)
 		for _, p := range document.Pages {
 			gotLinksByPage = append(gotLinksByPage, p.links)
@@ -362,8 +362,8 @@ func TestLinks(t *testing.T) {
 		},
 	},
 		[]anchors{
-			{"hello": [2]fl{0, 200}},
-			{"lipsum": [2]fl{0, 0}},
+			{"hello": [4]fl{0, 0, 200, 30}},
+			{"lipsum": [4]fl{0, 0, 200, 90}},
 		},
 		[][]Link{
 			{
@@ -454,7 +454,7 @@ func TestLinks(t *testing.T) {
 			{Type: "internal", Target: "lipsum", Rectangle: [4]fl{5, 10, 195, 10}},
 			{Type: "external", Target: "http://weasyprint.org/", Rectangle: [4]fl{0, 10, 200, 10}},
 		}},
-		[]anchors{{"lipsum": [2]fl{5, 10}}},
+		[]anchors{{"lipsum": [4]fl{5, 10, 195, 10}}},
 		[][]Link{{
 			{Type: "internal", Target: "lipsum", Rectangle: [4]fl{5, 10, 195, 10}},
 			{Type: "external", Target: "http://weasyprint.org/", Rectangle: [4]fl{0, 10, 200, 10}},
@@ -473,7 +473,7 @@ func TestLinks(t *testing.T) {
 		[][]Link{{
 			{Type: "internal", Target: "lipsum", Rectangle: [4]fl{5, 10, 195, 10}},
 		}},
-		[]anchors{{"lipsum": [2]fl{5, 10}}},
+		[]anchors{{"lipsum": [4]fl{5, 10, 195, 10}}},
 		[][]Link{{
 			{Type: "internal", Target: "lipsum", Rectangle: [4]fl{5, 10, 195, 10}},
 		}},
@@ -493,7 +493,7 @@ func TestLinks(t *testing.T) {
 			{Type: "internal", Target: "lipsum", Rectangle: [4]fl{0, 0, 200, 15}},
 			{Type: "internal", Target: "missing", Rectangle: [4]fl{0, 15, 200, 30}},
 		}},
-		[]anchors{{"lipsum": [2]fl{0, 15}}},
+		[]anchors{{"lipsum": [4]fl{0, 15, 200, 30}}},
 		[][]Link{{
 			{Type: "internal", Target: "lipsum", Rectangle: [4]fl{0, 0, 200, 15}},
 		}},
@@ -511,7 +511,7 @@ func TestLinks(t *testing.T) {
 		[][]Link{{
 			{Type: "internal", Target: "lipsum", Rectangle: [4]fl{30, 10, 70, 210}},
 		}},
-		[]anchors{{"lipsum": [2]fl{70, 10}}},
+		[]anchors{{"lipsum": [4]fl{70, 10, 30, 210}}},
 		[][]Link{{
 			{Type: "internal", Target: "lipsum", Rectangle: [4]fl{30, 10, 70, 210}},
 		}},

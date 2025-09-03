@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/benoitkugler/textlayout/fonts"
@@ -349,6 +350,8 @@ func getFontDescription(fd FontDescription) pango.FontDescription {
 
 	fontDesc.SetVariations(pangoFontVariations(fd.VariationSettings))
 
+	fontDesc.SetVariant(pango.Variant(fd.VariantCaps))
+
 	return fontDesc
 }
 
@@ -554,7 +557,7 @@ func (p *TextLayoutPango) setText(text string, justify bool) {
 			}
 
 			for position, c := range textRunes {
-				if c == ' ' {
+				if c == ' ' || c == '\u00a0' {
 					// Pango gives only half of word-spacing on boundaries
 					factor := int32(1)
 					if position == 0 || position == len(textRunes)-1 {
@@ -639,17 +642,31 @@ func (fc *FontConfigurationPango) splitFirstLine(hyphenCache map[HyphenDictKey]h
 	if !textWrap {
 		maxWidth = nil
 	}
+	shortText := text
 	// Step #1: Get a draft layout with the first line
 	if maxWidth, ok := maxWidth.(pr.Float); ok && maxWidth != pr.Inf && fontSize != 0 {
 		// Try to use a small amount of text instead of the whole text
-		shortText := shortTextHint(text, maxWidth, fontSize)
+		shortText = shortTextHint(text, maxWidth, fontSize)
 
 		layout = createLayout(string(shortText), style, fc, maxWidth)
 		firstLine, resumeIndex = layout.GetFirstLine()
 		if resumeIndex == -1 && len(shortText) != len(text) {
-			// The small amount of text fits in one line, give up and use the whole text
+			// The small amount of text fits in one line, give up and use the
+			// whole text.
+			shortText = text
 			layout.SetText(text_)
 			firstLine, resumeIndex = layout.GetFirstLine()
+		} else {
+			// If the second line of the short text can break, we have the next
+			// line break point required for step #3 in it, drop the end of the text.
+			firstLineText := shortText[:resumeIndex]
+			if !slices.Equal(firstLineText, shortText) {
+				start, end := len(firstLineText)+1, len(shortText)
+				textEndLogAttrs := fc.runeProps(layout.Text())[start:end]
+				if getNextBreakPoint(textEndLogAttrs) != -1 {
+					text = shortText
+				}
+			}
 		}
 	} else {
 		layout = createLayout(text_, style, fc, originalMaxWidth)
@@ -675,14 +692,11 @@ func (fc *FontConfigurationPango) splitFirstLine(hyphenCache map[HyphenDictKey]h
 	// is a good thread related to this problem.
 
 	firstLineText := text_
-	if resumeIndex != -1 && resumeIndex <= len(text) {
-		firstLineText = string(text[:resumeIndex])
-	}
-	firstLineFits := (firstLineWidth <= maxWidthV ||
-		strings.ContainsRune(strings.TrimSpace(firstLineText), ' ') ||
-		fc.CanBreakText([]rune(strings.TrimSpace(firstLineText))) == pr.True)
 	var secondLineText []rune
-	if firstLineFits {
+	if firstLineWidth <= maxWidthV {
+		if resumeIndex != -1 && resumeIndex <= len(text) {
+			firstLineText = string(text[:resumeIndex])
+		}
 		// The first line fits but may have been cut too early by Pango
 		if resumeIndex == -1 {
 			secondLineText = text
@@ -693,6 +707,20 @@ func (fc *FontConfigurationPango) splitFirstLine(hyphenCache map[HyphenDictKey]h
 		// The line can't be split earlier, try to hyphenate the first word.
 		firstLineText = ""
 		secondLineText = text
+	}
+
+	var breakPoint int
+	if len(firstLineText) == len(shortText) {
+		// There’s no second line, don’t try to find a next word.
+		breakPoint = -1
+	} else {
+		// Find then second line’s first break point.
+		log_attrs := fc.runeProps(layout.Text())
+		start, end := len(firstLineText)+1, len(shortText)
+		breakPoint = getNextBreakPoint(log_attrs[start:end])
+		if breakPoint != -1 {
+			breakPoint -= len(firstLineText) + 1
+		}
 	}
 
 	nextWord := strings.SplitN(string(secondLineText), " ", 2)[0]

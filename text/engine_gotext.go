@@ -188,27 +188,27 @@ func newAspect(style FontStyle, weight uint16, stretch FontStretch) font.Aspect 
 		Style:  font.StyleNormal,
 		Weight: font.Weight(weight),
 	}
-	if style == FSyItalic || style == FSyOblique {
+	if style == FSty_Italic || style == FSty_Oblique {
 		aspect.Style = font.StyleItalic
 	}
 	switch stretch {
-	case FSeUltraCondensed:
+	case FStr_UltraCondensed:
 		aspect.Stretch = font.StretchUltraCondensed
-	case FSeExtraCondensed:
+	case FStr_ExtraCondensed:
 		aspect.Stretch = font.StretchExtraCondensed
-	case FSeCondensed:
+	case FStr_Condensed:
 		aspect.Stretch = font.StretchCondensed
-	case FSeSemiCondensed:
+	case FStr_SemiCondensed:
 		aspect.Stretch = font.StretchSemiCondensed
-	case FSeNormal:
+	case FStr_Normal:
 		aspect.Stretch = font.StretchNormal
-	case FSeSemiExpanded:
+	case FStr_SemiExpanded:
 		aspect.Stretch = font.StretchSemiExpanded
-	case FSeExpanded:
+	case FStr_Expanded:
 		aspect.Stretch = font.StretchExpanded
-	case FSeExtraExpanded:
+	case FStr_ExtraExpanded:
 		aspect.Stretch = font.StretchExtraExpanded
-	case FSeUltraExpanded:
+	case FStr_UltraExpanded:
 		aspect.Stretch = font.StretchUltraExpanded
 	}
 	return aspect
@@ -320,6 +320,17 @@ func (fc *FontConfigurationGotext) wordBoundaries(t []rune) *[2]int {
 		return &[2]int{word.Offset, word.Offset + len(word.Text)}
 	}
 	return nil
+}
+
+func (fc *FontConfigurationGotext) getNextBreakPoint(text []rune) int {
+	fc.unicodeSeg.Init(text)
+	iter := fc.unicodeSeg.LineIterator()
+	if iter.Next() {
+		line := iter.Line()
+		end := line.Offset + len(line.Text)
+		return end
+	}
+	return -1
 }
 
 // returns the first occurence of c, or -1 if not found
@@ -547,6 +558,16 @@ func (fc *FontConfigurationGotext) splitFirstLine(hyphenCache map[HyphenDictKey]
 		if firstLine.ResumeAt == -1 && len(shortText) != len(text) {
 			// The small amount of text fits in one line, give up and use the whole text
 			firstLine = fc.wrap(text, style, maxWidth)
+		} else {
+			// If the second line of the short text can break, we have the next
+			// line break point required for step #3 in it, drop the end of the text.
+			firstLineText := shortText[:firstLine.ResumeAt]
+			if len(firstLineText) != len(shortText) {
+				start := len(firstLineText) + 1
+				if fc.getNextBreakPoint(shortText[start:]) != -1 {
+					text = shortText
+				}
+			}
 		}
 	} else {
 		originalMaxW := pr.Inf

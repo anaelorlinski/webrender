@@ -82,16 +82,20 @@ type HyphenDictKey struct {
 
 // returns a prefix of text
 func shortTextHint(text []rune, maxWidth, fontSize pr.Float) []rune {
+	// Try to use a small amount of text to avoid the whole layout. We need
+	// at least one line, and one possible line break point on the second line.
 	cut := len(text)
-	if maxWidth <= 0 {
-		// Trying to find minimum size, let's naively split on spaces and
-		// keep one word + one letter
 
+	const ratio = 4 // number that almost always respects char_height / char_width > ratio
+	if fontSize*ratio > maxWidth {
+		// Trying to find minimum or very small size, let's naively split on
+		// spaces and keep one word + one letter.
 		if spaceIndex := indexRune(text, ' '); spaceIndex != -1 {
 			cut = spaceIndex + 2 // index + space + one letter
 		}
 	} else {
-		cut = int(maxWidth / fontSize * 2.5)
+		// Use the magic ratio and hope that we’ll get the right amount of text.
+		cut = int(maxWidth / fontSize * ratio)
 	}
 
 	if cut > len(text) {
@@ -235,4 +239,13 @@ func TrimLeft(s []rune, r rune) []rune {
 		s = s[1:]
 	}
 	return s
+}
+
+func getNextBreakPoint(attrs []runeProp) int {
+	for i, attr := range attrs {
+		if attr&isLineBreak != 0 {
+			return i
+		}
+	}
+	return -1
 }

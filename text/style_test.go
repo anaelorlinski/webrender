@@ -14,8 +14,8 @@ import (
 func TestDefaultValues(t *testing.T) {
 	ts := NewTextStyle(pr.InitialValues, false)
 	tu.AssertEqual(t, ts.FontDescription.Family, []string{"serif"})
-	tu.AssertEqual(t, ts.FontDescription.Style, FSyNormal)
-	tu.AssertEqual(t, ts.FontDescription.Stretch, FSeNormal)
+	tu.AssertEqual(t, ts.FontDescription.Style, FSty_Normal)
+	tu.AssertEqual(t, ts.FontDescription.Stretch, FStr_Normal)
 	tu.AssertEqual(t, ts.FontDescription.Weight, uint16(400))
 	tu.AssertEqual(t, ts.FontDescription.Size, pr.Fl(16))
 	tu.AssertEqual(t, ts.FontDescription.VariationSettings, []Variation(nil))

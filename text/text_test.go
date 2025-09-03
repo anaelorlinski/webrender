@@ -564,7 +564,7 @@ func TestWrap(t *testing.T) {
 					Family:  []string{family},
 					Weight:  w,
 					Size:    s,
-					Stretch: FSeNormal,
+					Stretch: FStr_Normal,
 				}}
 
 				for _, text := range textSamples {
@@ -625,7 +625,7 @@ func BenchmarkWrap(b *testing.B) {
 						style := &TextStyle{FontDescription: FontDescription{
 							Family:  []string{family},
 							Weight:  w,
-							Stretch: FSeNormal,
+							Stretch: FStr_Normal,
 							Size:    s * 100,
 						}}
 						_ = wrapPango(fcPango, text, style, nil)
@@ -643,7 +643,7 @@ func BenchmarkWrap(b *testing.B) {
 						style := &TextStyle{FontDescription: FontDescription{
 							Family:  []string{family},
 							Weight:  w,
-							Stretch: FSeNormal,
+							Stretch: FStr_Normal,
 							Size:    s * 100,
 						}}
 						_ = fcG.wrap([]rune(text), style, pr.Inf)
@@ -710,7 +710,7 @@ func TestLetterAndWordSpacing(t *testing.T) {
 		FontDescription: FontDescription{
 			Family:  []string{"Nimbus Sans"},
 			Weight:  400,
-			Stretch: FSeNormal,
+			Stretch: FStr_Normal,
 			Size:    12,
 		},
 	}
@@ -743,7 +743,7 @@ func TestDebug(t *testing.T) {
 	style := &TextStyle{FontDescription: FontDescription{
 		Family:  []string{"Nimbus Sans"},
 		Weight:  400,
-		Stretch: FSeNormal,
+		Stretch: FStr_Normal,
 		Size:    12,
 	}}
 	const text = "다람쥐 헌 쳇바퀴에 타고파"
@@ -773,9 +773,9 @@ func TestResolveFace(t *testing.T) {
 	fcPango := &FontConfigurationPango{fontmap: fontmapPango}
 	style := &TextStyle{FontDescription: FontDescription{
 		Family:  []string{"Nimbus Sans"},
-		Style:   FSyNormal,
+		Style:   FSty_Normal,
 		Weight:  400,
-		Stretch: FSeNormal,
+		Stretch: FStr_Normal,
 		Size:    12,
 	}}
 	for _, text := range textSamples {

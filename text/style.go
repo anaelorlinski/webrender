@@ -40,13 +40,14 @@ type FontDescription struct {
 	Weight            uint16
 	Size              pr.Fl
 	VariationSettings []Variation // empty for 'normal'
+	VariantCaps       FontVariantCaps
 }
 
 func (fd FontDescription) binary(dst []byte, includeSize bool) []byte {
 	for _, f := range fd.Family {
 		dst = append(dst, f...)
 	}
-	dst = append(dst, byte(fd.Style), byte(fd.Stretch))
+	dst = append(dst, byte(fd.Style), byte(fd.Stretch), byte(fd.VariantCaps))
 	dst = binary.BigEndian.AppendUint16(dst, fd.Weight)
 	if includeSize {
 		dst = binary.BigEndian.AppendUint32(dst, math.Float32bits(fd.Size))
@@ -116,6 +117,7 @@ func NewTextStyle(style pr.StyleAccessor, ignoreSpacing bool) *TextStyle {
 	out.FontDescription.Stretch = newFontStretch(style.GetFontStretch())
 	out.FontDescription.Size = pr.Fl(style.GetFontSize().Value)
 	out.FontDescription.VariationSettings = newFontVariationSettings(style.GetFontVariationSettings())
+	out.FontDescription.VariantCaps = newFontVariantCaps(style.GetFontVariantCaps())
 
 	out.FontLanguageOverride = newFontLanguageOverrride(style.GetFontLanguageOverride())
 	out.Lang = style.GetLang().S
@@ -507,21 +509,21 @@ func newHyphenateZone(zone pr.DimOrS) HyphenateZone {
 type FontStyle uint8
 
 const (
-	FSyNormal FontStyle = iota
-	FSyOblique
-	FSyItalic
+	FSty_Normal FontStyle = iota
+	FSty_Oblique
+	FSty_Italic
 )
 
 func newFontStyle(style pr.String) FontStyle {
 	switch strings.ToLower(string(style)) {
 	case "", "roman", "normal":
-		return FSyNormal
+		return FSty_Normal
 	case "oblique":
-		return FSyOblique
+		return FSty_Oblique
 	case "italic":
-		return FSyItalic
+		return FSty_Italic
 	default:
-		return FSyNormal
+		return FSty_Normal
 	}
 }
 
@@ -537,39 +539,72 @@ func newFontWeight(weight pr.IntString) uint16 {
 type FontStretch uint8
 
 const (
-	FSeUltraCondensed FontStretch = iota // ultra condensed width
-	FSeExtraCondensed                    // extra condensed width
-	FSeCondensed                         // condensed width
-	FSeSemiCondensed                     // semi condensed width
-	FSeNormal                            // the normal width
-	FSeSemiExpanded                      // semi expanded width
-	FSeExpanded                          // expanded width
-	FSeExtraExpanded                     // extra expanded width
-	FSeUltraExpanded                     // ultra expanded width
+	FStr_UltraCondensed FontStretch = iota // ultra condensed width
+	FStr_ExtraCondensed                    // extra condensed width
+	FStr_Condensed                         // condensed width
+	FStr_SemiCondensed                     // semi condensed width
+	FStr_Normal                            // the normal width
+	FStr_SemiExpanded                      // semi expanded width
+	FStr_Expanded                          // expanded width
+	FStr_ExtraExpanded                     // extra expanded width
+	FStr_UltraExpanded                     // ultra expanded width
 )
 
 func newFontStretch(stretch pr.String) FontStretch {
 	switch strings.ToLower(string(stretch)) {
 	case "", "normal":
-		return FSeNormal
+		return FStr_Normal
 	case "ultra-condensed":
-		return FSeUltraCondensed
+		return FStr_UltraCondensed
 	case "extra-condensed":
-		return FSeExtraCondensed
+		return FStr_ExtraCondensed
 	case "condensed":
-		return FSeCondensed
+		return FStr_Condensed
 	case "semi-condensed":
-		return FSeSemiCondensed
+		return FStr_SemiCondensed
 	case "semi-expanded":
-		return FSeSemiExpanded
+		return FStr_SemiExpanded
 	case "expanded":
-		return FSeExpanded
+		return FStr_Expanded
 	case "extra-expanded":
-		return FSeExtraExpanded
+		return FStr_ExtraExpanded
 	case "ultra-expanded":
-		return FSeUltraExpanded
+		return FStr_UltraExpanded
 	default:
-		return FSeNormal
+		return FStr_Normal
+	}
+}
+
+type FontVariantCaps uint8
+
+const (
+	FVC_Normal FontVariantCaps = iota
+	FVC_SmallCaps
+	FVC_AllSmallCaps
+	FVC_PetiteCaps
+	FVC_AllPetiteCaps
+	FVC_Unicase
+	FVC_TitlingCaps
+)
+
+func newFontVariantCaps(variant pr.String) FontVariantCaps {
+	switch strings.ToLower(string(variant)) {
+	case "", "normal":
+		return FVC_Normal
+	case "small-caps":
+		return FVC_SmallCaps
+	case "all-small-caps":
+		return FVC_AllSmallCaps
+	case "petite-caps":
+		return FVC_PetiteCaps
+	case "all-petite-caps":
+		return FVC_AllPetiteCaps
+	case "unicase":
+		return FVC_Unicase
+	case "titling-caps":
+		return FVC_TitlingCaps
+	default:
+		return FVC_Normal
 	}
 }
 

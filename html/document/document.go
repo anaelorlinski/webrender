@@ -123,7 +123,7 @@ type bookmarkData struct {
 	level    int
 }
 
-func gatherLinksAndBookmarks(box_ bo.Box, bookmarks *[]bookmarkData, links *[]Link, anchors anchors, matrix *mt.Transform) {
+func gatherAnchors(box_ bo.Box, anchors anchors, links *[]Link, bookmarks *[]bookmarkData, matrix *mt.Transform) {
 	if transform, hasTransform := getMatrix(box_); hasTransform {
 		if matrix != nil {
 			t := mt.Mul(*matrix, transform)
@@ -164,26 +164,31 @@ func gatherLinksAndBookmarks(box_ bo.Box, bookmarks *[]bookmarkData, links *[]Li
 			}
 			*links = append(*links, linkS)
 		}
-		if matrix != nil && (hasBookmark || hasAnchor) {
-			posX, posY = matrix.Apply(posX, posY)
-		}
 		if hasBookmark {
+			if matrix != nil {
+				posX, posY = matrix.Apply(posX, posY)
+			}
 			*bookmarks = append(*bookmarks, bookmarkData{
 				level: bookmarkLevel, label: bookmarkLabel,
 				position: [2]fl{posX, posY}, open: state == "open",
 			})
 		}
 		if hasAnchor {
-			anchors[anchorName] = [2]fl{posX, posY}
+			posX1, posY1, posX2, posY2 := posX, posY, posX+width, posY+height
+			if matrix != nil {
+				posX1, posY1 = matrix.Apply(posX1, posY1)
+				posX2, posY2 = matrix.Apply(posX2, posY2)
+			}
+			anchors[anchorName] = [4]fl{posX1, posY1, posX2, posY2}
 		}
 	}
 
 	for _, child := range box_.AllChildren() {
-		gatherLinksAndBookmarks(child, bookmarks, links, anchors, matrix)
+		gatherAnchors(child, anchors, links, bookmarks, matrix)
 	}
 }
 
-type anchors = map[string][2]fl
+type anchors = map[string][4]fl
 
 // Page represents a single rendered page.
 type Page struct {
@@ -219,8 +224,7 @@ func newPage(pageBox *bo.PageBox) Page {
 	d.Bleed = pageBox.Bleed()
 	d.anchors = anchors{}
 
-	gatherLinksAndBookmarks(
-		pageBox, &d.bookmarks, &d.links, d.anchors, nil)
+	gatherAnchors(pageBox, d.anchors, &d.links, &d.bookmarks, nil)
 	d.pageBox = pageBox
 	return d
 }
