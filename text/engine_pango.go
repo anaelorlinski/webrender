@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 
 	"github.com/benoitkugler/textlayout/fonts"
@@ -659,8 +658,8 @@ func (fc *FontConfigurationPango) splitFirstLine(hyphenCache map[HyphenDictKey]h
 		} else {
 			// If the second line of the short text can break, we have the next
 			// line break point required for step #3 in it, drop the end of the text.
-			firstLineText := shortText[:resumeIndex]
-			if !slices.Equal(firstLineText, shortText) {
+			if resumeIndex != -1 {
+				firstLineText := shortText[:resumeIndex]
 				start, end := len(firstLineText)+1, len(shortText)
 				textEndLogAttrs := fc.runeProps(layout.Text())[start:end]
 				if getNextBreakPoint(textEndLogAttrs) != -1 {
