@@ -102,8 +102,8 @@ func LayoutReplacedBox(box_ bo.ReplacedBoxITF) (drawWidth, drawHeight, positionX
 		}
 
 		if objectFit == "scale-down" {
-			drawWidth = pr.Min(drawWidth, intrinsicWidth.V())
-			drawHeight = pr.Min(drawHeight, intrinsicHeight.V())
+			drawWidth = min(drawWidth, intrinsicWidth.V())
+			drawHeight = min(drawHeight, intrinsicHeight.V())
 		}
 	}
 
@@ -214,8 +214,8 @@ func minMaxAutoReplaced(box *bo.BoxFields) {
 	height := box.Height.V()
 	minWidth := box.MinWidth.V()
 	minHeight := box.MinHeight.V()
-	maxWidth := pr.Max(minWidth, box.MaxWidth.V())
-	maxHeight := pr.Max(minHeight, box.MaxHeight.V())
+	maxWidth := max(minWidth, box.MaxWidth.V())
+	maxHeight := max(minHeight, box.MaxHeight.V())
 
 	// (violationWidth, violationHeight)
 	var violationWidth, violationHeight string
@@ -243,31 +243,31 @@ func minMaxAutoReplaced(box *bo.BoxFields) {
 	// ("", ""): nothing to do
 	case [2]string{"max", ""}:
 		box.Width = maxWidth
-		box.Height = pr.Max(maxWidth*height/width, minHeight)
+		box.Height = max(maxWidth*height/width, minHeight)
 	case [2]string{"min", ""}:
 		box.Width = minWidth
-		box.Height = pr.Min(minWidth*height/width, maxHeight)
+		box.Height = min(minWidth*height/width, maxHeight)
 	case [2]string{"", "max"}:
-		box.Width = pr.Max(maxHeight*width/height, minWidth)
+		box.Width = max(maxHeight*width/height, minWidth)
 		box.Height = maxHeight
 	case [2]string{"", "min"}:
-		box.Width = pr.Min(minHeight*width/height, maxWidth)
+		box.Width = min(minHeight*width/height, maxWidth)
 		box.Height = minHeight
 	case [2]string{"max", "max"}:
 		if maxWidth/width <= maxHeight/height {
 			box.Width = maxWidth
-			box.Height = pr.Max(minHeight, maxWidth*height/width)
+			box.Height = max(minHeight, maxWidth*height/width)
 		} else {
-			box.Width = pr.Max(minWidth, maxHeight*width/height)
+			box.Width = max(minWidth, maxHeight*width/height)
 			box.Height = maxHeight
 		}
 	case [2]string{"min", "min"}:
 		if minWidth/width <= minHeight/height {
-			box.Width = pr.Min(maxWidth, minHeight*width/height)
+			box.Width = min(maxWidth, minHeight*width/height)
 			box.Height = minHeight
 		} else {
 			box.Width = minWidth
-			box.Height = pr.Min(maxHeight, minWidth*height/width)
+			box.Height = min(maxHeight, minWidth*height/width)
 		}
 	case [2]string{"min", "max"}:
 		box.Width = minWidth

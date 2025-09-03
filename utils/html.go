@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"encoding/binary"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -22,11 +23,53 @@ var (
 )
 
 type PageElement struct {
-	Side  string
+	Side   string
+	Name   string
+	Index  int
+	Blank  bool
+	groups string // serialization of []PageGroup
+}
+
+func NewPageElement(side string, name string, index int, blank bool, groups []PageGroup) PageElement {
+	var dst []byte
+	for _, group := range groups {
+		dst = group.serializeTo(dst)
+	}
+	return PageElement{side, name, index, blank, string(dst)}
+}
+
+func (pr *PageElement) Groups() []PageGroup {
+	var (
+		out []PageGroup
+		src = []byte(pr.groups)
+	)
+	for len(src) != 0 {
+		var item PageGroup
+		src = item.deserializeFrom(src)
+		out = append(out, item)
+	}
+	return out
+}
+
+func (pe *PageElement) First() bool { return pe.Index == 0 }
+
+type PageGroup struct {
 	Name  string
 	Index int
-	Blank bool
-	First bool
+}
+
+func (pg PageGroup) serializeTo(dst []byte) []byte {
+	dst = binary.BigEndian.AppendUint32(dst, uint32(int32(pg.Index)))
+	dst = binary.BigEndian.AppendUint32(dst, uint32(len(pg.Name)))
+	dst = append(dst, pg.Name...)
+	return dst
+}
+
+func (pg *PageGroup) deserializeFrom(src []byte) []byte {
+	pg.Index = int(int32(binary.BigEndian.Uint32(src)))
+	L := binary.BigEndian.Uint32(src[4:])
+	pg.Name = string(src[8 : 8+L])
+	return src[8+L:]
 }
 
 type ElementKey struct {

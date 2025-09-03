@@ -102,8 +102,8 @@ func initializePageMaker(context *layoutContext, rootBox bo.BoxFields) {
 	// Initial values
 	remakeState := tree.RemakeState{}
 	context.pageMaker = append(context.pageMaker, tree.PageMaker{
-		InitialResumeAt: nil, InitialNextPage: nextPage, RightPage: rightPage,
-		InitialPageState: pageState, RemakeState: remakeState,
+		ResumeAt: nil, NextPage: nextPage, RightPage: rightPage,
+		PageState: pageState, RemakeState: remakeState,
 	})
 }
 
@@ -161,7 +161,7 @@ func layoutDocument(doc *tree.HTML, rootBox bo.BlockLevelBoxITF, context *layout
 		reloopPages := false
 		for _, pageData := range context.pageMaker {
 			// Update pages
-			pageCounterValues := pageData.InitialPageState.CounterValues
+			pageCounterValues := pageData.PageState.CounterValues
 			pageCounterValues["pages"] = []int{actualTotalPages}
 			if pageData.RemakeState.ContentChanged {
 				reloopContent = true
@@ -187,7 +187,7 @@ func layoutDocument(doc *tree.HTML, rootBox bo.BlockLevelBoxITF, context *layout
 
 	for i, page := range pages {
 		// We need the updated pageCounterValues
-		pageCounterValues := context.pageMaker[i+1].InitialPageState.CounterValues
+		pageCounterValues := context.pageMaker[i+1].PageState.CounterValues
 
 		for _, child := range bo.Descendants(page) {
 			childBox := child.Box()
@@ -252,7 +252,7 @@ func layoutDocument(doc *tree.HTML, rootBox bo.BlockLevelBoxITF, context *layout
 		context.currentPage = i + 1 // pageNumber starts at 1
 
 		// pageMaker's pageState is ready for the MarginBoxes
-		state := context.pageMaker[context.currentPage].InitialPageState
+		state := context.pageMaker[context.currentPage].PageState
 		page.Children = []Box{root}
 		if len(footnoteArea.Box().Children) != 0 {
 			page.Children = append(page.Children, footnoteArea)

@@ -25,8 +25,8 @@ import (
 // for width of the *content area*, not margin area.
 // https://www.w3.org/TR/CSS21/visudet.html#float-width
 func shrinkToFit(context *layoutContext, box Box, availableContentWidth pr.Float) pr.Float {
-	out := pr.Min(
-		pr.Max(minContentWidth(context, box, false), availableContentWidth),
+	out := min(
+		max(minContentWidth(context, box, false), availableContentWidth),
 		maxContentWidth(context, box, false),
 	)
 	return out
@@ -40,7 +40,7 @@ func minContentWidth(context *layoutContext, box Box, outer bool) pr.Float {
 		return tableAndColumnsPreferredWidths(context, box, outer).tableMinContentWidth
 	} else if bo.TableCellT.IsInstance(box) {
 		return tableCellMinContentWidth(context, box, outer)
-	} else if bo.BlockContainerT.IsInstance(box) || bo.TableColumnT.IsInstance(box) || bo.FlexT.IsInstance(box) {
+	} else if bo.BlockContainerT.IsInstance(box) || bo.TableColumnT.IsInstance(box) {
 		return blockMinContentWidth(context, box, outer)
 	} else if bo.TableColumnGroupT.IsInstance(box) {
 		return columnGroupContentWidth(box)
@@ -66,7 +66,7 @@ func maxContentWidth(context *layoutContext, box Box, outer bool) pr.Float {
 		return tableAndColumnsPreferredWidths(context, box, outer).tableMaxContentWidth
 	} else if bo.TableCellT.IsInstance(box) {
 		return tableCellMaxContentWidth(context, box, outer)
-	} else if bo.BlockContainerT.IsInstance(box) || bo.TableColumnT.IsInstance(box) || bo.FlexT.IsInstance(box) {
+	} else if bo.BlockContainerT.IsInstance(box) || bo.TableColumnT.IsInstance(box) {
 		return blockMaxContentWidth(context, box, outer)
 	} else if bo.TableColumnGroupT.IsInstance(box) {
 		return columnGroupContentWidth(box)
@@ -135,16 +135,16 @@ func minMax(box Box, width pr.Float) pr.Float {
 		if ratio != nil {
 			minHeight := box.Box().Style.GetMinHeight()
 			if minHeight.S != "auto" && minHeight.Unit != pr.Perc {
-				resMin = pr.Max(resMin, minHeight.Value*ratio.V())
+				resMin = max(resMin, minHeight.Value*ratio.V())
 			}
 			maxHeight := box.Box().Style.GetMaxHeight()
 			if maxHeight.S != "auto" && maxHeight.Unit != pr.Perc {
-				resMax = pr.Min(resMax, maxHeight.Value*ratio.V())
+				resMax = min(resMax, maxHeight.Value*ratio.V())
 			}
 		}
 	}
 
-	return pr.Max(resMin, pr.Min(width, resMax))
+	return max(resMin, min(width, resMax))
 }
 
 // Add box paddings, borders and margins to “width“.
@@ -299,9 +299,24 @@ func tableCellMinContentWidth(context *layoutContext, box_ Box, outer bool) pr.F
 
 // Return the max-content width for a “TableCellBox“.
 func tableCellMaxContentWidth(context *layoutContext, box Box, outer bool) pr.Float {
-	return pr.Max(tableCellMinContentWidth(context, box, outer), blockMaxContentWidth(context, box, outer))
+	return max(tableCellMinContentWidth(context, box, outer), blockMaxContentWidth(context, box, outer))
 }
 
+func orNil(v pr.Float) pr.MaybeFloat {
+	if v == 0 {
+		return nil
+	}
+	return v
+}
+
+func orZero(v pr.MaybeFloat) pr.Float {
+	if v == nil {
+		return 0
+	}
+	return v.V()
+}
+
+// Yield line width for each line.
 // firstLine=false
 func inlineLineWidths(context *layoutContext, box_ Box, outer, isLineStart,
 	minimum bool, skipStack tree.ResumeStack, firstLine bool,
@@ -312,40 +327,45 @@ func inlineLineWidths(context *layoutContext, box_ Box, outer, isLineStart,
 		out                     []pr.Float
 		box                     = box_.Box()
 	)
-	if bo.LineT.IsInstance(box_) {
-		if box.Style.GetTextIndent().Unit == pr.Perc {
-			// TODO: this is wrong, text-indent percentages should be resolved
-			// before calling this function.
-			textIndent = 0
-		} else {
-			textIndent = box.Style.GetTextIndent().Value
-		}
+	// Set text indent.
+	if bo.LineT.IsInstance(box_) && box.Style.GetTextIndent().Unit != pr.Perc {
+		textIndent = box.Style.GetTextIndent().Value
 	}
+
+	// Yield widths for each line.
 	currentLine = 0
 	if skipStack != nil {
 		skip, skipStack = skipStack.Unpack()
 	}
 	for _, child := range box.Children[skip:] {
+		// Skip absolutely positioned elements.
 		if child.Box().IsAbsolutelyPositioned() {
-			continue // Skip
+			continue
 		}
 		textBox, isTextBox := child.(*bo.TextBox)
-		var lines []pr.Float
+		// nil is used in "lines" to track line breaks, transformed to 0 when yielded.
+		var lines []pr.MaybeFloat
 		if bo.InlineT.IsInstance(child) {
-			lines = inlineLineWidths(context, child, outer, isLineStart, minimum,
-				skipStack, firstLine)
+			// Inline box, call function recursively.
+			lines_ := inlineLineWidths(context, child, outer, isLineStart, minimum, skipStack, firstLine)
 			if firstLine {
-				lines = lines[0:1]
+				lines_ = lines_[0:1]
+			}
+			lines := make([]pr.MaybeFloat, len(lines_))
+			for i, v := range lines_ {
+				lines[i] = orNil(v)
 			}
 			if len(lines) == 1 {
-				lines[0] = adjust(child, outer, lines[0], true, true)
+				lines[0] = adjust(child, outer, orZero(lines[0]), true, true)
 			} else {
-				lines[0] = adjust(child, outer, lines[0], true, false)
-				lines[len(lines)-1] = adjust(child, outer, lines[len(lines)-1], false, true)
+				lines[0] = orNil(adjust(child, outer, orZero(lines[0]), true, false))
+				lines[len(lines)-1] = orNil(adjust(child, outer, orZero(lines[len(lines)-1]), false, true))
 			}
 		} else if isTextBox {
-			wp := textBox.Style.GetWhiteSpace()
-			spaceCollapse := wp == "normal" || wp == "nowrap" || wp == "pre-line"
+			// Text box, split into lines.
+			whiteSpace := textBox.Style.GetWhiteSpace()
+			spaceCollapse := whiteSpace == "normal" || whiteSpace == "nowrap" || whiteSpace == "pre-line"
+			textWrap := whiteSpace == "normal" || whiteSpace == "pre-wrap" || whiteSpace == "pre-line"
 			if skipStack == nil {
 				skip = 0
 			} else {
@@ -358,32 +378,37 @@ func inlineLineWidths(context *layoutContext, box_ Box, outer, isLineStart,
 			if isLineStart && spaceCollapse {
 				childText = text.TrimLeft(childText, ' ')
 			}
-			if minimum && len(childText) == 1 && childText[0] == ' ' {
-				lines = []pr.Float{0, 0}
-			} else {
-				var maxWidth pr.MaybeFloat
-				if minimum {
-					maxWidth = pr.Float(0)
-				}
-				resumeIndex := 0
-				newResumeIndex := 0
-				textRunes := childText
-				for newResumeIndex != -1 {
-					resumeIndex += newResumeIndex
-					tmp := text.SplitFirstLine(textRunes[resumeIndex:], textBox.Style,
-						context, maxWidth, true, isLineStart)
-					newResumeIndex = tmp.ResumeAt
-					lines = append(lines, tmp.Width)
-					if firstLine {
-						break
-					}
-				}
-				if firstLine && newResumeIndex != -1 && newResumeIndex != 0 {
-					currentLine += lines[0]
+			var maxWidth pr.MaybeFloat
+			if minimum {
+				maxWidth = pr.Float(0)
+			}
+			resumeIndex := 0
+			newResumeIndex := 0
+			textRunes := childText
+			for newResumeIndex != -1 {
+				resumeIndex += newResumeIndex
+				tmp := text.SplitFirstLine(textRunes[resumeIndex:], textBox.Style,
+					context, maxWidth, true, isLineStart)
+				newResumeIndex = tmp.ResumeAt
+				lines = append(lines, orNil(tmp.Width))
+				if firstLine {
 					break
 				}
 			}
+			if firstLine && newResumeIndex != -1 && newResumeIndex != 0 {
+				// We only need the first line, break early.
+				currentLine += orZero(lines[0])
+				break
+			}
+			// TODO: use the real next character instead of 'a' to detect line breaks.
+			lastLetter := childText[len(childText)-1]
+			canBreak := context.Fonts().CanBreakText([]rune{lastLetter, 'a'})
+			if minimum && textWrap && canBreak == pr.True {
+				// Add all possible line breaks for minimal width.
+				lines = append(lines, nil)
+			}
 		} else {
+			// Replaced elements, inline blocks…
 			// https://www.w3.org/TR/css3-text/#line-break-details
 			// "The line breaking behavior of a replaced element
 			//  or other atomic inline is equivalent to that
@@ -392,23 +417,25 @@ func inlineLineWidths(context *layoutContext, box_ Box, outer, isLineStart,
 			// "By default, there is a break opportunity
 			//  both before and after any inline object."
 			if minimum {
-				lines = []pr.Float{0, maxContentWidth(context, child, true), 0}
+				lines = []pr.MaybeFloat{nil, minContentWidth(context, child, true), nil}
 			} else {
-				lines = []pr.Float{maxContentWidth(context, child, true)}
+				lines = []pr.MaybeFloat{maxContentWidth(context, child, true)}
 			}
 		}
 		// The first text line goes on the current line
-		currentLine += lines[0]
+		currentLine += orZero(lines[0])
 		if len(lines) > 1 {
-			// Forced line break
+			// Forced line break(s).
 			out = append(out, currentLine+textIndent)
 			textIndent = 0
 			if len(lines) > 2 {
-				out = append(out, lines[1:len(lines)-1]...)
+				for _, v := range lines[1 : len(lines)-1] {
+					out = append(out, orZero(v))
+				}
 			}
-			currentLine = lines[len(lines)-1]
+			currentLine = orZero(lines[len(lines)-1])
 		}
-		isLineStart = lines[len(lines)-1] == 0
+		isLineStart = lines[len(lines)-1] == nil
 		skipStack = nil
 	}
 	out = append(out, currentLine+textIndent)
@@ -430,7 +457,7 @@ func percentageContribution(box bo.BoxFields) pr.Float {
 	if w.S != "auto" && w.Unit == pr.Perc {
 		width = w.Value
 	}
-	return pr.Max(minWidth, pr.Min(width, maxWidth))
+	return max(minWidth, min(width, maxWidth))
 }
 
 type tableContentWidths struct {
@@ -555,17 +582,17 @@ outerLoop:
 	for i := range minContentWidths {
 		for _, groups := range groupss {
 			if b := (*groups)[i]; b != nil {
-				minContentWidths[i] = pr.Max(minContentWidths[i], minContentWidth(context, b, true))
-				maxContentWidths[i] = pr.Max(maxContentWidths[i], maxContentWidth(context, b, true))
-				intrinsicPercentages[i] = pr.Max(intrinsicPercentages[i], percentageContribution(*b.Box()))
+				minContentWidths[i] = max(minContentWidths[i], minContentWidth(context, b, true))
+				maxContentWidths[i] = max(maxContentWidths[i], maxContentWidth(context, b, true))
+				intrinsicPercentages[i] = max(intrinsicPercentages[i], percentageContribution(*b.Box()))
 			}
 		}
 		for _, cell := range zippedGrid[i] {
 			if cell != nil {
 				if cell.Box().Colspan == 1 {
-					minContentWidths[i] = pr.Max(minContentWidths[i], minContentWidth(context, cell, true))
-					maxContentWidths[i] = pr.Max(maxContentWidths[i], maxContentWidth(context, cell, true))
-					intrinsicPercentages[i] = pr.Max(intrinsicPercentages[i], percentageContribution(*cell.Box()))
+					minContentWidths[i] = max(minContentWidths[i], minContentWidth(context, cell, true))
+					maxContentWidths[i] = max(maxContentWidths[i], maxContentWidth(context, cell, true))
+					intrinsicPercentages[i] = max(intrinsicPercentages[i], percentageContribution(*cell.Box()))
 				} else {
 					colspanCells = append(colspanCells, cell)
 				}
@@ -605,7 +632,7 @@ outerLoop:
 
 				// Cell contribution to intrinsic percentage width
 				if intrinsicPercentages[i] == 0 {
-					diff := pr.Max(0, percentageContribution(*originCell.Box())-baselinePercentage)
+					diff := max(0, percentageContribution(*originCell.Box())-baselinePercentage)
 					var (
 						otherColumnsContributions    []pr.Float
 						otherColumnsContributionsSum pr.Float
@@ -626,7 +653,7 @@ outerLoop:
 					} else {
 						ratio = maxContentWidths[i] / otherColumnsContributionsSum
 					}
-					percentageContribution_ = pr.Max(percentageContribution_, diff*ratio)
+					percentageContribution_ = max(percentageContribution_, diff*ratio)
 				}
 			}
 			percentageContributions = append(percentageContributions, percentageContribution_)
@@ -660,7 +687,7 @@ outerLoop:
 	}
 	var cumsum pr.Float
 	for i, percentage := range intrinsicPercentages {
-		u := pr.Min(percentage, 100-cumsum)
+		u := min(percentage, 100-cumsum)
 		cumsum += percentage
 		intrinsicPercentages[i] = u
 	}
@@ -734,8 +761,8 @@ outerLoop:
 		sumMax += maxContentWidths[i]
 	}
 	tableMinContentWidth := totalHorizontalBorderSpacing + sumMin
-	tableMaxContentWidth := totalHorizontalBorderSpacing + pr.Max(
-		pr.Max(sumMax, largepercentageContribution),
+	tableMaxContentWidth := totalHorizontalBorderSpacing + max(
+		max(sumMax, largepercentageContribution),
 		pr.Maxs(smallpercentageContributions...))
 
 	tableMinWidth := tableMinContentWidth
@@ -748,8 +775,8 @@ outerLoop:
 		tableMaxWidth = wid.Value
 	}
 
-	tableMinContentWidth = pr.Max(tableMinContentWidth, adjust(table, false, tableMinWidth, true, true))
-	tableMaxContentWidth = pr.Max(tableMaxContentWidth, adjust(table, false, tableMaxWidth, true, true))
+	tableMinContentWidth = max(tableMinContentWidth, adjust(table, false, tableMinWidth, true, true))
+	tableMaxContentWidth = max(tableMaxContentWidth, adjust(table, false, tableMaxWidth, true, true))
 	tableOuterMinContentWidth := marginWidth(&table.BoxFields, marginWidth(box, tableMinContentWidth, true, true), true, true)
 	tableOuterMaxContentWidth := marginWidth(&table.BoxFields, marginWidth(box, tableMaxContentWidth, true, true), true, true)
 
@@ -797,8 +824,12 @@ func replacedMinContentWidth(box *bo.ReplacedBox, outer bool) pr.Float {
 			w = pr.Float(0)
 		} else {
 			image := box.Replacement
-			iwidth, iheight, ratio := image.GetIntrinsicSize(box.Style.GetImageResolution().Value, box.Style.GetFontSize().Value)
-			w, _ = DefaultImageSizing(iwidth, iheight, ratio, pr.AutoF, h, 300, 150)
+			iwidth, iheight, iratio := image.GetIntrinsicSize(box.Style.GetImageResolution().Value, box.Style.GetFontSize().Value)
+			if pr.Is(iratio) && !pr.Is(iwidth) && !pr.Is(iheight) {
+				w = 0
+			} else {
+				w, _ = DefaultImageSizing(iwidth, iheight, iratio, pr.AutoF, h, 300, 150)
+			}
 		}
 	} else if width.Unit == pr.Perc {
 		// See https://drafts.csswg.org/css-sizing/#intrinsic-contribution
@@ -888,36 +919,47 @@ func flexMaxContentWidth(context *layoutContext, box Box, outer bool) pr.Float {
 
 // Return the size of the trailing whitespace of “box“.
 func trailingWhitespaceSize(context *layoutContext, box Box) pr.Float {
+	// Find last box child, keep last parent to remove nested trailing spaces.
+	var lastParent Box
 	for IsLine(box) {
 		ch := box.Box().Children
 		if len(ch) == 0 {
 			return 0
 		}
-		box = ch[len(ch)-1]
+		lastParent, box = box, ch[len(ch)-1]
 	}
+	// Return early if possible.
 	textBox, ok := box.(*bo.TextBox)
-	if ws := box.Box().Style.GetWhiteSpace(); !(ok && len(textBox.Text) != 0 &&
-		(ws == "normal" || ws == "nowrap" || ws == "pre-line")) {
+	if !ok || len(textBox.Text) == 0 {
+		// There’s no text in last child.
+		return 0
+	} else if ws := box.Box().Style.GetWhiteSpace(); !(ws == "normal" || ws == "nowrap" || ws == "pre-line") {
+		// Spaces don’t collapse.
+		return 0
+	} else if box.Box().Style.GetFontSize() == pr.FToV(0) {
+		// Trailing spaces take no space.
+		return 0
+	} else if !text.HasSuffix(textBox.Text, ' ') {
+		// No trailing space.
 		return 0
 	}
-	strippedText := text.TrimRight(textBox.Text, ' ')
-	if box.Box().Style.GetFontSize() == pr.FToV(0) || len(strippedText) == len(textBox.Text) {
-		return 0
-	}
-	if len(strippedText) != 0 {
+
+	// Strip text.
+	if strippedText := text.TrimRight(textBox.Text, ' '); len(strippedText) != 0 {
+		// Stripped text is not empty, calculate width difference.
 		resume, oldResume := 0, -1
 		var oldBox *bo.TextBox
 		for resume != -1 {
 			oldResume = resume
-			oldBox, resume, _, _ = splitTextBox(context, textBox, nil, resume, true)
+			oldBox, resume, _ = splitTextBox(context, textBox, nil, resume, true)
 		}
 		if oldBox == nil {
 			panic("oldBox can't be nil")
 		}
 		strippedBox := textBox.CopyWithText(strippedText)
-		strippedBox, resume, _, _ = splitTextBox(context, strippedBox, nil, oldResume, true)
+		strippedBox, resume, _ = splitTextBox(context, strippedBox, nil, oldResume, true)
 		if strippedBox == nil {
-			// oldBox split just before the trailing spaces
+			// Old box is split just before the trailing spaces.
 			return oldBox.Box().Width.V()
 		} else {
 			if resume != -1 {
@@ -926,7 +968,14 @@ func trailingWhitespaceSize(context *layoutContext, box Box) pr.Float {
 			return oldBox.Box().Width.V() - strippedBox.Box().Width.V()
 		}
 	} else {
+		// Stripped text is empty, render spaces to get width.
 		spli := text.SplitFirstLine(textBox.Text, textBox.Style, context, nil, false, true)
-		return spli.Width
+		width := spli.Width
+		// Remove possible trailing spaces from previous child.
+		if lastParent != nil && len(lastParent.Box().Children) >= 2 {
+			children := lastParent.Box().Children
+			width += trailingWhitespaceSize(context, children[len(children)-2])
+		}
+		return width
 	}
 }

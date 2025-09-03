@@ -606,27 +606,44 @@ func ResolveColor(style pr.ElementStyle, key pr.KnownProp) pr.Color {
 	return value
 }
 
-func pageTypeMatch(selectorPageType pageSelector, pageType utils.PageElement) bool {
-	if selectorPageType.Side != "" && selectorPageType.Side != pageType.Side {
+func pageTypeMatch(pageSelectorType pageSelector, pageType utils.PageElement) bool {
+	if pageSelectorType.Side != "" && pageSelectorType.Side != pageType.Side {
 		return false
 	}
-	if selectorPageType.Blank && selectorPageType.Blank != pageType.Blank {
+	if pageSelectorType.Blank && pageSelectorType.Blank != pageType.Blank {
 		return false
 	}
-	if selectorPageType.First && selectorPageType.First != pageType.First {
+	if pageSelectorType.First && pageSelectorType.First != pageType.First() {
 		return false
 	}
-	if selectorPageType.Name != "" && selectorPageType.Name != pageType.Name {
+	if pageSelectorType.Name != "" && pageSelectorType.Name != pageType.Name {
 		return false
 	}
-	if !selectorPageType.Index.IsNone() {
-		a, b := selectorPageType.Index.A, selectorPageType.Index.B
-		// TODO: handle group
-		offset := pageType.Index + 1 - b
-		if a == 0 {
-			return offset == 0
-		} else {
+	if index := pageSelectorType.Index; !index.IsNone() {
+		a, b, name := index.A, index.B, index.Group
+		if name == "" {
+			offset := pageType.Index + 1 - b
+			if a == 0 {
+				return offset == 0
+			}
 			return offset/a >= 0 && offset%a == 0
+		}
+		if name != pageType.Name {
+			return false
+		}
+		for _, group := range pageType.Groups() {
+			if name != group.Name {
+				continue
+			}
+			offset := group.Index + 1 - b
+			condition := offset == 0
+			if a != 0 {
+				condition = offset/a >= 0 && offset%a == 0
+			}
+			if condition {
+				return true
+			}
+			return false
 		}
 	}
 	return true
@@ -1186,6 +1203,10 @@ func parsePageSelectors(rule pa.QualifiedRule) (out []pageSelector) {
 					if nthValues == nil {
 						return nil
 					}
+					types_.Index = pageIndex{
+						A: nthValues[0],
+						B: nthValues[1],
+					}
 					if group != nil {
 						var group_ []pa.Token
 						for _, token := range group {
@@ -1196,20 +1217,18 @@ func parsePageSelectors(rule pa.QualifiedRule) (out []pageSelector) {
 						if len(group_) != 1 {
 							return nil
 						}
-						if _, ok := group_[0].(pa.Ident); ok {
-							// TODO: handle page groups
+						groupIdent, ok := group_[0].(pa.Ident)
+						if !ok {
 							return nil
 						}
-						return nil
-					}
-					types_.Index = pageIndex{
-						A:     nthValues[0],
-						B:     nthValues[1],
-						Group: group,
+						types_.Index.Group = groupIdent.Value
 					}
 					// TODO: specificity is not specified yet
 					// https://github.com/w3c/csswg-drafts/issues/3524
 					types_.Specificity[1] += 1
+					if types_.Index.Group != "" {
+						types_.Specificity[0] += 1
+					}
 					continue
 				}
 				return nil

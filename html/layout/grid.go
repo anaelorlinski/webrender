@@ -337,7 +337,7 @@ const (
 
 // affectedSizes : sizeMin or sizeMax ("min", "max")
 // affectedTracksTypes : i, c, m ("intrinsic", "content-based", "max-content")
-// sizeContribution : m, c, C ("mininum", "min-content", "max-content")
+// sizeContribution : m, c, C ("minimum", "min-content", "max-content")
 // direction : x, y
 func distributeExtraSpace(context *layoutContext, affectedSizes, affectedTracksTypes, sizeContribution byte, tracksChildren [][]Box,
 	sizingFunctions [][2]pr.DimOrS, tracksSizes [][2]pr.MaybeFloat, span int, direction byte, containingBlock *bo.BoxFields,
@@ -386,7 +386,7 @@ func distributeExtraSpace(context *layoutContext, affectedSizes, affectedTracksT
 			for _, sizes := range tracksSizes[utils.MinInt(i, len(tracksSizes)):utils.MinInt(i+span, len(tracksSizes))] {
 				space -= sizes[affectedSizes].V()
 			}
-			space = pr.Max(0, space)
+			space = max(0, space)
 			// 2.2 Distribute space up to limits.
 			var affectedTracksNumbers, unaffectedTracksNumbers []int
 			for j := i; j < i+span && j < len(affectedTracks); j++ {
@@ -486,7 +486,7 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 			growthLimit = pr.Inf
 		}
 		if baseSize != nil && growthLimit != nil {
-			growthLimit = pr.Max(baseSize.V(), growthLimit.V())
+			growthLimit = max(baseSize.V(), growthLimit.V())
 		}
 		tracksSizes[i] = [2]pr.MaybeFloat{baseSize, growthLimit}
 	}
@@ -530,7 +530,7 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 				child.Box().PositionY = 0
 				parent := bo.BlockT.AnonymousFrom(containingBlock, nil)
 				cbW, cbH := containingBlock.Box().ContainingBlock()
-				resolvePercentages(parent, bo.MaybePoint{cbW, cbH}, 0)
+				resolvePercentages(parent, bo.MaybePoint{cbW, cbH})
 				parent.Box().PositionX = child.Box().PositionX
 				parent.Box().PositionY = child.Box().PositionY
 				parent.Box().Width = widthF
@@ -538,7 +538,7 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 				bottomSpace := -pr.Inf
 				child, _, _ = blockLevelLayout(context, child.(bo.BlockLevelBoxITF), bottomSpace, nil,
 					parent.Box(), true, nil, nil, nil, false, -1)
-				height = pr.Max(height, child.Box().MarginHeight())
+				height = max(height, child.Box().MarginHeight())
 			}
 			if minFunction.S == "min-content" || minFunction.S == "maxContent" || minFunction.S == "auto" {
 				sizes[0] = height
@@ -547,7 +547,7 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 				sizes[1] = height
 			}
 			if sizes[0] != nil && sizes[1] != nil {
-				sizes[1] = pr.Max(sizes[0].V(), sizes[1].V())
+				sizes[1] = max(sizes[0].V(), sizes[1].V())
 			}
 			continue
 		}
@@ -595,7 +595,7 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 			}
 			sizes[1] = ma
 			if sizes[0] != nil && sizes[1] != nil {
-				sizes[1] = pr.Max(sizes[0].V(), sizes[1].V())
+				sizes[1] = max(sizes[0].V(), sizes[1].V())
 			}
 		}
 	}
@@ -652,7 +652,7 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 		// 1.2.3.4 Increase growth limit.
 		for j, sizes := range tracksSizes {
 			if sizes[0] != nil && sizes[1] != nil {
-				tracksSizes[j][1] = pr.Max(sizes[0].V(), sizes[1].V())
+				tracksSizes[j][1] = max(sizes[0].V(), sizes[1].V())
 			}
 		}
 		i = -1
@@ -738,7 +738,7 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 					}
 				}
 			}
-			flexFactorSum = pr.Max(1, flexFactorSum)
+			flexFactorSum = max(1, flexFactorSum)
 			hypotheticalFrSize = leftoverSpace / flexFactorSum
 			stop = true
 			// iterable = enumerate(zip(tracksSizes, sizingFunctions))
@@ -759,9 +759,9 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 			maxFunction := sizingFunctions[i][1]
 			if isFr(maxFunction) {
 				if maxFunction.Value > 1 {
-					flexFraction = pr.Max(flexFraction, maxFunction.Value*sizes[0].V())
+					flexFraction = max(flexFraction, maxFunction.Value*sizes[0].V())
 				} else {
-					flexFraction = pr.Max(flexFraction, sizes[0].V())
+					flexFraction = max(flexFraction, sizes[0].V())
 				}
 			}
 		}
@@ -1339,10 +1339,10 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 	justifyContent := box.Style.GetJustifyContent()
 	x := box.ContentBoxX()
 
-	freeWidth := pr.Max(0, box.Width.V()-sum0(columnsSizes))
+	freeWidth := max(0, box.Width.V()-sum0(columnsSizes))
 	columnsNumber := pr.Float(len(columnsSizes))
 	columnsPositions := make([]pr.Float, len(columnsSizes))
-	if justifyContent.Intersects(kw.Center) {
+	if justifyContent.Has(kw.Center) {
 		x += freeWidth / 2
 		for i, size := range columnsSizes {
 			columnsPositions[i] = x
@@ -1354,20 +1354,20 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 			columnsPositions[i] = x
 			x += size[0] + columnGap
 		}
-	} else if justifyContent.Intersects(kw.SpaceAround) {
+	} else if justifyContent.Has(kw.SpaceAround) {
 		x += freeWidth / 2 / columnsNumber
 		for i, size := range columnsSizes {
 			columnsPositions[i] = x
 			x += size[0] + freeWidth/columnsNumber + columnGap
 		}
-	} else if justifyContent.Intersects(kw.SpaceBetween) {
+	} else if justifyContent.Has(kw.SpaceBetween) {
 		for i, size := range columnsSizes {
 			columnsPositions[i] = x
 			if columnsNumber >= 2 {
 				x += size[0] + freeWidth/(columnsNumber-1) + columnGap
 			}
 		}
-	} else if justifyContent.Intersects(kw.SpaceEvenly) {
+	} else if justifyContent.Has(kw.SpaceEvenly) {
 		x += freeWidth / (columnsNumber + 1)
 		for i, size := range columnsSizes {
 			columnsPositions[i] = x
@@ -1385,11 +1385,11 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 	freeHeight := pr.Float(0)
 	if h := box.Height; h != pr.AutoF {
 		freeHeight = h.V() - sum0(rowsSizes) - pr.Float(len(rowsSizes)-1)*rowGap
-		freeHeight = pr.Max(0, freeHeight)
+		freeHeight = max(0, freeHeight)
 	}
 	rowsNumber := pr.Float(len(rowsSizes))
 	rowsPositions := make([]pr.Float, len(rowsSizes))
-	if alignContent.Intersects(kw.Center) {
+	if alignContent.Has(kw.Center) {
 		y += freeHeight / 2
 		for i, size := range rowsSizes {
 			rowsPositions[i] = y
@@ -1401,27 +1401,27 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 			rowsPositions[i] = y
 			y += size[0] + rowGap
 		}
-	} else if alignContent.Intersects(kw.SpaceAround) {
+	} else if alignContent.Has(kw.SpaceAround) {
 		y += freeHeight / 2 / rowsNumber
 		for i, size := range rowsSizes {
 			rowsPositions[i] = y
 			y += size[0] + freeHeight/rowsNumber + rowGap
 		}
-	} else if alignContent.Intersects(kw.SpaceBetween) {
+	} else if alignContent.Has(kw.SpaceBetween) {
 		for i, size := range rowsSizes {
 			rowsPositions[i] = y
 			if rowsNumber >= 2 {
 				y += size[0] + freeHeight/(rowsNumber-1) + rowGap
 			}
 		}
-	} else if alignContent.Intersects(kw.SpaceEvenly) {
+	} else if alignContent.Has(kw.SpaceEvenly) {
 		y += freeHeight / (rowsNumber + 1)
 		for i, size := range rowsSizes {
 			rowsPositions[i] = y
 			y += size[0] + freeHeight/(rowsNumber+1) + rowGap
 		}
 	} else {
-		if alignContent.Intersects(kw.Baseline) {
+		if alignContent.Has(kw.Baseline) {
 			// TODO: Support baseline value.
 			logger.WarningLogger.Println("Baseline alignment is not supported for grid layout")
 		}
@@ -1497,7 +1497,7 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 		childB.PositionX = columnsPositions[x]
 		childB.PositionY = rowsPositions[y] - skipHeight
 		cbW, cbH := box.ContainingBlock()
-		resolvePercentages(child, bo.MaybePoint{cbW, cbH}, 0)
+		resolvePercentages(child, bo.MaybePoint{cbW, cbH})
 		widthF := (sum0(columnsSizes[x:x+width]) + pr.Float(width-1)*columnGap)
 		heightF := (sum0(rowsSizes[y:utils.MinInt(y+height, len(rowsSizes))]) + pr.Float(height-1)*rowGap)
 		childWidth := widthF - (childB.MarginLeft.V() + childB.BorderLeftWidth + childB.PaddingLeft.V() +
@@ -1506,7 +1506,7 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 			childB.MarginBottom.V() + childB.BorderBottomWidth + childB.PaddingBottom.V())
 
 		justifySelf := childB.Style.GetJustifySelf()
-		if justifySelf.Intersects(kw.Auto) {
+		if justifySelf.Has(kw.Auto) {
 			justifySelf = justifyItems
 		}
 		if justifySelf.Intersects(kw.Normal, kw.Stretch) {
@@ -1515,7 +1515,7 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 			}
 		}
 		alignSelf := childB.Style.GetAlignSelf()
-		if alignSelf.Intersects(kw.Auto) {
+		if alignSelf.Has(kw.Auto) {
 			alignSelf = alignItems
 		}
 		if alignSelf.Intersects(kw.Normal, kw.Stretch) {
@@ -1527,7 +1527,7 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 		// TODO: Find a better solution for the layout.
 		parent := bo.BlockT.AnonymousFrom(box_, nil)
 		cbW, cbH = containingBlock.ContainingBlock()
-		resolvePercentages(parent, bo.MaybePoint{cbW, cbH}, 0)
+		resolvePercentages(parent, bo.MaybePoint{cbW, cbH})
 		parent.Box().PositionX = childB.PositionX
 		parent.Box().PositionY = childB.PositionY
 		parent.Box().Width = widthF
@@ -1544,11 +1544,11 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 
 		// TODO: Apply auto margins.
 		if justifySelf.Intersects(kw.Normal, kw.Stretch) {
-			newChild.Box().Width = pr.Max(childWidth, newChild.Box().Width.V())
+			newChild.Box().Width = max(childWidth, newChild.Box().Width.V())
 		} else {
 			newChild.Box().Width = maxContentWidth(context, newChild, true)
 			diff := childWidth - newChild.Box().Width.V()
-			if justifySelf.Intersects(kw.Center) {
+			if justifySelf.Has(kw.Center) {
 				newChild.Translate(newChild, diff/2, 0, false)
 			} else if justifySelf.Intersects(kw.Right, kw.End, kw.FlexEnd, kw.SelfEnd) {
 				newChild.Translate(newChild, diff, 0, false)
@@ -1557,10 +1557,10 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 
 		// TODO: Apply auto margins.
 		if alignSelf.Intersects(kw.Normal, kw.Stretch) {
-			newChild.Box().Height = pr.Max(childHeight, newChild.Box().Height.V())
+			newChild.Box().Height = max(childHeight, newChild.Box().Height.V())
 		} else {
 			diff := childHeight - newChild.Box().Height.V()
-			if alignSelf.Intersects(kw.Center) {
+			if alignSelf.Has(kw.Center) {
 				newChild.Translate(newChild, 0, diff/2, false)
 			} else if alignSelf.Intersects(kw.End, kw.FlexEnd, kw.SelfEnd) {
 				newChild.Translate(newChild, 0, diff, false)

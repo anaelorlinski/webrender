@@ -96,7 +96,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 		var resumeAt tree.ResumeStack
 		nextPage := tree.PageBreak{Break: "any"}
 		originalPageIsEmpty := pageIsEmpty
-		resolvePercentagesBox(group_, &table.BoxFields, 0)
+		resolvePercentagesBox(group_, &table.BoxFields)
 		group := group_.Box()
 		group.PositionX = rowsLeftX
 		group.PositionY = positionY
@@ -124,7 +124,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 				}
 			}
 
-			resolvePercentagesBox(row_, &table.BoxFields, 0)
+			resolvePercentagesBox(row_, &table.BoxFields)
 			row.PositionX = rowsLeftX
 			row.PositionY = positionY
 			row.Width = rowsWidth
@@ -153,7 +153,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 						len(ignoredCells), ignoredCells)
 					break
 				}
-				resolvePercentagesBox(cell_, &table.BoxFields, 0)
+				resolvePercentagesBox(cell_, &table.BoxFields)
 				if table.Style.GetDirection() == "ltr" {
 					cell.PositionX = table.ColumnPositions[cell.GridX]
 				} else {
@@ -171,10 +171,6 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 					width += sw
 				}
 				cell.Width = width
-				// The computed height is a minimum
-				cell.ComputedHeight = cell.Height
-				cell.Height = pr.AutoF
-
 				var cellSkipStack tree.ResumeStack
 				if len(skipStack) != 0 {
 					if rs, has := skipStack[indexCell]; has {
@@ -215,9 +211,19 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 				// force to render something if the page is actually empty, or
 				// just draw an empty cell otherwise. See
 				// test_table_break_children_margin.
+				// Pretend that height is not set, keeping computed height as a minimum.
+				cell.ComputedHeight = cell.Height
+				cell.Height = pr.AutoF
+				originalStyle := cell.Style
+				if cell.Style.GetHeight().S != "auto" {
+					styleCopy := cell.Style.Copy()
+					styleCopy.SetHeight(pr.SToV("auto"))
+					cell.Style = styleCopy
+				}
 				newCell, tmp, _ := blockContainerLayout(context, cell_, bottomSpace, cellSkipStack, pageIsEmpty,
 					absoluteBoxes, fixedBoxes, new([]pr.Float), false, -1)
 				cellResumeAt := tmp.resumeAt
+				cell.Style = originalStyle
 				if newCell == nil {
 					cell_ = bo.CopyWithChildren(cell_, nil)
 					cell_, _, _ = blockContainerLayout(context, cell_, bottomSpace, cellSkipStack, true,
@@ -251,7 +257,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 
 				cell.ContentHeight = cell.Height.V()
 				if cell.ComputedHeight != pr.AutoF {
-					cell.Height = pr.Max(cell.Height.V(), cell.ComputedHeight.V())
+					cell.Height = max(cell.Height.V(), cell.ComputedHeight.V())
 				}
 				newRowChildren = append(newRowChildren, cell_)
 			}
@@ -319,7 +325,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 							rowBottomY = v
 						}
 					}
-					row.Height = pr.Max(rowBottomY-row.PositionY, 0)
+					row.Height = max(rowBottomY-row.PositionY, 0)
 				} else {
 					var m pr.Float
 					for _, rowCell := range endingCells {
@@ -327,7 +333,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 							m = v
 						}
 					}
-					row.Height = pr.Max(row.Height.V(), m)
+					row.Height = max(row.Height.V(), m)
 					rowBottomY = row.PositionY + row.Height.V()
 				}
 			} else {
@@ -525,10 +531,12 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 					pageBreak := blockLevelPageBreak(previousGroup, group_)
 					if avoidPageBreak(pageBreak, context) {
 						v1, v2 := findEarlierPageBreak(context, newTableChildren, absoluteBoxes, fixedBoxes)
-						if v1 != nil && v2 != nil {
-							newTableChildren, resumeAt = v1, v2
-							break
+						if v1 == nil && v2 == nil {
+							removePlaceholders(context, newTableChildren, absoluteBoxes, fixedBoxes)
+							return nil, nil, nextPage, positionY
 						}
+						newTableChildren, resumeAt = v1, v2
+						break
 					}
 					resumeAt = tree.ResumeStack{indexGroup: nil}
 				} else {
@@ -711,6 +719,9 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 	}
 	table_ = bo.CopyWithChildren(table_, newChildren).(bo.TableBoxITF) // CopyWithChildren is type stable
 	table = table_.Table()
+	for i, v := range table.ColumnGroups {
+		table.ColumnGroups[i] = v.Copy().(*bo.TableColumnGroupBox)
+	}
 	removeEndDecoration := resumeAt != nil && !hasFooter
 	table_.RemoveDecoration(&table.BoxFields, removeStartDecoration, removeEndDecoration)
 	if collapse {
@@ -723,7 +734,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 	if table.Height != pr.AutoF {
 		th = table.Height.V()
 	}
-	table.Height = pr.Max(th, positionY-table.ContentBoxY())
+	table.Height = max(th, positionY-table.ContentBoxY())
 
 	// Layout for column groups and columns
 	columnsHeight := positionY - initialPositionY
@@ -734,7 +745,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 	for _, group := range table.ColumnGroups {
 		for _, column_ := range group.Children {
 			column := column_.Box()
-			resolvePercentagesBox(column_, &table.BoxFields, 0)
+			resolvePercentagesBox(column_, &table.BoxFields)
 			if column.GridX < len(table.ColumnPositions) {
 				column.PositionX = table.ColumnPositions[column.GridX]
 				column.PositionY = initialPositionY
@@ -747,7 +758,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 				column.Width = pr.Float(0)
 				column.Height = pr.Float(0)
 			}
-			resolvePercentagesBox(group, &table.BoxFields, 0)
+			resolvePercentagesBox(group, &table.BoxFields)
 			column.GetCells = getColumnCells(table, column)
 		}
 		first := group.Children[0].Box()
@@ -807,7 +818,7 @@ func fixedTableLayout(box *bo.BoxFields) {
 	// `width` on column boxes
 	for i, column_ := range allColumns {
 		column := column_.Box()
-		column.Width = resolveOnePercentage(column.Style.GetWidth(), pr.PWidth, table.Width.V(), 0)
+		column.Width = resolveOnePercentage(column.Style.GetWidth(), pr.PWidth, table.Width.V())
 		if column.Width != pr.AutoF {
 			columnWidths[i] = column.Width
 		}
@@ -822,7 +833,7 @@ func fixedTableLayout(box *bo.BoxFields) {
 	i := 0
 	for _, cell_ := range firstRowCells {
 		cell := cell_.Box()
-		resolvePercentagesBox(cell_, &table.BoxFields, 0)
+		resolvePercentagesBox(cell_, &table.BoxFields)
 		if cell.Width != pr.AutoF {
 			width := cell.BorderWidth()
 			width -= borderSpacingX * pr.Float(cell.Colspan-1)
@@ -956,7 +967,7 @@ func autoTableLayout(context *layoutContext, box_ Box, containingBlock bo.Point)
 	// https://www.w3.org/TR/css-tables-3/#width-distribution-algorithm
 	for i := range tmp.grid {
 		if tmp.columnIntrinsicPercentages[i] != 0 {
-			minContentPercentageGuess[i] = pr.Max(
+			minContentPercentageGuess[i] = max(
 				tmp.columnIntrinsicPercentages[i]/100*assignableWidth,
 				tmp.columnMinContentWidths[i])
 			minContentSpecifiedGuess[i] = minContentPercentageGuess[i]
@@ -968,7 +979,7 @@ func autoTableLayout(context *layoutContext, box_ Box, containingBlock bo.Point)
 		}
 	}
 
-	if assignableWidth <= sum(maxContentGuess) {
+	if assignableWidth < sum(maxContentGuess) {
 		// Default values shouldn't be used, but we never know.
 		// See https://github.com/Kozea/WeasyPrint/issues/770
 		lowerGuess := guesses[0]
@@ -1047,7 +1058,7 @@ func autoTableLayout(context *layoutContext, box_ Box, containingBlock bo.Point)
 func tableWrapperWidth(context *layoutContext, wrapper_ Box, containingBlock bo.MaybePoint) {
 	wrapper := wrapper_.Box()
 	table := wrapper.GetWrappedTable()
-	resolvePercentages(table, containingBlock, 0)
+	resolvePercentages(table, containingBlock)
 
 	if table.Box().Style.GetTableLayout() == "fixed" && table.Box().Width != pr.AutoF {
 		fixedTableLayout(wrapper)
@@ -1135,7 +1146,7 @@ func distributeExcessWidth(context *layoutContext, grid [][]bo.Box, excessWidth 
 			differences    = make([]pr.Float, L)
 		)
 		for i := 0; i < L; i++ {
-			v := pr.Max(0, columnMaxContentWidths[i]-currentWidths[i])
+			v := max(0, columnMaxContentWidths[i]-currentWidths[i])
 			differences[i] = v
 			sumDifferences += v
 		}
@@ -1185,7 +1196,7 @@ func distributeExcessWidth(context *layoutContext, grid [][]bo.Box, excessWidth 
 			differences    = make([]pr.Float, L)
 		)
 		for i := 0; i < L; i++ {
-			v := pr.Max(0, columnMaxContentWidths[i]-currentWidths[i])
+			v := max(0, columnMaxContentWidths[i]-currentWidths[i])
 			differences[i] = v
 			sumDifferences += v
 		}

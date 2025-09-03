@@ -126,7 +126,6 @@ type StrokeOptions struct {
 type PaintOp uint8
 
 const (
-	// Clear does not show anything on the output, but reset the current path
 	Stroke PaintOp = 1 << iota
 	FillEvenOdd
 	FillNonZero // mutually exclusive with FillEvenOdd

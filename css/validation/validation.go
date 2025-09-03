@@ -144,6 +144,11 @@ var (
 		pr.PBorderImageWidth:        borderImageWidth,
 		pr.PBorderImageOutset:       borderImageOutset,
 		pr.PBorderImageRepeat:       borderImageRepeat,
+		pr.PMaskBorderSlice:         borderImageSlice,
+		pr.PMaskBorderWidth:         borderImageWidth,
+		pr.PMaskBorderOutset:        borderImageOutset,
+		pr.PMaskBorderRepeat:        borderImageRepeat,
+		pr.PMaskBorderMode:          maskBorderMode,
 		pr.PColumnRuleWidth:         borderWidth,
 		pr.POutlineWidth:            borderWidth,
 		pr.PColumnWidth:             columnWidth,
@@ -263,6 +268,7 @@ var (
 	validatorsError = map[pr.KnownProp]validatorError{
 		pr.PBackgroundImage:   backgroundImage,
 		pr.PBorderImageSource: borderImageSource,
+		pr.PMaskBorderSource:  borderImageSource,
 		pr.PListStyleImage:    listStyleImage,
 		pr.PContent:           content,
 		pr.PCounterIncrement:  counterIncrement,
@@ -1425,6 +1431,18 @@ func borderImageRepeat(tokens []Token, _ string) pr.CssProperty {
 		return keywords
 	}
 	return nil
+}
+
+// @property()
+// @single_keyword
+func maskBorderMode(tokens []Token, _ string) pr.CssProperty {
+	keyword := getSingleKeyword(tokens)
+	switch keyword {
+	case "luminance", "alpha":
+		return pr.String(keyword)
+	default:
+		return nil
+	}
 }
 
 // @validator()

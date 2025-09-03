@@ -60,6 +60,18 @@ func (r ResumeStack) Equals(other ResumeStack) bool {
 	return true
 }
 
+// Copy returns a deepcopy
+func (r ResumeStack) Copy() ResumeStack {
+	if r == nil {
+		return nil
+	}
+	out := make(ResumeStack)
+	for k, v := range r {
+		out[k] = v.Copy()
+	}
+	return out
+}
+
 type PageState struct {
 	QuoteDepth    []int
 	CounterValues CounterValues
@@ -97,11 +109,11 @@ type PageBreak struct {
 }
 
 type PageMaker struct {
-	InitialResumeAt  ResumeStack
-	InitialPageState PageState
-	InitialNextPage  PageBreak
-	RemakeState      RemakeState
-	RightPage        bool
+	ResumeAt    ResumeStack
+	NextPage    PageBreak
+	RightPage   bool
+	PageState   PageState
+	RemakeState RemakeState
 }
 
 type Box interface {

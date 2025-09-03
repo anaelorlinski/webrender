@@ -399,6 +399,24 @@ func (s Properties) SetMarginTop(v DimOrS) { s[PMarginTop] = v }
 func (s Properties) GetMarks() Marks  { return s[PMarks].(Marks) }
 func (s Properties) SetMarks(v Marks) { s[PMarks] = v }
 
+func (s Properties) GetMaskBorderMode() String  { return s[PMaskBorderMode].(String) }
+func (s Properties) SetMaskBorderMode(v String) { s[PMaskBorderMode] = v }
+
+func (s Properties) GetMaskBorderOutset() Values  { return s[PMaskBorderOutset].(Values) }
+func (s Properties) SetMaskBorderOutset(v Values) { s[PMaskBorderOutset] = v }
+
+func (s Properties) GetMaskBorderRepeat() Strings  { return s[PMaskBorderRepeat].(Strings) }
+func (s Properties) SetMaskBorderRepeat(v Strings) { s[PMaskBorderRepeat] = v }
+
+func (s Properties) GetMaskBorderSlice() Values  { return s[PMaskBorderSlice].(Values) }
+func (s Properties) SetMaskBorderSlice(v Values) { s[PMaskBorderSlice] = v }
+
+func (s Properties) GetMaskBorderSource() Image  { return s[PMaskBorderSource].(Image) }
+func (s Properties) SetMaskBorderSource(v Image) { s[PMaskBorderSource] = v }
+
+func (s Properties) GetMaskBorderWidth() Values  { return s[PMaskBorderWidth].(Values) }
+func (s Properties) SetMaskBorderWidth(v Values) { s[PMaskBorderWidth] = v }
+
 func (s Properties) GetMaxHeight() DimOrS  { return s[PMaxHeight].(DimOrS) }
 func (s Properties) SetMaxHeight(v DimOrS) { s[PMaxHeight] = v }
 
@@ -937,6 +955,24 @@ type StyleAccessor interface {
 	GetMarks() Marks
 	SetMarks(v Marks)
 
+	GetMaskBorderMode() String
+	SetMaskBorderMode(v String)
+
+	GetMaskBorderOutset() Values
+	SetMaskBorderOutset(v Values)
+
+	GetMaskBorderRepeat() Strings
+	SetMaskBorderRepeat(v Strings)
+
+	GetMaskBorderSlice() Values
+	SetMaskBorderSlice(v Values)
+
+	GetMaskBorderSource() Image
+	SetMaskBorderSource(v Image)
+
+	GetMaskBorderWidth() Values
+	SetMaskBorderWidth(v Values)
+
 	GetMaxHeight() DimOrS
 	SetMaxHeight(v DimOrS)
 
@@ -1218,6 +1254,12 @@ var propsNames = [...]string{
 	PMarginRight:             "margin-right",
 	PMarginTop:               "margin-top",
 	PMarks:                   "marks",
+	PMaskBorderMode:          "mask-border-mode",
+	PMaskBorderOutset:        "mask-border-outset",
+	PMaskBorderRepeat:        "mask-border-repeat",
+	PMaskBorderSlice:         "mask-border-slice",
+	PMaskBorderSource:        "mask-border-source",
+	PMaskBorderWidth:         "mask-border-width",
 	PMaxHeight:               "max-height",
 	PMaxLines:                "max-lines",
 	PMaxWidth:                "max-width",
@@ -1401,6 +1443,12 @@ var PropsFromNames = map[string]KnownProp{
 	"margin-right":               PMarginRight,
 	"margin-top":                 PMarginTop,
 	"marks":                      PMarks,
+	"mask-border-mode":           PMaskBorderMode,
+	"mask-border-outset":         PMaskBorderOutset,
+	"mask-border-repeat":         PMaskBorderRepeat,
+	"mask-border-slice":          PMaskBorderSlice,
+	"mask-border-source":         PMaskBorderSource,
+	"mask-border-width":          PMaskBorderWidth,
 	"max-height":                 PMaxHeight,
 	"max-lines":                  PMaxLines,
 	"max-width":                  PMaxWidth,

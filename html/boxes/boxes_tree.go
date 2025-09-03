@@ -42,7 +42,8 @@ type TextBox struct {
 	InlineLevelBox
 	BoxFields
 
-	TextLayout text.EngineLayout // setup during layout
+	TextLayout     text.EngineLayout // setup during layout
+	FirstLineIsRTL bool              // setup during layout
 
 	Text []rune
 }

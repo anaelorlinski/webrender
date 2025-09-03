@@ -30,12 +30,19 @@ type serializedStacking struct {
 	zeroZs        []serializedStacking
 }
 
+func flattenBlocksAndCells(blocksAndCells BoxTree) []string {
+	var out []string
+	for block, blocksAndCells := range blocksAndCells {
+		out = append(out, block.Box().ElementTag())
+		out = append(out, flattenBlocksAndCells(blocksAndCells)...)
+	}
+	return out
+}
+
 func serializeStacking(context StackingContext) serializedStacking {
 	out := serializedStacking{
-		tag: context.box.Box().ElementTag(),
-	}
-	for _, b := range context.blocksAndCells {
-		out.blockAndCells = append(out.blockAndCells, b.Box().ElementTag())
+		tag:           context.box.Box().ElementTag(),
+		blockAndCells: flattenBlocksAndCells(context.blocksAndCells),
 	}
 	for _, c := range context.zeroZContexts {
 		out.zeroZs = append(out.zeroZs, serializeStacking(c))

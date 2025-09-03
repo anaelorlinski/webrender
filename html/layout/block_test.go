@@ -2,12 +2,19 @@ package layout
 
 import (
 	"fmt"
+	"slices"
 	"testing"
 
 	pr "github.com/benoitkugler/webrender/css/properties"
 	bo "github.com/benoitkugler/webrender/html/boxes"
 	tu "github.com/benoitkugler/webrender/utils/testutils"
 )
+
+func TestReverse(t *testing.T) {
+	s := []int{1, 2, 3, 4, 5, 6, 7}
+	slices.Reverse(s[len(s)-3:])
+	tu.AssertEqual(t, s, []int{1, 2, 3, 4, 7, 6, 5})
+}
 
 // Tests for blocks layout.
 

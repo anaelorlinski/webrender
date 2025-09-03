@@ -319,7 +319,7 @@ func absoluteBoxLayout(context *layoutContext, box Box, cb_ Box, fixedBoxes *[]*
 		containingBlock.Height = cb.PaddingHeight()
 	}
 
-	resolvePercentages(box, bo.MaybePoint{containingBlock.Width, containingBlock.Height}, 0)
+	resolvePercentages(box, bo.MaybePoint{containingBlock.Width, containingBlock.Height})
 	resolvePositionPercentages(box.Box(), bo.Point{containingBlock.Width, containingBlock.Height})
 
 	context.createBlockFormattingContext()

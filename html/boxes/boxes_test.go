@@ -541,13 +541,13 @@ func testPageStyle(t *testing.T, data pageStyleData) {
 
 func TestPageStyle(t *testing.T) {
 	for _, data := range []pageStyleData{
-		{utils.PageElement{Side: "left", First: true, Index: 0, Blank: false, Name: ""}, 20, 3, 3, 10},
-		{utils.PageElement{Side: "right", First: true, Index: 0, Blank: false, Name: ""}, 20, 10, 3, 3},
-		{utils.PageElement{Side: "left", First: false, Index: 1, Blank: false, Name: ""}, 10, 3, 3, 10},
-		{utils.PageElement{Side: "right", First: false, Index: 1, Blank: false, Name: ""}, 10, 10, 3, 3},
-		{utils.PageElement{Side: "right", First: false, Index: 1, Blank: false, Name: "name"}, 5, 10, 3, 15},
-		{utils.PageElement{Side: "right", First: false, Index: 2, Blank: false, Name: "name"}, 5, 10, 1, 15},
-		{utils.PageElement{Side: "right", First: false, Index: 8, Blank: false, Name: "name"}, 5, 10, 2, 15},
+		{utils.PageElement{Side: "left", Index: 0, Blank: false, Name: ""}, 20, 3, 3, 10},
+		{utils.PageElement{Side: "right", Index: 0, Blank: false, Name: ""}, 20, 10, 3, 3},
+		{utils.PageElement{Side: "left", Index: 1, Blank: false, Name: ""}, 10, 3, 3, 10},
+		{utils.PageElement{Side: "right", Index: 1, Blank: false, Name: ""}, 10, 10, 3, 3},
+		{utils.PageElement{Side: "right", Index: 1, Blank: false, Name: "name"}, 5, 10, 3, 15},
+		{utils.PageElement{Side: "right", Index: 2, Blank: false, Name: "name"}, 5, 10, 1, 15},
+		{utils.PageElement{Side: "right", Index: 8, Blank: false, Name: "name"}, 5, 10, 2, 15},
 	} {
 		testPageStyle(t, data)
 	}

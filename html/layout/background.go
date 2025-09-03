@@ -79,6 +79,7 @@ func layoutBoxBackgrounds(page *bo.PageBox, box_ Box, getImageFromUri bo.ImageFe
 	// This is for the border image, not the background, but this is a
 	// convenient place to get the image.
 	box.BorderImage = resolveImage(style.GetBorderImageSource(), pr.SBoolFloat{}, getImageFromUri)
+	box.MaskBorderImage = resolveImage(style.GetMaskBorderSource(), pr.SBoolFloat{}, getImageFromUri)
 
 	var (
 		color     parser.RGBA // transparent
@@ -157,14 +158,14 @@ func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.DimOrS, ima
 		for _, row_ := range box.Children {
 			row := row_.Box()
 			if len(row.Children) != 0 {
-				var max pr.Float
+				var maxVal pr.Float
 				for _, cell := range row.Children {
 					clippedBoxes = append(clippedBoxes, cell.Box().RoundedBorderBox())
-					if v := cell.Box().BorderHeight(); v > max {
-						max = v
+					if v := cell.Box().BorderHeight(); v > maxVal {
+						maxVal = v
 					}
 				}
-				totalHeight = pr.Max(totalHeight, max)
+				totalHeight = max(totalHeight, maxVal)
 			}
 		}
 		paintingArea = [4]pr.Float{

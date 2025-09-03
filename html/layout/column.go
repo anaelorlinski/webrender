@@ -2,6 +2,7 @@ package layout
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/benoitkugler/webrender/html/tree"
 
@@ -43,13 +44,6 @@ func columnsLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.F
 		absoluteBoxes = &[]*AbsolutePlaceholder{}
 	}
 
-	gapV := style.GetColumnGap()
-	gap := gapV.Value
-	if gapV.S == "normal" {
-		// 1em because in column context
-		gap = style.GetFontSize().Value
-	}
-
 	box_ = bo.CopyWithChildren(box_, box_.Box().Children).(bo.BlockBoxITF) // CopyWithChildren preserves the concrete type of box_
 	box := box_.Box()
 	box.PositionY += collapseMargin(adjoiningMargins) - box.MarginTop.V()
@@ -62,10 +56,19 @@ func columnsLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.F
 		}
 		heightDefined = true
 		emptySpace := context.pageBottom - box.ContentBoxY() - height_.Value
-		bottomSpace = pr.Max(bottomSpace, emptySpace)
+		bottomSpace = max(bottomSpace, emptySpace)
 	}
 
 	blockLevelWidth(box_, nil, containingBlock)
+
+	var gap pr.Float
+	if gapV := style.GetColumnGap(); gapV.S == "normal" {
+		// 1em because in column context
+		gap = style.GetFontSize().Value
+	} else {
+		gap = pr.ResolvePercentage(gapV, box.Width.V()).V()
+	}
+
 	// Define the number of columns and their widths
 
 	availableWidth := box.Width.V()
@@ -75,12 +78,12 @@ func columnsLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.F
 	)
 	if width_.S == "auto" && count_.String != "auto" {
 		count = count_.Int
-		width = pr.Max(0, availableWidth-(pr.Float(count)-1)*gap) / pr.Float(count)
+		width = max(0, availableWidth-(pr.Float(count)-1)*gap) / pr.Float(count)
 	} else if width_.S != "auto" && count_.String == "auto" {
-		count = int(pr.Max(1, pr.Floor((availableWidth+gap)/(width_.Value+gap))))
+		count = int(max(1, pr.Floor((availableWidth+gap)/(width_.Value+gap))))
 		width = (availableWidth+gap)/pr.Float(count) - gap
 	} else { // overconstrained, with width != 'auto' and count != 'auto'
-		count = int(pr.Max(1, pr.Min(pr.Float(count_.Int), pr.Floor((availableWidth+gap)/(width_.Value+gap)))))
+		count = int(max(1, min(pr.Float(count_.Int), pr.Floor((availableWidth+gap)/(width_.Value+gap)))))
 		width = (availableWidth+gap)/pr.Float(count) - gap
 	}
 
@@ -161,7 +164,7 @@ func columnsLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.F
 		columnChildrenOrBlock := pair.bl
 		if block := columnChildrenOrBlock.box; block != nil {
 			// We have a spanning block, we display it like other blocks.
-			resolvePercentagesBox(block, containingBlock, 0)
+			resolvePercentagesBox(block, containingBlock)
 			block.Box().PositionX = box.ContentBoxX()
 			block.Box().PositionY = currentPositionY
 			newChild, tmp, _ := blockLevelLayout(context, block, originalBottomSpace, skipStack,
@@ -247,6 +250,7 @@ func columnsLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.F
 					// Get the empty space at the bottom of the column box
 					consumedHeight = lastInFlowChildren.MarginHeight() + lastInFlowChildren.PositionY - currentPositionY
 					emptySpace = height - consumedHeight
+					consumedHeight -= lastInFlowChildren.MarginBottom.V()
 
 					// Get the minimum size needed to render the next box
 					if columnSkipStack != nil {
@@ -282,7 +286,7 @@ func columnsLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.F
 				// least adds 1 pixel for each loop, we can ignore lost spaces
 				// lower than 1px.
 				if nextBoxHeight-emptySpace > 1 {
-					lostSpace = pr.Min(lostSpace, nextBoxHeight-emptySpace)
+					lostSpace = min(lostSpace, nextBoxHeight-emptySpace)
 				}
 
 				// Stop if we already rendered the whole content
@@ -346,7 +350,7 @@ func columnsLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.F
 					// let the columns continue on the next page
 					height += footnoteAreaHeights[L-1]
 					if L > 2 {
-						lastFootnotesHeight = pr.Min(lastFootnotesHeight, footnoteAreaHeights[L-1])
+						lastFootnotesHeight = min(lastFootnotesHeight, footnoteAreaHeights[L-1])
 					}
 					height -= lastFootnotesHeight
 					stopRendering = true
@@ -355,7 +359,7 @@ func columnsLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.F
 			}
 		}
 
-		bottomSpace = pr.Max(bottomSpace, context.pageBottom-currentPositionY-height)
+		bottomSpace = max(bottomSpace, context.pageBottom-currentPositionY-height)
 
 		// Replace the current box children with real columns
 		i := 0
@@ -387,7 +391,7 @@ func columnsLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.F
 			nextPage = columnNextPage
 			skipStack = columnSkipStack
 			columns = append(columns, newChild)
-			maxColumnHeight = pr.Max(maxColumnHeight, newChild.Box().MarginHeight())
+			maxColumnHeight = max(maxColumnHeight, newChild.Box().MarginHeight())
 			if skipStack == nil {
 				bottomSpace = originalBottomSpace
 				break
@@ -403,7 +407,7 @@ func columnsLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.F
 		}
 
 		// Update the current y position and set the columns’ height
-		currentPositionY += pr.Min(maxHeight, maxColumnHeight)
+		currentPositionY += min(maxHeight, maxColumnHeight)
 		for _, column := range columns {
 			column.Box().Height = maxColumnHeight
 			newChildren = append(newChildren, column)
@@ -500,15 +504,14 @@ func reportFootnotes(context *layoutContext, footnotesHeight pr.Float) {
 	// Revert reported footnotes, as they’ve been reported starting from the
 	// last one
 	if reportedFootnotes >= 2 {
-		L := len(context.reportedFootnotes)
-		reverseB(context.reportedFootnotes[L-reportedFootnotes:])
+		slices.Reverse(context.reportedFootnotes[len(context.reportedFootnotes)-reportedFootnotes:])
 	}
 }
 
 // Create a column box including given children.
 func createColumnBox(box_ Box, containingBlock containingBlock, children []Box, width, positionY pr.Float) bo.BlockBoxITF {
 	columnBox := box_.Type().AnonymousFrom(box_, children).(bo.BlockBoxITF) // AnonymousFrom preserves concrete types
-	resolvePercentagesBox(columnBox, containingBlock, 0)
+	resolvePercentagesBox(columnBox, containingBlock)
 	columnBox.Box().IsColumn = true
 	columnBox.Box().Width = width
 	columnBox.Box().PositionX = box_.Box().ContentBoxX()

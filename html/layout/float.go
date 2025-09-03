@@ -28,7 +28,7 @@ func floatLayout(context *layoutContext, box_ Box, containingBlock *bo.BoxFields
 	fixedBoxes *[]*AbsolutePlaceholder, bottomSpace pr.Float, skipStack tree.ResumeStack,
 ) (Box, tree.ResumeStack) {
 	cbWidth, cbHeight := containingBlock.Width, containingBlock.Height
-	resolvePercentages(box_, bo.MaybePoint{cbWidth, cbHeight}, 0)
+	resolvePercentages(box_, bo.MaybePoint{cbWidth, cbHeight})
 
 	// TODO: This is only handled later in blocks.blockContainerLayout
 	// https://www.w3.org/TR/CSS21/visudet.html#normal-block
@@ -79,7 +79,7 @@ func floatLayout(context *layoutContext, box_ Box, containingBlock *bo.BoxFields
 		context.finishBlockFormattingContext(box_)
 	} else if bo.FlexContainerT.IsInstance(box_) {
 		box_, tmp = flexLayout(context, box_, bottomSpace, skipStack, containingBlock,
-			true, absoluteBoxes, fixedBoxes)
+			true, absoluteBoxes, fixedBoxes, false)
 		resumeAt = tmp.resumeAt
 	} else if bo.GridContainerT.IsInstance(box_) {
 		box_, tmp = gridLayout(
@@ -128,10 +128,18 @@ func findFloatPosition(context *layoutContext, box_ Box, containingBlock *bo.Box
 }
 
 // Return nil if there is no clearance, otherwise the clearance value (as Float)
-// collapseMargin = 0
+// [collapsedMargin] defaults to 0
 func getClearance(context *layoutContext, box *bo.BoxFields, collapsedMargin pr.Float) (clearance pr.MaybeFloat) {
-	hypotheticalPosition := box.PositionY + collapsedMargin
+	// Box should be after shape that’s broken on this page.
+	for _, brokenShape := range context.brokenOutOfFlow {
+		if brokenShape.box.Box().IsFloated() {
+			if clear := box.Style.GetClear(); clear == brokenShape.box.Box().Style.GetFloat() || clear == "both" {
+				return pr.Inf
+			}
+		}
+	}
 	// Hypothetical position is the position of the top border edge
+	hypotheticalPosition := box.PositionY + collapsedMargin
 	for _, excludedShape := range context.excludedShapes.list {
 		if clear := box.Style.GetClear(); clear == excludedShape.Style.GetFloat() || clear == "both" {
 			y, h := excludedShape.PositionY, excludedShape.MarginHeight()
@@ -140,7 +148,7 @@ func getClearance(context *layoutContext, box *bo.BoxFields, collapsedMargin pr.
 				if clearance != nil {
 					safeClearance = clearance.V()
 				}
-				clearance = pr.Max(safeClearance, y+h-hypotheticalPosition)
+				clearance = max(safeClearance, y+h-hypotheticalPosition)
 			}
 		}
 	}
@@ -198,10 +206,10 @@ func avoidCollisions(context *layoutContext, box_ Box, containingBlock *bo.BoxFi
 		// Set the real maximum bounds according to sibling float elements
 		if len(leftBounds) != 0 || len(rightBounds) != 0 {
 			if len(leftBounds) != 0 {
-				maxLeftBound = pr.Max(pr.Maxs(leftBounds...), maxLeftBound)
+				maxLeftBound = max(pr.Maxs(leftBounds...), maxLeftBound)
 			}
 			if len(rightBounds) != 0 {
-				maxRightBound = pr.Min(pr.Mins(rightBounds...), maxRightBound)
+				maxRightBound = min(pr.Mins(rightBounds...), maxRightBound)
 			}
 
 			// Points 3, 7 && 8
@@ -232,10 +240,10 @@ func avoidCollisions(context *layoutContext, box_ Box, containingBlock *bo.BoxFi
 	// - line boxes
 	// - table wrappers
 	// - block-level replaced box
-	// - element establishing new formatting contexts (not handled)
+	// - element establishing new formatting contexts
 	if traceMode {
 		if fl := box.Style.GetFloat(); !(fl == "right" || fl == "left" || bo.LineT.IsInstance(box_) ||
-			box.IsTableWrapper || bo.BlockReplacedT.IsInstance(box_)) {
+			box.IsTableWrapper || bo.BlockReplacedT.IsInstance(box_) || bo.EstablishesFormattingContext(box_)) {
 			panic("assertion failed")
 		}
 	}
@@ -253,9 +261,11 @@ func avoidCollisions(context *layoutContext, box_ Box, containingBlock *bo.BoxFi
 				// bound.
 				positionX = maxRightBound - boxWidth
 			} else {
-				// The position of the right border of the replaced box is at
-				// the right bound.
-				// assert isinstance(box, boxes.BlockReplacedBox)
+				// The position of the right border of the replaced box or
+				// formatting context is at the right bound.
+				if !(bo.BlockReplacedT.IsInstance(box_) || bo.EstablishesFormattingContext(box_)) {
+					panic(fmt.Sprintf("expected BlockContainer, got %T", box_))
+				}
 				positionX = maxRightBound - boxWidth
 			}
 		}

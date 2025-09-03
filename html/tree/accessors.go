@@ -1810,6 +1810,90 @@ func (s *AnonymousStyle) SetMarks(v pr.Marks) {
 	s.propsCache.known[pr.PMarks] = v
 }
 
+func (s *ComputedStyle) GetMaskBorderMode() pr.String {
+	return s.Get(pr.PMaskBorderMode.Key()).(pr.String)
+}
+func (s *ComputedStyle) SetMaskBorderMode(v pr.String) {
+	s.propsCache.known[pr.PMaskBorderMode] = v
+}
+
+func (s *AnonymousStyle) GetMaskBorderMode() pr.String {
+	return s.Get(pr.PMaskBorderMode.Key()).(pr.String)
+}
+func (s *AnonymousStyle) SetMaskBorderMode(v pr.String) {
+	s.propsCache.known[pr.PMaskBorderMode] = v
+}
+
+func (s *ComputedStyle) GetMaskBorderOutset() pr.Values {
+	return s.Get(pr.PMaskBorderOutset.Key()).(pr.Values)
+}
+func (s *ComputedStyle) SetMaskBorderOutset(v pr.Values) {
+	s.propsCache.known[pr.PMaskBorderOutset] = v
+}
+
+func (s *AnonymousStyle) GetMaskBorderOutset() pr.Values {
+	return s.Get(pr.PMaskBorderOutset.Key()).(pr.Values)
+}
+func (s *AnonymousStyle) SetMaskBorderOutset(v pr.Values) {
+	s.propsCache.known[pr.PMaskBorderOutset] = v
+}
+
+func (s *ComputedStyle) GetMaskBorderRepeat() pr.Strings {
+	return s.Get(pr.PMaskBorderRepeat.Key()).(pr.Strings)
+}
+func (s *ComputedStyle) SetMaskBorderRepeat(v pr.Strings) {
+	s.propsCache.known[pr.PMaskBorderRepeat] = v
+}
+
+func (s *AnonymousStyle) GetMaskBorderRepeat() pr.Strings {
+	return s.Get(pr.PMaskBorderRepeat.Key()).(pr.Strings)
+}
+func (s *AnonymousStyle) SetMaskBorderRepeat(v pr.Strings) {
+	s.propsCache.known[pr.PMaskBorderRepeat] = v
+}
+
+func (s *ComputedStyle) GetMaskBorderSlice() pr.Values {
+	return s.Get(pr.PMaskBorderSlice.Key()).(pr.Values)
+}
+func (s *ComputedStyle) SetMaskBorderSlice(v pr.Values) {
+	s.propsCache.known[pr.PMaskBorderSlice] = v
+}
+
+func (s *AnonymousStyle) GetMaskBorderSlice() pr.Values {
+	return s.Get(pr.PMaskBorderSlice.Key()).(pr.Values)
+}
+func (s *AnonymousStyle) SetMaskBorderSlice(v pr.Values) {
+	s.propsCache.known[pr.PMaskBorderSlice] = v
+}
+
+func (s *ComputedStyle) GetMaskBorderSource() pr.Image {
+	return s.Get(pr.PMaskBorderSource.Key()).(pr.Image)
+}
+func (s *ComputedStyle) SetMaskBorderSource(v pr.Image) {
+	s.propsCache.known[pr.PMaskBorderSource] = v
+}
+
+func (s *AnonymousStyle) GetMaskBorderSource() pr.Image {
+	return s.Get(pr.PMaskBorderSource.Key()).(pr.Image)
+}
+func (s *AnonymousStyle) SetMaskBorderSource(v pr.Image) {
+	s.propsCache.known[pr.PMaskBorderSource] = v
+}
+
+func (s *ComputedStyle) GetMaskBorderWidth() pr.Values {
+	return s.Get(pr.PMaskBorderWidth.Key()).(pr.Values)
+}
+func (s *ComputedStyle) SetMaskBorderWidth(v pr.Values) {
+	s.propsCache.known[pr.PMaskBorderWidth] = v
+}
+
+func (s *AnonymousStyle) GetMaskBorderWidth() pr.Values {
+	return s.Get(pr.PMaskBorderWidth.Key()).(pr.Values)
+}
+func (s *AnonymousStyle) SetMaskBorderWidth(v pr.Values) {
+	s.propsCache.known[pr.PMaskBorderWidth] = v
+}
+
 func (s *ComputedStyle) GetMaxHeight() pr.DimOrS {
 	return s.Get(pr.PMaxHeight.Key()).(pr.DimOrS)
 }

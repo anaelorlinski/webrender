@@ -122,6 +122,10 @@ var (
 		pr.PBorderImageWidth:  borderImageWidth,
 		pr.PBorderImageOutset: borderImageOutset,
 		pr.PBorderImageRepeat: borderImageRepeat,
+		pr.PMaskBorderSlice:   borderImageSlice,
+		pr.PMaskBorderWidth:   borderImageWidth,
+		pr.PMaskBorderOutset:  borderImageOutset,
+		pr.PMaskBorderRepeat:  borderImageRepeat,
 
 		pr.PGridTemplateColumns: gridTemplate,
 		pr.PGridTemplateRows:    gridTemplate,

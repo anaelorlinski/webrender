@@ -2,6 +2,7 @@ package layout
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/benoitkugler/webrender/html/tree"
 
@@ -43,7 +44,7 @@ func blockLevelLayout(context *layoutContext, box bo.BlockLevelBoxITF, bottomSpa
 
 	box_ := box.Box()
 	if !bo.TableT.IsInstance(box) {
-		resolvePercentagesBox(box, containingBlock, 0)
+		resolvePercentagesBox(box, containingBlock)
 
 		if box_.MarginTop == pr.AutoF {
 			box_.MarginTop = pr.Float(0)
@@ -104,7 +105,7 @@ func blockLevelLayoutSwitch(context *layoutContext, box_ bo.BlockLevelBoxITF, bo
 		return b.(bo.BlockLevelBoxITF), v, -1 // blockReplacedBoxLayout is type stable
 	} else if bo.FlexT.IsInstance(box_) {
 		box_, layout := flexLayout(context, box_, bottomSpace, skipStack, containingBlock,
-			pageIsEmpty, absoluteBoxes, fixedBoxes)
+			pageIsEmpty, absoluteBoxes, fixedBoxes, discard)
 		return box_.(bo.BlockLevelBoxITF), layout, -1 // flexLayout is type stable
 	} else if bo.GridT.IsInstance(box_) {
 		box_, layout := gridLayout(context, box_, bottomSpace, skipStack, containingBlock,
@@ -144,7 +145,12 @@ func blockBoxLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.
 	newBox__, result, _ := blockContainerLayout(context, box_, bottomSpace, skipStack, pageIsEmpty,
 		absoluteBoxes, fixedBoxes, adjoiningMargins, discard, maxLines)
 	newBox, _ := newBox__.(bo.BlockBoxITF) // blockContainerLayout is type stable
-	if newBox != nil && newBox.Box().IsTableWrapper {
+	// TODO: columns and flex items shouldn't be block boxes, this condition
+	// would then be useless when this is fixed.
+	if newBox == nil || newBox.Box().IsColumn || newBox.Box().IsFlexItem {
+		return newBox, result
+	}
+	if newBox.Box().IsTableWrapper || bo.EstablishesFormattingContext(newBox) {
 		// Don't collide with floats
 		// https://www.w3.org/TR/CSS21/visuren.html#floats
 		positionX, positionY, _ := avoidCollisions(context, newBox, containingBlock, false)
@@ -296,20 +302,13 @@ func reversedBoxes(in []Box) []Box {
 	return out
 }
 
-// reverse in place
-func reverseB(a []Box) {
-	for left, right := 0, len(a)-1; left < right; left, right = left+1, right-1 {
-		a[left], a[right] = a[right], a[left]
-	}
-}
-
 // Set the “box“ height.
 func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStack tree.ResumeStack,
 	pageIsEmpty bool, absoluteBoxes, fixedBoxes *[]*AbsolutePlaceholder, adjoiningMargins *[]pr.Float, discard bool, maxLines int,
 ) (Box, blockLayout, int) {
 	box := box_.Box()
-	if !(bo.BlockContainerT.IsInstance(box_) || bo.FlexT.IsInstance(box_)) {
-		panic(fmt.Sprintf("expected BlockContainer or Flex, got %T", box_))
+	if !bo.BlockContainerT.IsInstance(box_) {
+		panic(fmt.Sprintf("expected BlockContainer, got %T", box_))
 	}
 
 	if traceMode {
@@ -317,7 +316,7 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 	}
 
 	// See https://www.w3.org/TR/CSS21/visuren.html#block-formatting
-	if establishesFormattingContext(box_) {
+	if bo.EstablishesFormattingContext(box_) {
 		context.createBlockFormattingContext()
 	}
 
@@ -335,7 +334,7 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 	thisBoxAdjoiningMargins := adjoiningMargins
 
 	collapsingWithChildren := !(pr.Is(box.BorderTopWidth) || pr.Is(box.PaddingTop) || box.IsFlexItem ||
-		box.IsGridItem || establishesFormattingContext(box_) || box.IsForRootElement)
+		box.IsGridItem || bo.EstablishesFormattingContext(box_) || box.IsForRootElement)
 	var positionY pr.Float
 	if collapsingWithChildren {
 		// Not counting margins in adjoining_margins, if any
@@ -355,11 +354,10 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 	}
 
 	var (
-		newChildren, allFootnotes []Box
-		nextPage                  = tree.PageBreak{Break: "any"}
-		resumeAt                  tree.ResumeStack
-		brokenOutOfFlow           = make(map[Box]brokenBox)
-		lastInFlowChild           Box
+		newChildren, brokenOutOfFlow []Box
+		nextPage                     = tree.PageBreak{Break: "any"}
+		resumeAt                     tree.ResumeStack
+		lastInFlowChild              Box
 	)
 
 	if ml := box.Style.GetMaxLines(); ml.Tag != pr.None {
@@ -394,7 +392,14 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 			stop, resumeAt, newChild, outOfFlowResumeAt = outOfFlowLayout(context, box_, index, child_,
 				&newChildren, pageIsEmpty, absoluteBoxes, fixedBoxes, *adjoiningMargins, bottomSpace)
 			if outOfFlowResumeAt != nil {
-				brokenOutOfFlow[newChild] = brokenBox{child_, box_, outOfFlowResumeAt}
+				context.brokenOutOfFlow[newChild] = brokenBox{child_, box_, outOfFlowResumeAt}
+				brokenOutOfFlow = append(brokenOutOfFlow, newChild)
+			}
+			if child.IsOutsideMarker {
+				newChild.Box().PositionX = box.BorderBoxX()
+				if child.Style.GetDirection() == "rtl" {
+					newChild.Box().PositionX += box.Width.V() + box.PaddingRight.V()
+				}
 			}
 		} else if childLineBox, ok := child_.(*bo.LineBox); ok { // LineBox is a final type
 			abort, stop, resumeAt, positionY, newChildren, newFootnotes, maxLines = lineBoxLayout(context, box_, index, childLineBox,
@@ -402,7 +407,6 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 				bottomSpace, positionY, skipStack, firstLetterStyle, maxLines)
 			drawBottomDecoration = drawBottomDecoration || resumeAt == nil
 			adjoiningMargins = new([]pr.Float)
-			allFootnotes = append(allFootnotes, newFootnotes...)
 		} else {
 			var (
 				adjoiningMarginsV []pr.Float
@@ -457,7 +461,7 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 			return nil, blockLayout{nextPage: tree.PageBreak{Break: "any", Page: page_}}, maxLines
 		} else if stop {
 			if box.Height != pr.AutoF {
-				if context.overflowsPage(box.PositionY+box.Height.V(), positionY) {
+				if context.overflowsPage(box.PositionY+box.BorderHeight(), positionY) {
 					// Box height is fixed and it doesn’t overflow page, forget
 					// overflowing children.
 					resumeAt = nil
@@ -472,21 +476,18 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 		resumeAt = nil
 	}
 
-	boxIsFragmented := resumeAt != nil
+	boxIsFragmented := resumeAt != nil || box.ForceFragmentation
 	if box.Style.GetContinue() == "discard" {
 		resumeAt = nil
 	}
 
 	if bi := string(box.Style.GetBreakInside()); boxIsFragmented && avoidPageBreak(bi, context) && !pageIsEmpty {
-		for _, footnote := range allFootnotes {
-			context.unlayoutFootnote(footnote)
+		removePlaceholders(context, append(newChildren, box.Children[skip:]...), absoluteBoxes, fixedBoxes)
+		for _, child := range brokenOutOfFlow {
+			delete(context.brokenOutOfFlow, child)
 		}
 
 		return nil, blockLayout{nextPage: tree.PageBreak{Break: "any"}}, maxLines
-	}
-
-	for k, v := range brokenOutOfFlow {
-		context.brokenOutOfFlow[k] = v
 	}
 
 	if collapsingWithChildren {
@@ -522,7 +523,7 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 	}
 
 	if pr.Is(box.BorderBottomWidth) || pr.Is(box.PaddingBottom) ||
-		establishesFormattingContext(box_) || box.IsForRootElement || box.IsTableWrapper {
+		bo.EstablishesFormattingContext(box_) || box.IsForRootElement || box.IsTableWrapper {
 		positionY += collapseMargin(*adjoiningMargins)
 		adjoiningMargins = new([]pr.Float)
 	}
@@ -540,9 +541,13 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 					maxFloatPositionY = v
 				}
 			}
-			positionY = pr.Max(maxFloatPositionY, positionY)
+			positionY = max(maxFloatPositionY, positionY)
 		}
-		newBox.Height = positionY - newBox.ContentBoxY()
+		if positionY == newBox.ContentBoxY() && positionY == pr.Inf {
+			newBox.Height = pr.Float(0)
+		} else {
+			newBox.Height = positionY - newBox.ContentBoxY()
+		}
 	}
 
 	if newBox.Style.GetPosition().String == "relative" {
@@ -556,14 +561,14 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 		relativePositioning(child, bo.Point{newBox.Width.V(), newBox.Height.V()})
 	}
 
-	if establishesFormattingContext(newBox_) {
+	if bo.EstablishesFormattingContext(newBox_) {
 		context.finishBlockFormattingContext(newBox_)
 	}
 
 	if discard || !boxIsFragmented {
 		// After finishBlockFormattingContext which may increment
 		// newBox.Height
-		newBox.Height = pr.Max(pr.Min(newBox.Height.V(), newBox.MaxHeight.V()), newBox.MinHeight.V())
+		newBox.Height = max(min(newBox.Height.V(), newBox.MaxHeight.V()), newBox.MinHeight.V())
 	} else if bottomSpace > -pr.Inf && !newBox.IsColumn {
 		// Make the box fill the blank space at the bottom of the page
 		// https://www.w3.org/TR/css-break-3/#box-splitting
@@ -656,7 +661,7 @@ func outOfFlowLayout(context *layoutContext, box bo.Box, index int, child_ Box, 
 	return stop, resumeAt, newChild, outOfFlowLayoutResumeAt
 }
 
-func breakLine(context *layoutContext, box *bo.BoxFields, line *bo.LineBox, newChildren *[]Box, iter *lineBoxeIterator,
+func breakLine(context *layoutContext, box *bo.BoxFields, line *bo.LineBox, newChildren *[]Box, nextLines int,
 	pageIsEmpty bool, index int, skipStack, resumeAt tree.ResumeStack,
 	absoluteBoxes, fixedBoxes *[]*AbsolutePlaceholder,
 ) (bool, bool, tree.ResumeStack) {
@@ -668,16 +673,8 @@ func breakLine(context *layoutContext, box *bo.BoxFields, line *bo.LineBox, newC
 	}
 	// How many lines we need on the next page to satisfy widows
 	// -1 for the current line.
-	needed := int(box.Style.GetWidows() - 1)
-	if needed != 0 {
-		for iter.Has() {
-			iter.Next()
-			needed -= 1
-			if needed == 0 {
-				break
-			}
-		}
-	}
+	needed := max(int(box.Style.GetWidows())-1-nextLines, 0)
+
 	if needed > overOrphans && !pageIsEmpty {
 		// Total number of lines < orphans + widows
 		return true, false, resumeAt
@@ -744,16 +741,50 @@ func lineBoxLayout(context *layoutContext, box_ Box, index int, child_ *bo.LineB
 			offsetY = box.BorderBottomWidth.V() + box.PaddingBottom.V()
 		}
 
-		// Allow overflow if the first line of the page is higher
-		// than the page itself so that we put *something* on this
-		// page and can advance in the context.
+		// Allow overflow if the first line of the page is higher than the page itself so
+		// that we put *something* on this page and can advance in the context.
 		overflow := (len(newChildren) != 0 || !pageIsEmpty) && context.overflowsPage(bottomSpace, newPositionY+offsetY)
 		if overflow {
-			abort, stop, resumeAt = breakLine(context, box, line_, &newChildren, linesIterator,
-				pageIsEmpty, index, skipStack, resumeAt, absoluteBoxes, fixedBoxes)
+			// If we couldn’t break the line before but can break now, first try to
+			// report footnotes and see if we don’t overflow.
+			couldBreakBefore, canBreakNow := true, true
+			nextLines := linesIterator.consume()
+			if len(newChildren)+1 < int(box.Style.GetOrphans()) {
+				canBreakNow = false
+			} else if nextLines < int(box.Style.GetWidows()) {
+				canBreakNow = false
+			}
+			if len(newChildren) < int(box.Style.GetOrphans()) {
+				couldBreakBefore = false
+			} else if nextLines+1 < int(box.Style.GetWidows()) {
+				couldBreakBefore = false
+			}
+			report := !context.inColumn && canBreakNow && !couldBreakBefore
+			reportedFootnotes := 0
+			hasBroken := false
+			for report && len(context.currentPageFootnotes) != 0 {
+				context.reportFootnote(context.currentPageFootnotes[len(context.currentPageFootnotes)-1])
+				reportedFootnotes += 1
+				if !context.overflowsPage(bottomSpace, newPositionY+offsetY) {
+					newChildren = append(newChildren, line_)
+					stop = true
+					hasBroken = true
+					break
+				}
+			}
+			if !hasBroken {
+				abort, stop, resumeAt = breakLine(context, box, line_, &newChildren, nextLines,
+					pageIsEmpty, index, skipStack, resumeAt, absoluteBoxes, fixedBoxes)
+			}
 
 			if traceMode {
 				traceLogger.Dump("lineBoxLayout -> overflow")
+			}
+
+			// Revert reported footnotes, as they’ve been reported starting from the last
+			// one.
+			if reportedFootnotes >= 2 {
+				slices.Reverse(context.reportedFootnotes[len(context.reportedFootnotes)-reportedFootnotes:])
 			}
 
 			break
@@ -789,8 +820,9 @@ func lineBoxLayout(context *layoutContext, box_ Box, index int, child_ *bo.LineB
 					// even try.
 					if len(newChildren) != 0 || !pageIsEmpty {
 						if footnote.Box().Style.GetFootnotePolicy() == "line" {
+							nextLines := linesIterator.consume()
 							abort, stop, resumeAt = breakLine(
-								context, box, line_, &newChildren, linesIterator, pageIsEmpty,
+								context, box, line_, &newChildren, nextLines, pageIsEmpty,
 								index, skipStack, resumeAt, absoluteBoxes, fixedBoxes)
 							breakLinebox = true
 						} else if footnote.Box().Style.GetFootnotePolicy() == "block" {
@@ -852,7 +884,7 @@ func inFlowLayout(context *layoutContext, box_ bo.Box, index int, child_ Box, ne
 	newContainingBlock := box
 
 	if !newContainingBlock.IsTableWrapper {
-		resolvePercentagesBox(child_, newContainingBlock, 0)
+		resolvePercentagesBox(child_, newContainingBlock)
 		if lastInFlowChild == nil && collapsingWithChildren {
 			oldCollapsedMargin := collapseMargin(*adjoiningMargins)
 			childMarginTop := child.MarginTop
@@ -883,10 +915,20 @@ func inFlowLayout(context *layoutContext, box_ bo.Box, index int, child_ Box, ne
 		}
 	}
 	if len(*adjoiningMargins) != 0 && box.IsTableWrapper {
-		collapsedMargin := collapseMargin(*adjoiningMargins)
-		child.PositionY += collapsedMargin
-		positionY += collapsedMargin
-		adjoiningMargins = new([]pr.Float)
+		if box.IsTableWrapper { // should not be a special case
+			collapsedMargin := collapseMargin(*adjoiningMargins)
+			child.PositionY += collapsedMargin
+			adjoiningMargins = new([]pr.Float)
+		} else if !bo.BlockT.IsInstance(child_) { // blocks handle that themselves
+			var marginTop pr.Float
+			if mt := child.Style.GetMarginTop(); mt.S != "auto" {
+				marginTop = pr.ResolvePercentage(mt, box.Width.V()).V()
+			}
+			*adjoiningMargins = append(*adjoiningMargins, marginTop)
+			offsetY := collapseMargin(*adjoiningMargins) - marginTop
+			child.PositionY += offsetY
+			adjoiningMargins = new([]pr.Float)
+		}
 	}
 
 	atLeastOneNotPlaceholder := false
@@ -913,16 +955,6 @@ func inFlowLayout(context *layoutContext, box_ bo.Box, index int, child_ Box, ne
 
 	if newChild_ != nil {
 		newChild := newChild_.Box()
-
-		// We need to do this after the child layout to have the
-		// used value for marginTop (eg. it might be a percentage.)
-		if !(bo.BlockT.IsInstance(newChild_) || bo.TableT.IsInstance(newChild_)) {
-			*adjoiningMargins = append(*adjoiningMargins, newChild.MarginTop.V())
-			offsetY := collapseMargin(*adjoiningMargins) - newChild.MarginTop.V()
-			newChild_.Translate(newChild_, 0, offsetY, false)
-		}
-		// else: blocks handle that themselves.
-
 		if !collapsingThrough {
 			newContentPositionY := newChild.ContentBoxY() + newChild.Height.V()
 			newPositionY := newChild.BorderBoxY() + newChild.BorderHeight()
@@ -1035,27 +1067,9 @@ func collapseMargin(adjoiningMargins []pr.Float) pr.Float {
 	return maxPos + minNeg
 }
 
-// Return wether a box establishes a block formatting context.
-// See https://www.w3.org/TR/CSS2/visuren.html#block-formatting
-func establishesFormattingContext(box_ Box) bool {
-	box := box_.Box()
-	return box.IsFloated() ||
-		box.IsAbsolutelyPositioned() ||
-		box.IsColumn ||
-		(bo.BlockContainerT.IsInstance(box_) && !bo.BlockT.IsInstance(box_)) ||
-		(bo.BlockT.IsInstance(box_) && box.Style.GetOverflow() != "visible") ||
-		box.Style.GetDisplay().Has("flow-root")
-}
-
 // https://drafts.csswg.org/css-break-3/#possible-breaks
 func isParallel(box Box) bool {
 	return bo.BlockLevelT.IsInstance(box) || bo.TableRowGroupT.IsInstance(box) || bo.TableRowT.IsInstance(box)
-}
-
-func reverseStrings(f []pr.String) {
-	for left, right := 0, len(f)-1; left < right; left, right = left+1, right-1 {
-		f[left], f[right] = f[right], f[left]
-	}
 }
 
 // Return the value of “page-break-before“ or “page-break-after“
@@ -1080,7 +1094,7 @@ func blockLevelPageBreak(siblingBefore, siblingAfter Box) string {
 		}
 		box_ = box.Children[len(box.Children)-1]
 	}
-	reverseStrings(values) // Have them in tree order
+	slices.Reverse(values) // Have them in tree order
 
 	box_ = siblingAfter
 	for isParallel(box_) {

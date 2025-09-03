@@ -61,20 +61,6 @@ func MaybeFloatToValue(mf MaybeFloat) DimOrS {
 	return mf.V().ToValue()
 }
 
-func Min(x, y Float) Float {
-	if x < y {
-		return x
-	}
-	return y
-}
-
-func Max(x, y Float) Float {
-	if x > y {
-		return x
-	}
-	return y
-}
-
 func Floor(x Float) Float {
 	return Float(math.Floor(float64(x)))
 }

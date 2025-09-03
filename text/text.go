@@ -215,6 +215,14 @@ func indexRune(text []rune, s rune) int {
 	return -1
 }
 
+func HasPrefix(s []rune, r rune) bool {
+	return len(s) != 0 && s[0] == r
+}
+
+func HasSuffix(s []rune, r rune) bool {
+	return len(s) != 0 && s[len(s)-1] == r
+}
+
 func TrimRight(s []rune, r rune) []rune {
 	for len(s) > 0 && s[len(s)-1] == r {
 		s = s[:len(s)-1]

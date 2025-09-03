@@ -2,6 +2,7 @@ package layout
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	pr "github.com/benoitkugler/webrender/css/properties"
@@ -46,7 +47,7 @@ func (o orientedBox) outer() pr.Float {
 }
 
 func (o *orientedBox) setOuter(newOuterWidth pr.Float) {
-	o.inner = pr.Min(pr.Max(o.minContentSize(), newOuterWidth-o.sugar()), o.maxContentSize())
+	o.inner = min(max(o.minContentSize(), newOuterWidth-o.sugar()), o.maxContentSize())
 }
 
 func (o orientedBox) outerMinContentSize() pr.Float {
@@ -331,7 +332,7 @@ func computeVariableDimension(context *layoutContext, sideBoxes_ [3]*bo.MarginBo
 	} else {
 		if boxB.inner == pr.AutoF {
 			// resolve any auto width of the middle box (B)
-			acMaxContentSize := 2 * pr.Max(boxA.outerMaxContentSize(), boxC.outerMaxContentSize())
+			acMaxContentSize := 2 * max(boxA.outerMaxContentSize(), boxC.outerMaxContentSize())
 			if availableSize > (boxB.outerMaxContentSize() + acMaxContentSize) {
 				flexSpace := availableSize - boxB.outerMaxContentSize() - acMaxContentSize
 				flexFactorB := boxB.outerMaxContentSize()
@@ -342,7 +343,7 @@ func computeVariableDimension(context *layoutContext, sideBoxes_ [3]*bo.MarginBo
 				}
 				boxB.setOuter(boxB.maxContentSize() + (flexSpace * flexFactorB / flexFactorSum))
 			} else {
-				acMinContentSize := 2 * pr.Max(boxA.outerMinContentSize(), boxC.outerMinContentSize())
+				acMinContentSize := 2 * max(boxA.outerMinContentSize(), boxC.outerMinContentSize())
 				if availableSize > (boxB.outerMinContentSize() + acMinContentSize) {
 					flexSpace := availableSize - boxB.outerMinContentSize() - acMinContentSize
 					flexFactorB := boxB.maxContentSize() - boxB.minContentSize()
@@ -454,7 +455,7 @@ func makeMarginBoxes(context *layoutContext, page *bo.PageBox, state tree.PageSt
 			bo.ProcessTextTransform(box)
 			box = bo.CreateAnonymousBox(box).(*bo.MarginBox) // type stable
 		}
-		resolvePercentages(box, containingBlock, 0)
+		resolvePercentages(box, containingBlock)
 		boxF := box.Box()
 		if !box.IsGenerated {
 			boxF.Width = pr.Float(0)
@@ -668,7 +669,7 @@ func (context *layoutContext) makePage(rootBox bo.BlockLevelBoxITF, pageType uti
 
 	deviceSize_ := page.Style.GetSize()
 	cbWidth, cbHeight := deviceSize_[0].Value, deviceSize_[1].Value
-	resolvePercentages(page, bo.MaybePoint{cbWidth, cbHeight}, 0)
+	resolvePercentages(page, bo.MaybePoint{cbWidth, cbHeight})
 
 	page.PositionX = 0
 	page.PositionY = 0
@@ -682,7 +683,7 @@ func (context *layoutContext) makePage(rootBox bo.BlockLevelBoxITF, pageType uti
 
 	footnoteAreaStyle := context.styleFor.Get(pageType, "@footnote")
 	footnoteArea := bo.NewFootnoteAreaBox(page, footnoteAreaStyle)
-	resolvePercentages(footnoteArea, bo.MaybePoint{page.Width, page.Height}, 0)
+	resolvePercentages(footnoteArea, bo.MaybePoint{page.Width, page.Height})
 	footnoteArea.PositionX = page.ContentBoxX()
 	footnoteArea.PositionY = context.pageBottom
 
@@ -692,10 +693,9 @@ func (context *layoutContext) makePage(rootBox bo.BlockLevelBoxITF, pageType uti
 		rootBox = bo.CopyWithChildren(rootBox, nil).(bo.BlockLevelBoxITF) // CopyWithChildren is type stable
 	}
 
-	// TODO: handle cases where the root element is something else.
-	// See https://www.w3.org/TR/CSS21/visuren.html#dis-pos-flo
-	if !(bo.BlockT.IsInstance(rootBox) || bo.FlexContainerT.IsInstance(rootBox) || bo.GridContainerT.IsInstance(rootBox)) {
-		panic(fmt.Sprintf("expected Block, FlexContainer or GridContainer, got %s", rootBox))
+	// https://www.w3.org/TR/css-display-4/#root
+	if !(bo.BlockLevelT.IsInstance(rootBox)) {
+		panic(fmt.Sprintf("expected BlockLevel, got %s", rootBox))
 	}
 	context.createBlockFormattingContext()
 	context.currentPage = pageNumber
@@ -715,7 +715,10 @@ func (context *layoutContext) makePage(rootBox bo.BlockLevelBoxITF, pageType uti
 		}
 	}
 
+	// Display out-of-flow boxes broken on the previous page.
+	// TODO: we shouldn’t separate broken in-flow and out-of-flow layout.
 	var (
+		pageIsEmpty      = true
 		adjoiningMargins []pr.Float
 		positionedBoxes  []*AbsolutePlaceholder // Mixed absolute and fixed
 		outOfFlowBoxes   []Box
@@ -741,16 +744,39 @@ func (context *layoutContext) makePage(rootBox bo.BlockLevelBoxITF, pageType uti
 				&positionedBoxes, 0, v.resumeAt)
 		}
 		outOfFlowBoxes = append(outOfFlowBoxes, outOfFlowBox)
+		pageIsEmpty = false
 		if outOfFlowResumeAt != nil {
 			context.brokenOutOfFlow[outOfFlowBox] = brokenBox{box, containingBlock, outOfFlowResumeAt}
 		}
 	}
 
+	// Display in-flow content.
+	initialRootBox := rootBox
+	initialResumeAt := resumeAt
 	rootBox, tmp, _ := blockLevelLayout(context, rootBox, 0, resumeAt,
 		&initialContainingBlock.BoxFields, true, &positionedBoxes, &positionedBoxes, &adjoiningMargins, false, -1)
 	resumeAt = tmp.resumeAt
 	if rootBox == nil {
-		panic("expected non nil box for the root element")
+		// In-flow page rendering didn’t progress, only out-of-flow did. Render empty box
+		// at skip_stack and force fragmentation to make the root box and its descendants
+		// cover the whole page height.
+		if pageIsEmpty {
+			panic("expected empty page")
+		}
+		initialRootBox = bo.Deepcopy(initialRootBox).(bo.BlockLevelBoxITF)
+		box, parent := Box(initialRootBox), Box(initialRootBox)
+		skipStack := initialResumeAt
+		for len(skipStack) == 1 {
+			var skip int
+			skip, skipStack = skipStack.Unpack()
+			box, parent = box.Box().Children[skip], box
+		}
+		parent.Box().Children = nil
+		parent.Box().ForceFragmentation = true
+		rootBox, _, _ = blockLevelLayout(
+			context, initialRootBox, 0, initialResumeAt, &initialContainingBlock.BoxFields,
+			pageIsEmpty, &positionedBoxes, &positionedBoxes, &adjoiningMargins, false, -1)
+		resumeAt = initialResumeAt
 	}
 
 	rootBox.Box().Children = append(outOfFlowBoxes, rootBox.Box().Children...)
@@ -889,7 +915,7 @@ func (context *layoutContext) makePage(rootBox bo.BlockLevelBoxITF, pageType uti
 
 	if pageType.Blank {
 		resumeAt = previousResumeAt
-		tmp.nextPage = pageMaker[pageNumber-1].InitialNextPage
+		tmp.nextPage = pageMaker[pageNumber-1].NextPage
 	}
 
 	if traceMode {
@@ -900,6 +926,111 @@ func (context *layoutContext) makePage(rootBox bo.BlockLevelBoxITF, pageType uti
 	return page, resumeAt, tmp.nextPage
 }
 
+func includesResumeAt(resumeAt, pageGroupResumeAt tree.ResumeStack) bool {
+	if len(pageGroupResumeAt) == 0 {
+		return true
+	}
+	pageChildIndex, pageChildResumeAt := pageGroupResumeAt.Unpack()
+	if _, in := resumeAt[pageChildIndex]; resumeAt == nil || !in {
+		return false
+	}
+	if pageChildResumeAt == nil {
+		return true
+	}
+	return includesResumeAt(resumeAt[pageChildIndex], pageChildResumeAt)
+}
+
+type pageGroup struct {
+	name     pr.Page
+	index    int
+	resumeAt tree.ResumeStack
+}
+
+func updatePageGroups(pageGroups *[]pageGroup, resumeAt tree.ResumeStack, nextPage tree.PageBreak, rootBox Box, blank bool) pr.Page {
+	// https://www.w3.org/TR/css-gcpm-3/#document-sequence-selectors
+	// Remove or increment page groups.
+	pageGroupsLength := len(*pageGroups)
+	for i, pageGroup := range slices.Clone(*pageGroups) {
+		if includesResumeAt(resumeAt, pageGroup.resumeAt) {
+			(*pageGroups)[i].index += 1
+		} else {
+			*pageGroups = slices.Delete(*pageGroups, i-pageGroupsLength, i-pageGroupsLength)
+		}
+	}
+
+	// Add page groups.
+	if !blank {
+		if (len(resumeAt) != 0 && nextPage.Break == "any") || nextPage.Page == "" {
+			// We don’t have a forced page break |or a named page.
+			return nextPage.Page
+		}
+		if L := len(*pageGroups); L != 0 && (*pageGroups)[L-1].name == nextPage.Page {
+			// We’re already in an element whose page name is the next page name.
+			return nextPage.Page
+		}
+	}
+
+	// Find the box that has the named page. It is a first in-flow child of the
+	// element corresponding to resumeAt.
+
+	// Find element corrensponding to resumeAt.
+	pageGroupResumeAt := resumeAt.Copy()
+	if len(pageGroupResumeAt) == 0 {
+		pageGroupResumeAt = tree.ResumeStack{0: nil}
+	}
+	var (
+		currentResumeAt = pageGroupResumeAt
+		currentElement  = rootBox
+		parentElement   Box
+		childIndex      int
+	)
+	for {
+		var childResumeAt tree.ResumeStack
+		childIndex, childResumeAt = currentResumeAt.Unpack()
+		parentElement = currentElement
+		currentElement = currentElement.Box().Children[childIndex]
+		if childResumeAt == nil {
+			break
+		}
+		currentResumeAt = childResumeAt
+	}
+
+	if blank {
+		// Page is blank, don’t create a new page group and return parent’s page name.
+		return parentElement.Box().Style.GetPage()
+	}
+
+	// Find the descendant with named page.
+	for true {
+		if currentElement.Box().Style.GetPage() == nextPage.Page {
+			*pageGroups = append(*pageGroups, pageGroup{nextPage.Page, 0, pageGroupResumeAt})
+			return nextPage.Page
+		}
+		if !bo.ParentT.IsInstance(currentElement) {
+			// Shouldn’t happen.
+			return nextPage.Page
+		}
+		var hasBroken bool
+		for i, child := range currentElement.Box().Children {
+			if !child.Box().IsInNormalFlow() {
+				continue
+			}
+			currentResumeAt[childIndex] = tree.ResumeStack{i: nil}
+			currentResumeAt = currentResumeAt[childIndex]
+			childIndex = i
+			currentElement = child
+			hasBroken = true
+			break
+		}
+		if !hasBroken {
+			// Shouldn’t happen.
+			return nextPage.Page
+		}
+	}
+
+	return ""
+}
+
 // Return one laid out page without margin boxes.
 // Start with the initial values from “context.pageMaker[index]“.
 // The resulting values / initial values for the next page are stored in
@@ -907,45 +1038,44 @@ func (context *layoutContext) makePage(rootBox bo.BlockLevelBoxITF, pageType uti
 // As the function"s name suggests: the plan is not to make all pages
 // repeatedly when a missing counter was resolved, but rather re-make the
 // single page where the “contentChanged“ happened.
-func (context *layoutContext) remakePage(index int, rootBox bo.BlockLevelBoxITF, html *tree.HTML) (*bo.PageBox, tree.ResumeStack) {
+func (context *layoutContext) remakePage(index int, pageGroups *[]pageGroup, rootBox bo.BlockLevelBoxITF, html *tree.HTML) (*bo.PageBox, tree.ResumeStack) {
 	tmp := context.pageMaker[index]
 
 	// PageType for current page, values for pageMaker[index + 1].
 	// Don't modify actual pageMaker[index] values!
-	pageState := tmp.InitialPageState.Copy()
-	first := index == 0
+	pageState := tmp.PageState.Copy()
 	var nextPageSide string
-	switch tmp.InitialNextPage.Break {
+	switch tmp.NextPage.Break {
 	case "left", "right":
-		nextPageSide = tmp.InitialNextPage.Break
+		nextPageSide = tmp.NextPage.Break
 	case "recto", "verso":
 		directionLtr := rootBox.Box().Style.GetDirection() == "ltr"
-		breakVerso := tmp.InitialNextPage.Break == "verso"
+		breakVerso := tmp.NextPage.Break == "verso"
 		nextPageSide = "left"
 		if directionLtr != breakVerso {
 			nextPageSide = "right"
 		}
 	}
 	blank := (nextPageSide == "left" && tmp.RightPage) || (nextPageSide == "right" && !tmp.RightPage) ||
-		(len(context.reportedFootnotes) != 0 && tmp.InitialResumeAt == nil)
+		(len(context.reportedFootnotes) != 0 && tmp.ResumeAt == nil)
 
-	nextPageName := string(tmp.InitialNextPage.Page)
-	if blank {
-		nextPageName = ""
-	}
 	side := "left"
 	if tmp.RightPage {
 		side = "right"
 	}
-	pageType := utils.PageElement{Side: side, Blank: blank, First: first, Index: index, Name: nextPageName}
+	name := updatePageGroups(pageGroups, tmp.ResumeAt, tmp.NextPage, rootBox, blank)
+	groups := make([]utils.PageGroup, len(*pageGroups))
+	for i, g := range *pageGroups {
+		groups[i] = utils.PageGroup{Name: string(g.name), Index: g.index}
+	}
+	pageType := utils.NewPageElement(side, string(name), index, blank, groups)
 	context.styleFor.SetPageComputedStylesT(pageType, html)
-
-	context.forcedBreak = tmp.InitialNextPage.Break != "any" || tmp.InitialNextPage.Page != ""
+	context.forcedBreak = tmp.NextPage.Break != "any" || tmp.NextPage.Page != ""
 	context.marginClearance = false
 
 	// makePage wants a pageNumber of index + 1
 	pageNumber := index + 1
-	page, resumeAt, nextPage := context.makePage(rootBox, pageType, tmp.InitialResumeAt,
+	page, resumeAt, nextPage := context.makePage(rootBox, pageType, tmp.ResumeAt,
 		pageNumber, &pageState)
 
 	if (nextPage == tree.PageBreak{}) {
@@ -961,13 +1091,12 @@ func (context *layoutContext) remakePage(index int, rootBox bo.BlockLevelBoxITF,
 		pageMakerNextChanged = true
 	} else {
 		// Check whether something changed
-		// TODO: Find what we need to compare. Is resumeAt enough?
 		next := context.pageMaker[index+1]
 		// (nextResumeAt, nextNextPage, nextRightPage,nextPageState, )
-		pageMakerNextChanged = !next.InitialResumeAt.Equals(resumeAt) ||
-			next.InitialNextPage != nextPage ||
+		pageMakerNextChanged = !next.ResumeAt.Equals(resumeAt) ||
+			next.NextPage != nextPage ||
 			next.RightPage != tmp.RightPage ||
-			!next.InitialPageState.Equal(pageState)
+			!next.PageState.Equal(pageState)
 	}
 
 	if pageMakerNextChanged {
@@ -977,10 +1106,9 @@ func (context *layoutContext) remakePage(index int, rootBox bo.BlockLevelBoxITF,
 		// If resumeAt  == nil  (last page) it must be false to prevent endless
 		// loops and list index out of range (see #794).
 		remakeState.ContentChanged = resumeAt != nil
-		// pageState is already a deepcopy
 		item := tree.PageMaker{
-			InitialResumeAt: resumeAt, InitialNextPage: nextPage, RightPage: tmp.RightPage,
-			InitialPageState: pageState, RemakeState: remakeState,
+			ResumeAt: resumeAt, NextPage: nextPage, RightPage: tmp.RightPage,
+			PageState: pageState, RemakeState: remakeState,
 		}
 		if index+1 >= len(context.pageMaker) {
 			context.pageMaker = append(context.pageMaker, item)
@@ -997,9 +1125,11 @@ func (context *layoutContext) remakePage(index int, rootBox bo.BlockLevelBoxITF,
 func (context *layoutContext) makeAllPages(rootBox bo.BlockLevelBoxITF, html *tree.HTML, pages []*bo.PageBox) []*bo.PageBox {
 	var (
 		out               []*bo.PageBox
+		i                 = 0
 		reportedFootnotes []Box
+		pageGroups        []pageGroup
 	)
-	i := 0
+
 	for {
 		remakeState := context.pageMaker[i].RemakeState
 		var (
@@ -1010,12 +1140,12 @@ func (context *layoutContext) makeAllPages(rootBox bo.BlockLevelBoxITF, html *tr
 			logger.ProgressLogger.Printf("Step 5 - Creating layout - Page %d", i+1)
 			// Reset remakeState
 			context.pageMaker[i].RemakeState = tree.RemakeState{}
-			page, resumeAt = context.remakePage(i, rootBox, html)
+			page, resumeAt = context.remakePage(i, &pageGroups, rootBox, html)
 			reportedFootnotes = context.reportedFootnotes
 			out = append(out, page)
 		} else {
 			logger.ProgressLogger.Printf("Step 5 - Creating layout - Page %d (up-to-date)", i+1)
-			resumeAt = context.pageMaker[i+1].InitialResumeAt
+			resumeAt = context.pageMaker[i+1].ResumeAt
 			reportedFootnotes = nil
 			out = append(out, pages[i])
 		}

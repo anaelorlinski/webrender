@@ -2,6 +2,7 @@ package document
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 
 	bo "github.com/benoitkugler/webrender/html/boxes"
@@ -11,6 +12,8 @@ import (
 type aliasForStackingContext = bo.Box
 
 var _ bo.Box = StackingContext{}
+
+type BoxTree map[bo.Box]BoxTree
 
 // Stacking contexts define the paint order of all pieces of a document.
 // http://www.w3.org/TR/CSS21/visuren.html#x43
@@ -25,11 +28,11 @@ type StackingContext struct {
 	negativeZContexts []StackingContext
 	zeroZContexts     []StackingContext
 	positiveZContexts []StackingContext
-	blocksAndCells    []Box
+	blocksAndCells    BoxTree
 	zIndex            int
 }
 
-func NewStackingContext(box Box, childContexts []StackingContext, blocks []bo.Box, floats []StackingContext, blocksAndCells []Box,
+func NewStackingContext(box Box, childContexts []StackingContext, blocks []bo.Box, floats []StackingContext, blocksAndCells BoxTree,
 	page *bo.PageBox,
 ) StackingContext {
 	self := StackingContext{}
@@ -82,11 +85,11 @@ func NewStackingContextFromPage(page *bo.PageBox) StackingContext {
 }
 
 func insertStackingContext(a *[]StackingContext, i int, item StackingContext) {
-	*a = append((*a)[:i], append([]StackingContext{item}, (*a)[i:]...)...)
+	*a = slices.Insert(*a, i, item)
 }
 
 func insertBox(a *[]Box, i int, item Box) {
-	*a = append((*a)[:i], append([]Box{item}, (*a)[i:]...)...)
+	*a = slices.Insert(*a, i, item)
 }
 
 func NewStackingContextFromBox(box Box, page *bo.PageBox, childContexts *[]StackingContext) StackingContext {
@@ -101,92 +104,85 @@ func NewStackingContextFromBox(box Box, page *bo.PageBox, childContexts *[]Stack
 	//    create a new stacking context should be considered part of the
 	//    parent stacking context, not this new one."
 	var (
-		blocks, blocksAndCells []Box
-		floats                 []StackingContext
-		dispatchChildren       func(Box) Box
+		blocks         []Box
+		blocksAndCells = BoxTree{}
+		floats         []StackingContext
 	)
 
-	dispatch := func(box Box) Box {
-		if absPlac, ok := box.(*layout.AbsolutePlaceholder); ok {
-			box = absPlac.AliasBox
-		} else if stack, ok := box.(StackingContext); ok {
-			box = stack.box
-		}
-		style := box.Box().Style
-		absoluteAndZIndex := style.GetPosition().String != "static" && style.GetZIndex().String != "auto"
-		if absoluteAndZIndex || style.GetOpacity() < 1 ||
-			// "transform: none" gives a "falsy" empty list here
-			len(style.GetTransform()) != 0 || style.GetOverflow() != "visible" {
+	box = dispatchChildren(box, page, childContexts, &blocks, floats, blocksAndCells)
+	return NewStackingContext(box, children, blocks, floats, blocksAndCells, page)
+}
 
-			// This box defines a new stacking context, remove it
-			// from the "normal" children list.
-			*childContexts = append(*childContexts, NewStackingContextFromBox(box, page, nil))
-		} else {
-			if style.GetPosition().String != "static" {
-				if style.GetZIndex().String != "auto" {
-					panic(fmt.Sprintf("expected auto z-index, got %v", style.GetZIndex()))
-				}
-				// "Fake" context: sub-contexts will go := range this
-				// `childContexts` list.
-				// Insert at the position before creating the sub-context.
-				index := len(*childContexts)
-				insertStackingContext(childContexts, index, NewStackingContextFromBox(box, page, childContexts))
-			} else if box.Box().IsFloated() {
-				floats = append(floats, NewStackingContextFromBox(box, page, childContexts))
-			} else if bo.InlineBlockT.IsInstance(box) || bo.InlineFlexT.IsInstance(box) {
-				// Have this fake stacking context be part of the "normal"
-				// box tree, because we need its position in the middle
-				// of a tree of inline boxes.
-				return NewStackingContextFromBox(box, page, childContexts)
-			} else {
-				var blocksIndex, blocksAndCellsIndex *int
-				if bo.BlockLevelT.IsInstance(box) {
-					l := len(blocks)
-					blocksIndex = &l
-					l2 := len(blocksAndCells)
-					blocksAndCellsIndex = &l2
-				} else if bo.TableCellT.IsInstance(box) {
-					blocksIndex = nil
-					l := len(blocksAndCells)
-					blocksAndCellsIndex = &l
-				} else {
-					blocksIndex = nil
-					blocksAndCellsIndex = nil
-				}
-
-				box = dispatchChildren(box)
-
-				// Insert at the positions before dispatch the children.
-				if blocksIndex != nil {
-					insertBox(&blocks, *blocksIndex, box)
-				}
-				if blocksAndCellsIndex != nil {
-					insertBox(&blocksAndCells, *blocksAndCellsIndex, box)
-				}
-
-				return box
-			}
-		}
-		return nil
+func dispatch(box Box, page *bo.PageBox, childContexts *[]StackingContext,
+	blocks *[]Box, floats []StackingContext, blocksAndCells BoxTree,
+) Box {
+	if absPlac, ok := box.(*layout.AbsolutePlaceholder); ok {
+		box = absPlac.AliasBox
+	} else if stack, ok := box.(StackingContext); ok {
+		box = stack.box
 	}
+	style := box.Box().Style
+	absoluteAndZIndex := style.GetPosition().String != "static" && style.GetZIndex().String != "auto"
+	if absoluteAndZIndex || style.GetOpacity() < 1 ||
+		// "transform: none" gives a "falsy" empty list here
+		len(style.GetTransform()) != 0 || style.GetOverflow() != "visible" {
 
-	dispatchChildren = func(box Box) Box {
-		if !bo.ParentT.IsInstance(box) {
+		// This box defines a new stacking context, remove it
+		// from the "normal" children list.
+		*childContexts = append(*childContexts, NewStackingContextFromBox(box, page, nil))
+	} else {
+		if style.GetPosition().String != "static" {
+			if style.GetZIndex().String != "auto" {
+				panic(fmt.Sprintf("expected auto z-index, got %v", style.GetZIndex()))
+			}
+			// "Fake" context: sub-contexts will go := range this
+			// `childContexts` list.
+			// Insert at the position before creating the sub-context.
+			index := len(*childContexts)
+			insertStackingContext(childContexts, index, NewStackingContextFromBox(box, page, childContexts))
+		} else if box.Box().IsFloated() {
+			floats = append(floats, NewStackingContextFromBox(box, page, childContexts))
+		} else if bo.InlineBlockT.IsInstance(box) || bo.InlineFlexT.IsInstance(box) {
+			// Have this fake stacking context be part of the "normal"
+			// box tree, because we need its position in the middle
+			// of a tree of inline boxes.
+			return NewStackingContextFromBox(box, page, childContexts)
+		} else {
+			if bo.BlockLevelT.IsInstance(box) {
+				blocksIndex := len(*blocks)
+				boxBlocksAndCells := BoxTree{}
+				box = dispatchChildren(box, page, childContexts, blocks, floats, boxBlocksAndCells)
+				*blocks = slices.Insert(*blocks, blocksIndex, box)
+				blocksAndCells[box] = boxBlocksAndCells
+			} else if bo.TableCellT.IsInstance(box) {
+				boxBlocksAndCells := BoxTree{}
+				box = dispatchChildren(box, page, childContexts, blocks, floats, boxBlocksAndCells)
+				blocksAndCells[box] = boxBlocksAndCells
+			} else {
+				box = dispatchChildren(box, page, childContexts, blocks, floats, blocksAndCells)
+			}
+
 			return box
 		}
+	}
+	return nil
+}
 
-		var newChildren []Box
-		for _, child := range box.Box().Children {
-			result := dispatch(child)
-			if result != nil {
-				newChildren = append(newChildren, result)
-			}
-		}
-		box = bo.CopyWithChildren(box, newChildren)
+func dispatchChildren(box Box, page *bo.PageBox, childContexts *[]StackingContext,
+	blocks *[]Box, floats []StackingContext, blocksAndCells BoxTree,
+) Box {
+	if !bo.ParentT.IsInstance(box) {
 		return box
 	}
-	box = dispatchChildren(box)
-	return NewStackingContext(box, children, blocks, floats, blocksAndCells, page)
+
+	var newChildren []Box
+	for _, child := range box.Box().Children {
+		result := dispatch(child, page, childContexts, blocks, floats, blocksAndCells)
+		if result != nil {
+			newChildren = append(newChildren, result)
+		}
+	}
+	return bo.CopyWithChildren(box, newChildren)
 }
 
 func (StackingContext) Type() bo.BoxType { return bo.StackingContextT }

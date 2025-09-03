@@ -227,12 +227,12 @@ func (m matcher) match(element *html.Node) (out []matchResult) {
 }
 
 type pageIndex struct {
-	Group []parser.Token // TODO: handle groups
+	Group string
 	A, B  int
 }
 
 func (p pageIndex) IsNone() bool {
-	return p.A == 0 && p.B == 0 && p.Group == nil
+	return p.A == 0 && p.B == 0 && p.Group == ""
 }
 
 type pageSelector struct {

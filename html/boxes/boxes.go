@@ -169,6 +169,8 @@ type BoxFields struct {
 	IsLeader         bool
 	IsOutsideMarker  bool
 
+	ForceFragmentation bool
+
 	properTableChild       bool
 	internalTableOrCaption bool
 	tabularContainer       bool
@@ -190,6 +192,8 @@ type BoxFields struct {
 	BorderTopWidth, BorderRightWidth, BorderBottomWidth, BorderLeftWidth pr.Float
 
 	BorderTopLeftRadius, BorderTopRightRadius, BorderBottomRightRadius, BorderBottomLeftRadius Point
+
+	MainOuterExtra pr.Float // used for flex layout
 
 	ViewportOverflow string
 
@@ -227,7 +231,7 @@ type BoxFields struct {
 
 	RemoveDecorationSides [4]bool
 
-	BorderImage images.Image
+	BorderImage, MaskBorderImage images.Image
 }
 
 func newBoxFields(style pr.ElementStyle, element *html.Node, pseudoType string, children []Box) BoxFields {
@@ -445,14 +449,14 @@ func (b *BoxFields) roundedBox(bt, br, bb, bl pr.Float) RoundedBox {
 	brr := b.BorderBottomRightRadius
 	blr := b.BorderBottomLeftRadius
 
-	tlrx := pr.Max(0, tlr[0]-bl)
-	tlry := pr.Max(0, tlr[1]-bt)
-	trrx := pr.Max(0, trr[0]-br)
-	trry := pr.Max(0, trr[1]-bt)
-	brrx := pr.Max(0, brr[0]-br)
-	brry := pr.Max(0, brr[1]-bb)
-	blrx := pr.Max(0, blr[0]-bl)
-	blry := pr.Max(0, blr[1]-bb)
+	tlrx := max(0, tlr[0]-bl)
+	tlry := max(0, tlr[1]-bt)
+	trrx := max(0, trr[0]-br)
+	trry := max(0, trr[1]-bt)
+	brrx := max(0, brr[0]-br)
+	brry := max(0, brr[1]-bb)
+	blrx := max(0, blr[0]-bl)
+	blry := max(0, blr[1]-bb)
 
 	x := b.BorderBoxX() + bl
 	y := b.BorderBoxY() + bt
@@ -548,6 +552,18 @@ func IsMonolithic(box Box) bool {
 	overflow, height := style.GetOverflow(), style.GetHeight()
 	return AtomicInlineLevelT.IsInstance(box) || ReplacedT.IsInstance(box) ||
 		overflow == "auto" || overflow == "scroll" || (overflow == "hidden" && height.S != "auto")
+}
+
+// Return whether this box establishes a block formatting context.
+// See https://www.w3.org/TR/CSS2/visuren.html#block-formatting
+func EstablishesFormattingContext(box_ Box) bool {
+	box := box_.Box()
+	return (box.IsFloated() ||
+		box.IsAbsolutelyPositioned() ||
+		box.IsColumn ||
+		(BlockContainerT.IsInstance(box_) && !BlockT.IsInstance(box_)) ||
+		(BlockT.IsInstance(box_) && box.Style.GetOverflow() != "visible") ||
+		box.Style.GetDisplay().Has("flow-root"))
 }
 
 // Start and end page values for named pages

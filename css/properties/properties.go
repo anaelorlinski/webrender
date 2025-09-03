@@ -46,7 +46,14 @@ const (
 	PBorderImageOutset
 	PBorderImageRepeat
 
-	// min-XXX is at +2, max-XXX is a + 4
+	PMaskBorderSource
+	PMaskBorderSlice
+	PMaskBorderWidth
+	PMaskBorderOutset
+	PMaskBorderRepeat
+	PMaskBorderMode
+
+	// min-XXX is at +2, max-XXX is at + 4
 	PWidth
 	PHeight
 	PMinWidth
@@ -313,6 +320,19 @@ var InitialValues = Properties{
 		FToV(0), FToV(0),
 	},
 	PBorderImageRepeat: Strings{"stretch", "stretch"},
+
+	PMaskBorderSource: NoneImage{},
+	PMaskBorderSlice: Values{
+		PercToV(100), PercToV(100), PercToV(100), PercToV(100),
+		DimOrS{},
+	},
+	PMaskBorderWidth: Values{SToV("auto"), SToV("auto"), SToV("auto"), SToV("auto")},
+	PMaskBorderOutset: Values{
+		FToV(0), FToV(0),
+		FToV(0), FToV(0),
+	},
+	PMaskBorderRepeat: Strings{"stretch", "stretch"},
+	PMaskBorderMode:   String("alpha"),
 
 	PBorderBottomLeftRadius:  Point{ZeroPixels, ZeroPixels},
 	PBorderBottomRightRadius: Point{ZeroPixels, ZeroPixels},
