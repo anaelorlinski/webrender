@@ -8,6 +8,7 @@ import (
 	"github.com/benoitkugler/webrender/html/tree"
 	"github.com/benoitkugler/webrender/utils"
 	tu "github.com/benoitkugler/webrender/utils/testutils"
+	"github.com/benoitkugler/webrender/utils/testutils/fonts"
 )
 
 // Test the HTML presentational hints.
@@ -23,7 +24,7 @@ func renderWithPH(t *testing.T, input string, withPH bool, baseUrl string) *bo.P
 		t.Fatalf("building tree: %s", err)
 	}
 
-	return Layout(doc, []tree.CSS{PHTESTINGCSS}, withPH, fontconfig)[0]
+	return Layout(doc, []tree.CSS{PHTESTINGCSS}, withPH, fonts.FontConfig)[0]
 }
 
 func TestNoPh(t *testing.T) {

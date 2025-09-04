@@ -10,6 +10,7 @@ import (
 	"github.com/benoitkugler/webrender/text/hyphen"
 	"github.com/benoitkugler/webrender/utils"
 	tu "github.com/benoitkugler/webrender/utils/testutils"
+	"github.com/benoitkugler/webrender/utils/testutils/fonts"
 )
 
 func TestErrorRecovery(t *testing.T) {
@@ -29,7 +30,7 @@ type textContext struct {
 	struts map[text.StrutLayoutKey][2]pr.Float
 }
 
-func (tc textContext) Fonts() text.FontConfiguration                          { return fontconfig }
+func (tc textContext) Fonts() text.FontConfiguration                          { return fonts.FontConfig }
 func (tc textContext) HyphenCache() map[text.HyphenDictKey]hyphen.Hyphener    { return nil }
 func (tc textContext) StrutLayoutsCache() map[text.StrutLayoutKey][2]pr.Float { return tc.struts }
 
