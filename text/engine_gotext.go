@@ -561,8 +561,8 @@ func (fc *FontConfigurationGotext) splitFirstLine(hyphenCache map[HyphenDictKey]
 		} else {
 			// If the second line of the short text can break, we have the next
 			// line break point required for step #3 in it, drop the end of the text.
-			firstLineText := shortText[:firstLine.ResumeAt]
-			if len(firstLineText) != len(shortText) {
+			if firstLine.ResumeAt != -1 && firstLine.ResumeAt != len(shortText) {
+				firstLineText := shortText[:firstLine.ResumeAt]
 				start := len(firstLineText) + 1
 				if fc.getNextBreakPoint(shortText[start:]) != -1 {
 					text = shortText
