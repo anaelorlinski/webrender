@@ -75,7 +75,6 @@ func TestGridTemplateFr(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         article {
           display: grid;
           font-family: weasyprint;
@@ -114,7 +113,6 @@ func TestGridTemplateAreas(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         article {
           display: grid;
           font-family: weasyprint;
@@ -156,7 +154,6 @@ func TestGridTemplateAreasGridArea(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         article {
           display: grid;
           font-family: weasyprint;
@@ -198,7 +195,6 @@ func TestGridTemplateAreasEmptyRow(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         article {
           display: grid;
           font-family: weasyprint;
@@ -240,7 +236,6 @@ func TestGridTemplateAreasMultipleRows(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         article {
           display: grid;
           font-family: weasyprint;
@@ -282,7 +277,6 @@ func TestGridTemplateAreasMultipleColumns(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         article {
           display: grid;
           font-family: weasyprint;
@@ -321,7 +315,6 @@ func TestGridTemplateAreasOverlap(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         article {
           display: grid;
           font-family: weasyprint;
@@ -360,7 +353,6 @@ func TestGridTemplateAreasExtraSpan(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         article {
           display: grid;
           font-family: weasyprint;
@@ -412,7 +404,6 @@ func TestGridTemplateAreasExtraSpanDense(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         article {
           display: grid;
           font-family: weasyprint;
@@ -465,7 +456,6 @@ func TestGridTemplateRepeatFr(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         article {
           display: grid;
           font-family: weasyprint;
@@ -525,7 +515,6 @@ func TestGridTemplateShorthandFr(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         article {
           display: grid;
           font-family: weasyprint;
@@ -578,7 +567,6 @@ func TestGridShorthandAutoFlowRowsFrSize(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         article {
           display: grid;
           font-family: weasyprint;
@@ -618,7 +606,6 @@ func TestGridShorthandAutoFlowRowsFrSize(t *testing.T) {
 func TestGridShorthandAutoFlowColumnsNoneDense(t *testing.T) {
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         article {
           display: grid;
           font-family: weasyprint;
@@ -658,7 +645,6 @@ func TestGridTemplateFrUndefinedFreeSpace(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         article {
           display: grid;
           font-family: weasyprint;
@@ -698,7 +684,6 @@ func TestGridColumnStart(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         dl {
           display: grid;
           font-family: weasyprint;
@@ -747,7 +732,6 @@ func TestGridColumnStartBlockified(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         dl {
           display: grid;
           font-family: weasyprint;
@@ -796,7 +780,6 @@ func TestGridUndefinedFreeSpace(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         body {
           font-family: weasyprint;
           font-size: 2px;
@@ -852,7 +835,6 @@ func TestGridPadding(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         article {
           display: grid;
           font-family: weasyprint;
@@ -904,7 +886,6 @@ func TestGridBorder(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         article {
           display: grid;
           font-family: weasyprint;
@@ -956,7 +937,6 @@ func TestGridMargin(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         article {
           display: grid;
           font-family: weasyprint;

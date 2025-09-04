@@ -1205,7 +1205,6 @@ func TestPageAndLineboxBreaking(t *testing.T) {
 	// Empty <span/> tests a corner case in skipFirstWhitespace()
 	pages := renderPages(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         @page { size: 100px; margin: 2px; border: 1px solid }
         body { margin: 0 }
         div { font-family: weasyprint; font-size: 20px }

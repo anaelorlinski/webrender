@@ -115,7 +115,6 @@ func TestInlineBlockWithMargin(t *testing.T) {
 	// Regression test for https://github.com/Kozea/WeasyPrint/issues/1235
 	page1 := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         @page { size: 100px }
         span { font-family: weasyprint; display: inline-block; margin: 0 30px }
       </style>

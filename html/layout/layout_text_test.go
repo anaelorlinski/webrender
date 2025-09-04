@@ -561,8 +561,7 @@ func TestTextIndentInline(t *testing.T) {
 	// Regression test for #1000
 	page := renderOnePage(t, `
         <style>
-            @font-face { src: url(weasyprint.otf); font-family: weasyprint }
-            p { display: inline-block; text-indent: 1em;
+                p { display: inline-block; text-indent: 1em;
                 font-family: weasyprint }
         </style>
         <p><span>text

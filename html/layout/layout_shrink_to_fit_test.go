@@ -25,7 +25,6 @@ func testShrinkToFitFloatingPointError1(t *testing.T, marginLeft, fontSize int) 
 	// See bugs #325 && #288, see commit fac5ee9.
 	page := renderOnePage(t, fmt.Sprintf(`
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         @page { size: 100000px 100px }
         p { float: left; margin-left: 0.%din; font-size: 0.%dem;
             font-family: weasyprint }
@@ -46,8 +45,7 @@ func TestShrinkToFitFloatingPointError2(t *testing.T) {
 		for {
 			page := renderOnePage(t, fmt.Sprintf(`
           <style>
-            @font-face { src: url(weasyprint.otf); font-family: weasyprint }
-            @page { size: %d0pt %d0px }
+                @page { size: %d0pt %d0px }
             p { font-size: %dpt; font-family: weasyprint }
           </style>
           <p>mmm <b>%s a</b></p>

@@ -46,7 +46,6 @@ func TestColumns(t *testing.T) {
 	} {
 		page := renderOnePage(t, fmt.Sprintf(`
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         div { %s; column-gap: 0 }
         body { margin: 0; font-family: weasyprint }
         @page { margin: 0; size: 400px 1000px }
@@ -83,7 +82,6 @@ func TestColumnGap(t *testing.T) {
 	} {
 		page := renderOnePage(t, fmt.Sprintf(`
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         div { columns: 3; column-gap: %s }
         body { margin: 0; font-family: weasyprint }
         @page { margin: 0; size: 300px 1000px }
@@ -113,7 +111,6 @@ func TestColumnSpan1(t *testing.T) {
 
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         body { margin: 0; font-family: weasyprint; line-height: 1 }
         div { columns: 2; width: 10em; column-gap: 0 }
         section { column-span: all; margin: 1em 0 }
@@ -176,7 +173,6 @@ func TestColumnSpan3(t *testing.T) {
 
 	pages := renderPages(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         @page { margin: 0; size: 8px 3px }
         body { font-family: weasyprint; font-size: 1px }
         div { columns: 2; column-gap: 0; line-height: 1 }
@@ -222,7 +218,6 @@ func TestColumnSpan4(t *testing.T) {
 
 	page1, page2 := renderTwoPages(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         @page { margin: 0; size: 8px 3px }
         body { font-family: weasyprint; font-size: 1px }
         div { columns: 2; column-gap: 0; line-height: 1 }
@@ -267,7 +262,6 @@ func TestColumnSpan5(t *testing.T) {
 
 	pages := renderPages(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         @page { margin: 0; size: 8px 3px }
         body { font-family: weasyprint; font-size: 1px }
         div { columns: 2; column-gap: 0; line-height: 1 }
@@ -311,7 +305,6 @@ func TestColumnSpan6(t *testing.T) {
 
 	page1, page2 := renderTwoPages(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         @page { margin: 0; size: 8px 3px }
         body { font-family: weasyprint; font-size: 1px }
         div { columns: 2; column-gap: 0; line-height: 1 }
@@ -351,7 +344,6 @@ func TestColumnSpan7(t *testing.T) {
 
 	pages := renderPages(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         @page { margin: 0; size: 8px 3px }
         body { font-family: weasyprint; font-size: 1px }
         div { columns: 2; column-gap: 0; line-height: 1 }
@@ -396,7 +388,6 @@ func TestColumnSpan8(t *testing.T) {
 
 	pages := renderPages(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         @page { margin: 0; size: 8px 2px }
         body { font-family: weasyprint; font-size: 1px }
         div { columns: 2; column-gap: 0; line-height: 1 }
@@ -441,7 +432,6 @@ func TestColumnSpan9(t *testing.T) {
 
 	page1 := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         @page { margin: 0; size: 8px 3px }
         body { font-family: weasyprint; font-size: 1px }
         div { columns: 2; column-gap: 0; line-height: 1 }
@@ -471,7 +461,6 @@ func TestColumnSpan9(t *testing.T) {
 func TestColumnSpanBalance(t *testing.T) {
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         @page { margin: 0; size: 8px 5px }
         body { font-family: weasyprint; font-size: 1px }
         div { columns: 2; column-gap: 0; line-height: 1; column-fill: auto }
@@ -504,7 +493,6 @@ func TestColumnsMultipage(t *testing.T) {
 
 	pages := renderPages(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         div { columns: 2; column-gap: 1px }
         body { margin: 0; font-family: weasyprint;
                font-size: 1px; line-height: 1px }
@@ -542,7 +530,6 @@ func TestColumnsBreaks(t *testing.T) {
 
 	pages := renderPages(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         div { columns: 2; column-gap: 1px }
         body { margin: 0; font-family: weasyprint;
                font-size: 1px; line-height: 1px }
@@ -576,7 +563,6 @@ func TestColumnsBreakAfterColumn_1(t *testing.T) {
 
 	page1 := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         div { columns: 2; column-gap: 1px }
         body { margin: 0; font-family: weasyprint;
                font-size: 1px; line-height: 1px }
@@ -601,7 +587,6 @@ func TestColumnsBreakAfterColumn_2(t *testing.T) {
 
 	page1 := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         div { columns: 2; column-gap: 1px }
         body { margin: 0; font-family: weasyprint;
                font-size: 1px; line-height: 1px }
@@ -626,7 +611,6 @@ func TestColumnsBreakAfterAvoidColumn(t *testing.T) {
 
 	page1 := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         div { columns: 2; column-gap: 1px }
         body { margin: 0; font-family: weasyprint;
                font-size: 1px; line-height: 1px }
@@ -651,7 +635,6 @@ func TestColumnsBreakBeforeColumn_1(t *testing.T) {
 
 	page1 := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         div { columns: 2; column-gap: 1px }
         body { margin: 0; font-family: weasyprint;
                font-size: 1px; line-height: 1px }
@@ -676,7 +659,6 @@ func TestColumnsBreakBeforeColumn_2(t *testing.T) {
 
 	page1 := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         div { columns: 2; column-gap: 1px }
         body { margin: 0; font-family: weasyprint;
                font-size: 1px; line-height: 1px }
@@ -701,7 +683,6 @@ func TestColumnsBreakBeforeAvoidColumn(t *testing.T) {
 
 	page1 := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         div { columns: 2; column-gap: 1px }
         body { margin: 0; font-family: weasyprint;
                font-size: 1px; line-height: 1px }
@@ -726,7 +707,6 @@ func TestColumnsBreakInsideColumn_1(t *testing.T) {
 
 	page1 := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         div { columns: 2; column-gap: 1px }
         body { margin: 0; font-family: weasyprint;
                font-size: 1px; line-height: 1px }
@@ -751,7 +731,6 @@ func TestColumnsBreakInsideColumn_2(t *testing.T) {
 
 	page1 := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         div { columns: 2; column-gap: 1px }
         body { margin: 0; font-family: weasyprint;
                font-size: 1px; line-height: 1px }
@@ -776,7 +755,6 @@ func TestColumnsBreakInsideColumnNotEmptyPage(t *testing.T) {
 
 	page1 := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         div { columns: 2; column-gap: 1px }
         body { margin: 0; font-family: weasyprint;
                font-size: 1px; line-height: 1px }
@@ -803,7 +781,6 @@ func TestColumnsNotEnoughContent(t *testing.T) {
 
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         div { columns: 5; column-gap: 0 }
         body { margin: 0; font-family: weasyprint; font-size: 1px }
         @page { margin: 0; size: 5px }
@@ -827,7 +804,6 @@ func TestColumnsHigherThanPage(t *testing.T) {
 
 	pages := renderPages(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         div { columns: 5; column-gap: 0 }
         body { margin: 0; font-family: weasyprint; font-size: 2px }
         @page { margin: 0; size: 5px 1px }
@@ -863,7 +839,6 @@ func TestColumnsEmpty(t *testing.T) {
 
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         div { columns: 3 }
         body { margin: 0; font-family: weasyprint }
         @page { margin: 0; size: 3px; font-size: 1px }
@@ -885,7 +860,6 @@ func TestColumnsFixedHeight(t *testing.T) {
 	for _, prop := range []string{"height", "min-height"} {
 		page := renderOnePage(t, fmt.Sprintf(`
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         div { columns: 4; column-gap: 0; %s: 10px }
         body { margin: 0; font-family: weasyprint; line-height: 1px }
         @page { margin: 0; size: 4px 50px; font-size: 1px }
@@ -913,7 +887,6 @@ func TestColumnsPadding(t *testing.T) {
 
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         div { columns: 4; column-gap: 0; padding: 1px }
         body { margin: 0; font-family: weasyprint; line-height: 1px }
         @page { margin: 0; size: 6px 50px; font-size: 1px }
@@ -966,7 +939,6 @@ func TestColumnsRelative(t *testing.T) {
 
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         article { position: absolute; top: 3px }
         div { columns: 4; column-gap: 0; position: relative;
               top: 1px; left: 2px }

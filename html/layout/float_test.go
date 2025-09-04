@@ -137,7 +137,6 @@ func TestFloats5(t *testing.T) {
 	// c414-flt-wrap-000 with text ... more || less
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         body { width: 100px; font: 60px weasyprint; }
         p { float: left; height: 100px }
         img { width: 60px; vertical-align: top }
@@ -348,8 +347,7 @@ func TestPreferredWidths1(t *testing.T) {
 	getFloatWidth := func(bodyWidth int) pr.Float {
 		page := renderOnePage(t, fmt.Sprintf(`
           <style>
-            @font-face { src: url(weasyprint.otf); font-family: weasyprint }
-          </style>
+              </style>
           <body style="width: %dpx; font-family: weasyprint">
           <p style="white-space: pre-line; float: left">
             Lorem ipsum dolor sit amet,
@@ -404,8 +402,7 @@ func TestPreferredWidths4(t *testing.T) {
 
 	page := renderOnePage(t, `
         <style>
-          @font-face { src: url(weasyprint.otf); font-family: weasyprint }
-          p { font: 20px weasyprint }
+            p { font: 20px weasyprint }
         </style>
         <p style="float: left">XX<br>XX<br>X</p>`)
 	html := unpack1(page)
@@ -419,8 +416,7 @@ func TestPreferredWidths5(t *testing.T) {
 	// The space is the start of the line is collapsed.
 	page := renderOnePage(t, `
         <style>
-          @font-face { src: url(weasyprint.otf); font-family: weasyprint }
-          p { font: 20px weasyprint }
+            p { font: 20px weasyprint }
         </style>
         <p style="float: left">XX<br> XX<br>X</p>`)
 	html := unpack1(page)
@@ -434,7 +430,6 @@ func TestFloatInInline1(t *testing.T) {
 
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         body {
           font-family: weasyprint;
           font-size: 20px;
@@ -480,7 +475,6 @@ func TestFloatInInline_2(t *testing.T) {
 
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         @page {
           size: 10em;
         }
@@ -517,7 +511,6 @@ func TestFloatInInline_3(t *testing.T) {
 
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         @page {
           size: 10em;
         }
@@ -553,7 +546,6 @@ func TestFloatInInline_4(t *testing.T) {
 
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         @page {
           size: 10em;
         }
@@ -591,7 +583,6 @@ func TestFloatNextLine(t *testing.T) {
 
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         body {
           font-family: weasyprint;
           font-size: 20px;
@@ -627,7 +618,6 @@ func TestFloatTextIndent1(t *testing.T) {
 
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         body {
           font-family: weasyprint;
           font-size: 20px;
@@ -664,7 +654,6 @@ func TestFloatTextIndent2(t *testing.T) {
 
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         body {
           font-family: weasyprint;
           font-size: 20px;
@@ -708,7 +697,6 @@ func TestFloatTextIndent3(t *testing.T) {
 
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         body {
           font-family: weasyprint;
           font-size: 20px;

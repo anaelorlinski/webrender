@@ -32,7 +32,6 @@ func TestFontFace(t *testing.T) {
 
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         body { font-family: weasyprint }
       </style>
       <span>abc</span>`)
@@ -48,7 +47,6 @@ func TestKerningDefault(t *testing.T) {
 	// Kerning and ligatures are on by default
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         body { font-family: weasyprint }
       </style>
       <span>kk</span><span>liga</span>`)

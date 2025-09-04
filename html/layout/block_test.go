@@ -932,7 +932,6 @@ func TestBlockInBlockWithBottomPadding(t *testing.T) {
 
 	pages := renderPages(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         @page { size: 8em 3.5em }
         body { line-height: 1; font-family: weasyprint }
         div { padding-bottom: 1em }

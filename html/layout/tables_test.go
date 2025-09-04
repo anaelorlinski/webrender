@@ -419,7 +419,6 @@ func TestLayoutTableAuto5(t *testing.T) {
 
 	page := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         * { font-family: weasyprint }
       </style>
       <table style="width: 1000px; font-family: weasyprint">

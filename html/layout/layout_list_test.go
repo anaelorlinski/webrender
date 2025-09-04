@@ -90,7 +90,6 @@ func TestListsPageBreak(t *testing.T) {
 	// Regression test for https://github.com/Kozea/WeasyPrint/issues/945
 	pages := renderPages(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         @page { size: 300px 100px }
         ul { font-size: 30px; font-family: weasyprint; margin: 0 }
       </style>
@@ -123,7 +122,6 @@ func TestListsPageBreakMargin(t *testing.T) {
 	// Regression test for https://github.com/Kozea/WeasyPrint/issues/1058
 	pages := renderPages(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         @page { size: 300px 100px }
         ul { font-size: 30px; font-family: weasyprint; margin: 0 }
         p { margin: 10px 0 }

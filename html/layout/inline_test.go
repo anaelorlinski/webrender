@@ -1144,7 +1144,6 @@ func TestBoxDecorationBreakInlineSlice(t *testing.T) {
 	// https://www.w3.org/TR/css-backgrounds-3/#the-box-decoration-break
 	page1 := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         @page { size: 100px }
         span { font-family: weasyprint; box-decoration-break: slice;
                padding: 5px; border: 1px solid black }
@@ -1176,7 +1175,6 @@ func TestBoxDecorationBreakInlineClone(t *testing.T) {
 	// https://www.w3.org/TR/css-backgrounds-3/#the-box-decoration-break
 	page1 := renderOnePage(t, `
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         @page { size: 100px }
         span { font-size: 12pt; font-family: weasyprint;
                box-decoration-break: clone;

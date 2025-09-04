@@ -709,7 +709,6 @@ func TestFlexAlignContent(t *testing.T) {
 		// Regression test for https://github.com/Kozea/WeasyPrint/issues/811
 		page := renderOnePage(t, fmt.Sprintf(`
       <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         article {
           align-content: %s;
           display: flex;
