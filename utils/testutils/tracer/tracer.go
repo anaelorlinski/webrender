@@ -45,7 +45,7 @@ func (t Tracer) DumpTree(box boxes.Box, context string) {
 	printer = func(box boxes.Box, indent int) {
 		fmt.Fprint(t.out, strings.Repeat(" ", indent))
 		if box == nil {
-			fmt.Fprintf(t.out, "None")
+			fmt.Fprintf(t.out, "<nil>")
 			return
 		}
 		fmt.Fprintf(t.out, "%s: %s %s %s %s ; %s %s %s %s ; %s %s %s %s\n", box.Type(),

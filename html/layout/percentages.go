@@ -48,7 +48,7 @@ func resolvePercentages(box_ Box, containingBlock bo.MaybePoint) {
 	cbWidth, cbHeight := containingBlock[0], containingBlock[1]
 
 	if traceMode {
-		traceLogger.Dump(fmt.Sprintf("resolvePercentages: %s x %s",
+		traceLogger.Dump(fmt.Sprintf("resolvePercentages for <%s> (%s): %s x %s", box_.Box().ElementTag(), box_.Type(),
 			tracer.FormatMaybeFloat(cbWidth), tracer.FormatMaybeFloat(cbHeight)))
 	}
 

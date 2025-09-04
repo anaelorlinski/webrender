@@ -1,7 +1,6 @@
 package layout
 
 import (
-	"fmt"
 	"math"
 	"slices"
 	"sort"
@@ -122,6 +121,9 @@ func setDirection(box *bo.BoxFields, position bool, value pr.Float) {
 func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStack tree.ResumeStack, containingBlock containingBlock,
 	pageIsEmpty bool, absoluteBoxes, fixedBoxes *[]*AbsolutePlaceholder, discard bool,
 ) (bo.Box, blockLayout) {
+	if traceMode {
+		traceLogger.DumpTree(box_, "starting flexLayout")
+	}
 	box := box_.Box()
 
 	context.createFlexFormattingContext()
@@ -435,44 +437,6 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 				} else {
 					child.FlexBaseSize, child.MainOuterExtra = 0, 0
 				}
-			}
-
-			child.Style.Set(main.Key(), pr.SToV("max-content"))
-			styleAxis := child.Style.Get(main.Key()).(pr.DimOrS)
-			// TODO: don"t set style value, support *-content values instead
-			if styleAxis.S == "max-content" {
-				child.Style.Set(main.Key(), pr.SToV("auto"))
-				if main == pr.PWidth {
-					child.FlexBaseSize = maxContentWidth(context, child_, true)
-				} else {
-					newChild := child_.Copy()
-					if bo.ParentT.IsInstance(child_) {
-						newChild = bo.CopyWithChildren(child_, child.Children)
-					}
-					newChild.Box().Width = pr.Inf
-					newChild, _, _ = blockLevelLayout(context, newChild.(bo.BlockLevelBoxITF), -pr.Inf, childSkipStack,
-						parentBox, pageIsEmpty, absoluteBoxes, fixedBoxes, nil, false, -1)
-					child.FlexBaseSize = newChild.Box().MarginHeight()
-				}
-			} else if styleAxis.S == "min-content" {
-				child.Style.Set(main.Key(), pr.SToV("auto"))
-				if main == pr.PWidth {
-					child.FlexBaseSize = minContentWidth(context, child_, true)
-				} else {
-					newChild := child_.Copy()
-					if bo.ParentT.IsInstance(child_) {
-						newChild = bo.CopyWithChildren(child_, child.Children)
-					}
-					newChild.Box().Width = pr.Float(0)
-					newChild, _, _ = blockLevelLayout(context, newChild.(bo.BlockLevelBoxITF), -pr.Inf, childSkipStack,
-						parentBox, pageIsEmpty, absoluteBoxes, fixedBoxes, nil, false, -1)
-					child.FlexBaseSize = newChild.Box().MarginHeight()
-				}
-			} else if styleAxis.Unit == pr.Px {
-				// TODO: should we add padding, borders and margins?
-				child.FlexBaseSize = styleAxis.Value
-			} else {
-				panic(fmt.Sprintf("unexpected Style[axis] : %v", styleAxis))
 			}
 		}
 

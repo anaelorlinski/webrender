@@ -32,6 +32,10 @@ func blockLevelLayout(context *layoutContext, box bo.BlockLevelBoxITF, bottomSpa
 	absoluteBoxes, fixedBoxes *[]*AbsolutePlaceholder, adjoiningMargins *[]pr.Float,
 	discard bool, maxLines int,
 ) (bo.BlockLevelBoxITF, blockLayout, int) {
+	if traceMode {
+		traceLogger.Dump(fmt.Sprintf("entering blockLevelLayout skipStack %s", skipStack))
+	}
+
 	if absoluteBoxes == nil {
 		absoluteBoxes = new([]*AbsolutePlaceholder)
 	}
@@ -448,7 +452,7 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 			} else if _, ok := child_.(*bo.LineBox); ok {
 				origin = "lineBox"
 			}
-			traceLogger.Dump(fmt.Sprintf("Block container layout child %d (%s) resumeAt %s", i, origin, resumeAt))
+			traceLogger.Dump(fmt.Sprintf("in blockContainerLayout child %d (%s) resumeAt %s", i, origin, resumeAt))
 		}
 
 		if abort {
@@ -914,7 +918,7 @@ func inFlowLayout(context *layoutContext, box_ bo.Box, index int, child_ Box, ne
 			}
 		}
 	}
-	if len(*adjoiningMargins) != 0 && box.IsTableWrapper {
+	if len(*adjoiningMargins) != 0 {
 		if box.IsTableWrapper { // should not be a special case
 			collapsedMargin := collapseMargin(*adjoiningMargins)
 			child.PositionY += collapsedMargin
@@ -932,8 +936,8 @@ func inFlowLayout(context *layoutContext, box_ bo.Box, index int, child_ Box, ne
 	}
 
 	atLeastOneNotPlaceholder := false
-	for _, child := range newChildren {
-		if _, isAbsPlac := child.(*AbsolutePlaceholder); !isAbsPlac {
+	for _, newChild := range newChildren {
+		if _, isAbsPlac := newChild.(*AbsolutePlaceholder); !isAbsPlac {
 			atLeastOneNotPlaceholder = true
 			break
 		}
