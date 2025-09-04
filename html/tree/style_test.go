@@ -1,6 +1,7 @@
 package tree
 
 import (
+	_ "embed"
 	"fmt"
 	"math"
 	"path/filepath"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/benoitkugler/webrender/css/counters"
 	pr "github.com/benoitkugler/webrender/css/properties"
+	resourcestest "github.com/benoitkugler/webrender/resources_test"
 	tu "github.com/benoitkugler/webrender/utils/testutils"
 	"golang.org/x/net/html/atom"
 
@@ -20,8 +22,18 @@ import (
 
 // Test the CSS parsing, cascade, inherited && computed values.
 
+var testUAStylesheet CSS
+
+func init() {
+	var err error
+	testUAStylesheet, err = NewCSSDefault(utils.InputString(resourcestest.TestUACSS))
+	if err != nil {
+		panic(fmt.Sprintf("invalid embedded stylesheet: %s", err))
+	}
+}
+
 func fakeHTML(html HTML) *HTML {
-	html.UAStyleSheet = TestUAStylesheet
+	html.UAStyleSheet = testUAStylesheet
 	return &html
 }
 

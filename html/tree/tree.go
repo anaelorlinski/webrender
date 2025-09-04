@@ -89,14 +89,8 @@ var (
 	// Html5PHStylesheet is the presentational hints style sheet
 	Html5PHStylesheet CSS
 
-	// TestUAStylesheet is a lightweight style sheet
-	TestUAStylesheet CSS
-
 	// The counters defined in the user agent style sheet
-	UACounterStyle counters.CounterStyle
-
-	//go:embed tests_ua.css
-	testUACSS string
+	UACounterStyle = make(counters.CounterStyle)
 
 	//go:embed html5_ua.css
 	html5UACSS string
@@ -117,11 +111,6 @@ func init() {
 	}()
 
 	var err error
-	TestUAStylesheet, err = NewCSSDefault(utils.InputString(testUACSS))
-	if err != nil {
-		panic(fmt.Sprintf("invalid embedded stylesheet: %s", err))
-	}
-	UACounterStyle = make(counters.CounterStyle)
 	Html5UAStylesheet, err = newCSS(utils.InputString(html5UACSS), "", nil, false, "", nil, nil, nil, UACounterStyle)
 	if err != nil {
 		panic(fmt.Sprintf("invalid embedded stylesheet: %s", err))
@@ -191,7 +180,12 @@ func newCSS(input utils.ContentInput, baseUrl string,
 
 // NewCSSDefault processes a CSS input.
 func NewCSSDefault(input utils.ContentInput) (CSS, error) {
-	return newCSS(input, "", nil, false, "", nil, nil, nil, nil)
+	return NewCSSExt(input, "", nil)
+}
+
+// NewCSSDefault processes a CSS input.
+func NewCSSExt(input utils.ContentInput, baseURL string, fonts text.FontConfiguration) (CSS, error) {
+	return newCSS(input, baseURL, nil, false, "", fonts, nil, nil, nil)
 }
 
 func (c CSS) IsNone() bool {

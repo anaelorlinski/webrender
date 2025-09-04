@@ -5,43 +5,19 @@ import (
 	"io"
 	"testing"
 
-	fc "github.com/benoitkugler/textprocessing/fontconfig"
-	"github.com/benoitkugler/textprocessing/pango/fcfonts"
 	pr "github.com/benoitkugler/webrender/css/properties"
 	bo "github.com/benoitkugler/webrender/html/boxes"
 	"github.com/benoitkugler/webrender/html/tree"
 	"github.com/benoitkugler/webrender/logger"
-	"github.com/benoitkugler/webrender/text"
 	"github.com/benoitkugler/webrender/utils"
 	tu "github.com/benoitkugler/webrender/utils/testutils"
+	"github.com/benoitkugler/webrender/utils/testutils/fonts"
 )
 
 var baseUrl, _ = utils.PathToURL("../../resources_test/")
 
-const fontmapCache = "../../text/testdata/cache.fc"
-
-var fontconfig *text.FontConfigurationPango
-
 func init() {
 	logger.ProgressLogger.SetOutput(io.Discard)
-
-	// this command has to run once
-	// fmt.Println("Scanning fonts...")
-	// _, err := fc.ScanAndCache(fontmapCache)
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	fs, err := fc.LoadFontsetFile(fontmapCache)
-	if err != nil {
-		panic(err)
-	}
-	fontconfig = text.NewFontConfigurationPango(fcfonts.NewFontMap(fc.Standard.Copy(), fs))
-}
-
-func fakeHTML(html *tree.HTML) *tree.HTML {
-	html.UAStyleSheet = tree.TestUAStylesheet
-	return html
 }
 
 // lay out a document and return a list of PageBox objects
@@ -50,8 +26,8 @@ func renderPages(t *testing.T, htmlContent string, css ...tree.CSS) []*bo.PageBo
 	if err != nil {
 		t.Fatal(err)
 	}
-	doc = fakeHTML(doc)
-	return Layout(doc, css, false, fontconfig)
+	doc.UAStyleSheet = fonts.UAStylesheet
+	return Layout(doc, css, false, fonts.FontConfig)
 }
 
 // same as renderPages, but expects only on laid out page

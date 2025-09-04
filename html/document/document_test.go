@@ -9,6 +9,7 @@ import (
 	"github.com/benoitkugler/webrender/html/tree"
 	"github.com/benoitkugler/webrender/utils"
 	tu "github.com/benoitkugler/webrender/utils/testutils"
+	"github.com/benoitkugler/webrender/utils/testutils/fonts"
 )
 
 func round(x fl) fl { return utils.RoundPrec(x, 4) }
@@ -262,7 +263,7 @@ func renderHTML(t *testing.T, html string, baseUrl string, round bool) Document 
 	if err != nil {
 		t.Fatal(err)
 	}
-	doc.UAStyleSheet = tree.TestUAStylesheet // fakeHTML
+	doc.UAStyleSheet = fonts.UAStylesheet // fakeHTML
 
 	document := Render(doc, nil, false, fc)
 	if round {

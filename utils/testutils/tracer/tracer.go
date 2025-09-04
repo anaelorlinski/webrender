@@ -39,11 +39,15 @@ func (t Tracer) Dump(line string) {
 }
 
 func (t Tracer) DumpTree(box boxes.Box, context string) {
-	fmt.Fprintln(t.out, context)
+	fmt.Fprintln(t.out, "BOX TREE AT "+context+":")
 
 	var printer func(box boxes.Box, indent int)
 	printer = func(box boxes.Box, indent int) {
 		fmt.Fprint(t.out, strings.Repeat(" ", indent))
+		if box == nil {
+			fmt.Fprintf(t.out, "None")
+			return
+		}
 		fmt.Fprintf(t.out, "%s: %s %s %s %s ; %s %s %s %s ; %s %s %s %s\n", box.Type(),
 			FormatMaybeFloat(box.Box().PositionX),
 			FormatMaybeFloat(box.Box().PositionY),
@@ -72,4 +76,5 @@ func (t Tracer) DumpTree(box boxes.Box, context string) {
 	printer(box, 0)
 
 	fmt.Fprintln(t.out)
+	fmt.Fprint(t.out, "END BOX TREE\n")
 }

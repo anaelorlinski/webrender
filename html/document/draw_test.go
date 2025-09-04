@@ -8,34 +8,16 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/benoitkugler/textprocessing/fontconfig"
-	"github.com/benoitkugler/textprocessing/pango/fcfonts"
 	"github.com/benoitkugler/webrender/html/tree"
 	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/text"
 	"github.com/benoitkugler/webrender/utils"
+	"github.com/benoitkugler/webrender/utils/testutils/fonts"
 	"github.com/benoitkugler/webrender/utils/testutils/tracer"
 	"github.com/go-text/typesetting/fontscan"
 )
 
-const fontmapCache = "../../text/testdata/cache.fc"
-
-var fc *text.FontConfigurationPango
-
-func init() {
-	// this command has to run once
-	// fmt.Println("Scanning fonts...")
-	// _, err := fc.ScanAndCache(fontmapCache)
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	fs, err := fontconfig.LoadFontsetFile(fontmapCache)
-	if err != nil {
-		panic(err)
-	}
-	fc = text.NewFontConfigurationPango(fcfonts.NewFontMap(fontconfig.Standard.Copy(), fs))
-}
+var fc = fonts.FontConfig
 
 func TestStacking(t *testing.T) {
 	var s StackingContext
@@ -186,7 +168,7 @@ func TestLeaderCrash(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	doc.UAStyleSheet = tree.TestUAStylesheet
+	doc.UAStyleSheet = fonts.UAStylesheet
 	finalDoc := Render(doc, nil, true, fc)
 	finalDoc.Write(tracer.NewDrawerNoOp(), 4./30, nil)
 }
@@ -215,7 +197,7 @@ func TestDebug(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	doc.UAStyleSheet = tree.TestUAStylesheet
+	doc.UAStyleSheet = fonts.UAStylesheet
 	finalDoc := Render(doc, nil, true, fc)
 	finalDoc.Write(tracer.NewDrawerFile("/tmp/drawer_go.txt"), 4./30, nil)
 }

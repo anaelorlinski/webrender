@@ -16,6 +16,7 @@ import (
 	"github.com/benoitkugler/webrender/images"
 	"github.com/benoitkugler/webrender/utils"
 	tu "github.com/benoitkugler/webrender/utils/testutils"
+	"github.com/benoitkugler/webrender/utils/testutils/fonts"
 )
 
 var (
@@ -37,7 +38,7 @@ var (
 //  Test that the "before layout" box tree is correctly constructed.
 
 func fakeHTML(html *tree.HTML) *tree.HTML {
-	html.UAStyleSheet = tree.TestUAStylesheet
+	html.UAStyleSheet = fonts.UAStylesheet
 	return html
 }
 

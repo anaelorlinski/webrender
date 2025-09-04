@@ -8,6 +8,7 @@ import (
 	"github.com/benoitkugler/webrender/html/tree"
 	"github.com/benoitkugler/webrender/utils"
 	tu "github.com/benoitkugler/webrender/utils/testutils"
+	"github.com/benoitkugler/webrender/utils/testutils/fonts"
 )
 
 // Test CSS stacking contexts.
@@ -20,7 +21,7 @@ func renderPages(t *testing.T, htmlContent string) []*bo.PageBox {
 	if err != nil {
 		t.Fatal(err)
 	}
-	doc.UAStyleSheet = tree.TestUAStylesheet // fakeHTML
+	doc.UAStyleSheet = fonts.UAStylesheet // fakeHTML
 	return layout.Layout(doc, nil, false, fc)
 }
 
