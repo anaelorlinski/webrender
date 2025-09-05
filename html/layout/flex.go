@@ -465,7 +465,7 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 				if !child.IsFlexItem {
 					continue
 				}
-				box.Height = child.HypotheticalMainSize + child.MainOuterExtra
+				box.Height = box.Height.V() + child.HypotheticalMainSize + child.MainOuterExtra
 				if i != 0 {
 					box.Height = box.Height.V() + mainGap
 				}
@@ -481,8 +481,8 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 	var lineSize pr.Float
 	mainSize := getAttr(box, main, "")
 
-	for i := skip; i < len(children); i++ {
-		child_ := children[i]
+	for i_, child_ := range children {
+		i := i_ + skip
 		child := child_.Box()
 		if !child.IsFlexItem {
 			continue
@@ -686,7 +686,6 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 	}
 
 	// 7 Determine the hypothetical cross size of each item.
-
 	var newFlexLines []flexLine
 	childSkipStack = skipStack
 	for _, line := range flexLines {
@@ -1333,6 +1332,10 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 	}
 
 	box_.RemoveDecoration(box, false, resumeAt != nil && !discard)
+
+	if traceMode {
+		traceLogger.DumpTree(box_, "end flexLayout")
+	}
 
 	context.finishFlexFormattingContext(box_)
 

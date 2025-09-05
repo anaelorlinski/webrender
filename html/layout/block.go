@@ -91,8 +91,7 @@ func blockLevelLayoutSwitch(context *layoutContext, box_ bo.BlockLevelBoxITF, bo
 	maxLines int,
 ) (bo.BlockLevelBoxITF, blockLayout, int) {
 	if traceMode {
-		traceLogger.Dump(fmt.Sprintf("skipStack %s", skipStack))
-		traceLogger.DumpTree(box_, "blockLevelLayoutSwitch")
+		traceLogger.DumpTree(box_, fmt.Sprintf("at blockLevelLayoutSwitch with skipStack %s", skipStack))
 	}
 
 	blockBox, isBlockBox := box_.(bo.BlockBoxITF)
