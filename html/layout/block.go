@@ -33,7 +33,7 @@ func blockLevelLayout(context *layoutContext, box bo.BlockLevelBoxITF, bottomSpa
 	discard bool, maxLines int,
 ) (bo.BlockLevelBoxITF, blockLayout, int) {
 	if traceMode {
-		traceLogger.Dump(fmt.Sprintf("entering blockLevelLayout skipStack %s", skipStack))
+		traceLogger.DumpTree(box, fmt.Sprintf("entering blockLevelLayout skipStack %s", skipStack))
 	}
 
 	if absoluteBoxes == nil {
@@ -80,8 +80,14 @@ func blockLevelLayout(context *layoutContext, box bo.BlockLevelBoxITF, bottomSpa
 			adjoiningMargins = new([]pr.Float)
 		}
 	}
-	return blockLevelLayoutSwitch(context, box, bottomSpace, skipStack, containingBlock,
+	box, layout, v := blockLevelLayoutSwitch(context, box, bottomSpace, skipStack, containingBlock,
 		pageIsEmpty, absoluteBoxes, fixedBoxes, adjoiningMargins, discard, maxLines)
+
+	if traceMode {
+		traceLogger.DumpTree(box, "after blockLevelLayout")
+	}
+
+	return box, layout, v
 }
 
 // Call the layout function corresponding to the “box“ type.

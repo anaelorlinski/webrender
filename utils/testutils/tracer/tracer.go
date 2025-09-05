@@ -39,7 +39,7 @@ func (t Tracer) Dump(line string) {
 }
 
 func (t Tracer) DumpTree(box boxes.Box, context string) {
-	fmt.Fprintln(t.out, "BOX TREE AT "+context+":")
+	fmt.Fprintln(t.out, "\nBOX TREE AT "+context+":")
 
 	var printer func(box boxes.Box, indent int)
 	printer = func(box boxes.Box, indent int) {
@@ -75,6 +75,5 @@ func (t Tracer) DumpTree(box boxes.Box, context string) {
 
 	printer(box, 0)
 
-	fmt.Fprintln(t.out)
-	fmt.Fprint(t.out, "END BOX TREE\n")
+	fmt.Fprint(t.out, "END BOX TREE\n\n")
 }

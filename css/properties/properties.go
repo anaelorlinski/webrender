@@ -548,6 +548,7 @@ const (
 	SGridArea
 	SGridTemplate
 	SGrid
+	SGap
 )
 
 // NewShortand return the tag for 's' or 0 if not supported
@@ -621,6 +622,8 @@ func NewShortand(s string) Shortand {
 		return SGridTemplate
 	case "grid":
 		return SGrid
+	case "gap":
+		return SGap
 	default:
 		return 0
 	}
@@ -697,6 +700,8 @@ func (sh Shortand) String() string {
 		return "grid-template"
 	case SGrid:
 		return "grid"
+	case SGap:
+		return "gap"
 	default:
 		return ""
 	}

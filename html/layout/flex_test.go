@@ -11,6 +11,7 @@ import (
 //  Tests for flex layout.
 
 func assertEquals(t *testing.T, values ...pr.MaybeFloat) {
+	t.Helper()
 	for _, val := range values {
 		if val != values[0] {
 			t.Fatalf("different values %f %f", val, values[0])
@@ -79,7 +80,7 @@ func TestFlexDirectionRowMinHeight(t *testing.T) {
 	html := unpack1(page)
 	body := unpack1(html)
 	article := unpack1(body)
-	tu.AssertEqual(t, article.Box().Height, 100)
+	tu.AssertEqual(t, article.Box().Height, Fl(100))
 }
 
 func TestFlexDirectionRowRtl(t *testing.T) {
@@ -200,17 +201,17 @@ func TestFlexDirectionColumnMaxHeight(t *testing.T) {
 	html := unpack1(page)
 	body := unpack1(html)
 	article := unpack1(body)
-	tu.AssertEqual(t, article.Box().Height, 100)
+	tu.AssertEqual(t, article.Box().Height, Fl(100))
 	div1, div2, div3 := unpack3(article)
-	tu.AssertEqual(t, div1.Box().Height, 40)
-	tu.AssertEqual(t, div1.Box().PositionX, 0)
-	tu.AssertEqual(t, div1.Box().PositionY, 0)
-	tu.AssertEqual(t, div2.Box().Height, 40)
-	tu.AssertEqual(t, div2.Box().PositionX, 0)
-	tu.AssertEqual(t, div2.Box().PositionY, 40)
-	tu.AssertEqual(t, div3.Box().Height, 40)
+	tu.AssertEqual(t, div1.Box().Height, Fl(40))
+	tu.AssertEqual(t, div1.Box().PositionX, Fl(0))
+	tu.AssertEqual(t, div1.Box().PositionY, Fl(0))
+	tu.AssertEqual(t, div2.Box().Height, Fl(40))
+	tu.AssertEqual(t, div2.Box().PositionX, Fl(0))
+	tu.AssertEqual(t, div2.Box().PositionY, Fl(40))
+	tu.AssertEqual(t, div3.Box().Height, Fl(40))
 	tu.AssertEqual(t, div3.Box().PositionX, div1.Box().Width)
-	tu.AssertEqual(t, div3.Box().PositionY, 0)
+	tu.AssertEqual(t, div3.Box().PositionY, Fl(0))
 }
 
 func TestFlexDirectionColumnRtl(t *testing.T) {
@@ -866,8 +867,8 @@ func TestFlexColumnWidth(t *testing.T) {
 	div1, div2 := unpack2(section2)
 	tu.Assert(t, section1.Box().Width == section2.Box().Width && section2.Box().Width == main.Box().Width)
 	tu.AssertEqual(t, div1.Box().Width, div2.Box().Width)
-	tu.AssertEqual(t, div1.Box().PositionY, 5)
-	tu.AssertEqual(t, div2.Box().PositionY, 48)
+	tu.AssertEqual(t, div1.Box().PositionY, Fl(5))
+	tu.AssertEqual(t, div2.Box().PositionY, Fl(48))
 }
 
 func TestFlexColumnInFlexRow(t *testing.T) {
@@ -1105,7 +1106,7 @@ func TestFlexDirectionColumnDefinedMain(t *testing.T) {
 	body := unpack1(html)
 	article := unpack1(body)
 	div := unpack1(article)
-	tu.AssertEqual(t, div.Box().Height, 10)
+	tu.AssertEqual(t, div.Box().Height, Fl(10))
 	tu.AssertEqual(t, div.Box().MarginHeight(), Fl(12))
 }
 
@@ -1120,7 +1121,7 @@ func TestFlexDirectionColumnDefinedMainBorderBox(t *testing.T) {
 	body := unpack1(html)
 	article := unpack1(body)
 	div := unpack1(article)
-	tu.AssertEqual(t, div.Box().Height, 8)
+	tu.AssertEqual(t, div.Box().Height, Fl(8))
 	tu.AssertEqual(t, div.Box().MarginHeight(), Fl(10))
 }
 
@@ -1135,7 +1136,7 @@ func TestFlexItemNegativeMargin(t *testing.T) {
 	body := unpack1(html)
 	article := unpack1(body)
 	div := unpack1(article)
-	tu.AssertEqual(t, div.Box().Height, 10)
+	tu.AssertEqual(t, div.Box().Height, Fl(10))
 	tu.AssertEqual(t, div.Box().Width, Fl(10))
 }
 
@@ -1150,7 +1151,7 @@ func TestFlexItemAutoMarginMain(t *testing.T) {
 	body := unpack1(html)
 	article := unpack1(body)
 	div := unpack1(article)
-	tu.AssertEqual(t, div.Box().Height, 10)
+	tu.AssertEqual(t, div.Box().Height, Fl(10))
 	tu.AssertEqual(t, div.Box().Width, Fl(10))
 	tu.AssertEqual(t, div.Box().MarginLeft, Fl(90))
 }
@@ -1166,7 +1167,7 @@ func TestFlexItemAutoMarginCross(t *testing.T) {
 	body := unpack1(html)
 	article := unpack1(body)
 	div := unpack1(article)
-	tu.AssertEqual(t, div.Box().Height, 10)
+	tu.AssertEqual(t, div.Box().Height, Fl(10))
 	tu.AssertEqual(t, div.Box().Width, Fl(10))
 	tu.AssertEqual(t, div.Box().MarginTop, Fl(90))
 }
@@ -1183,7 +1184,7 @@ func TestFlexDirectionColumnItemAutoMargin(t *testing.T) {
 	body := unpack1(html)
 	div := unpack1(body)
 	article := unpack1(div)
-	tu.AssertEqual(t, article.Box().Width, 8)
+	tu.AssertEqual(t, article.Box().Width, Fl(8))
 	tu.AssertEqual(t, article.Box().MarginLeft, Fl(11))
 }
 
@@ -1198,7 +1199,7 @@ func TestFlexItemAutoMarginFlexBasis(t *testing.T) {
 	body := unpack1(html)
 	article := unpack1(body)
 	div := unpack1(article)
-	tu.AssertEqual(t, div.Box().Height, 10)
+	tu.AssertEqual(t, div.Box().Height, Fl(10))
 	tu.AssertEqual(t, div.Box().Width, Fl(10))
 }
 
@@ -1552,14 +1553,14 @@ func TestFlexDirectionRowJustifyMarginPadding(t *testing.T) {
 		assertText(t, div2.Box().Children[0].Box().Children[0], "B")
 		assertText(t, div3.Box().Children[0].Box().Children[0], "C")
 		assertPosYEqual(t, div1, div2, div3, article)
-		tu.AssertEqual(t, article.Box().PositionX, 0)
-		tu.AssertEqual(t, article.Box().Width, 20)
+		tu.AssertEqual(t, article.Box().PositionX, Fl(0))
+		tu.AssertEqual(t, article.Box().Width, Fl(20))
 		tu.AssertEqual(t, div1.Box().PositionX, data.x1)
 		tu.AssertEqual(t, div2.Box().PositionX, data.x2)
 		tu.AssertEqual(t, div3.Box().PositionX, data.x3)
-		tu.AssertEqual(t, div1.Box().MarginWidth(), 6)
-		tu.AssertEqual(t, div2.Box().MarginWidth(), 6)
-		tu.AssertEqual(t, div3.Box().MarginWidth(), 2)
+		tu.AssertEqual(t, div1.Box().MarginWidth(), Fl(6))
+		tu.AssertEqual(t, div2.Box().MarginWidth(), Fl(6))
+		tu.AssertEqual(t, div3.Box().MarginWidth(), Fl(2))
 	}
 }
 
@@ -1597,14 +1598,14 @@ func TestFlexDirectionColumnJustifyMarginPadding(t *testing.T) {
 		assertText(t, div2.Box().Children[0].Box().Children[0], "B")
 		assertText(t, div3.Box().Children[0].Box().Children[0], "C")
 		assertPosXEqual(t, div1, div2, div3, article)
-		tu.AssertEqual(t, article.Box().PositionY, 0)
-		tu.AssertEqual(t, article.Box().Height, 20)
+		tu.AssertEqual(t, article.Box().PositionY, Fl(0))
+		tu.AssertEqual(t, article.Box().Height, Fl(20))
 		tu.AssertEqual(t, div1.Box().PositionY, data.y1)
 		tu.AssertEqual(t, div2.Box().PositionY, data.y2)
 		tu.AssertEqual(t, div3.Box().PositionY, data.y3)
-		tu.AssertEqual(t, div1.Box().MarginHeight(), 6)
-		tu.AssertEqual(t, div2.Box().MarginHeight(), 6)
-		tu.AssertEqual(t, div3.Box().MarginHeight(), 2)
+		tu.AssertEqual(t, div1.Box().MarginHeight(), Fl(6))
+		tu.AssertEqual(t, div2.Box().MarginHeight(), Fl(6))
+		tu.AssertEqual(t, div3.Box().MarginHeight(), Fl(2))
 	}
 }
 
@@ -1622,8 +1623,8 @@ func TestFlexItemTable(t *testing.T) {
 	article := unpack1(body)
 	table_wrapper1, table_wrapper2 := unpack2(article)
 	tu.Assert(t, table_wrapper1.Box().Width == table_wrapper2.Box().Width && table_wrapper2.Box().Width == Fl(2))
-	tu.AssertEqual(t, table_wrapper1.Box().PositionX, 0)
-	tu.AssertEqual(t, table_wrapper2.Box().PositionX, 2)
+	tu.AssertEqual(t, table_wrapper1.Box().PositionX, Fl(0))
+	tu.AssertEqual(t, table_wrapper2.Box().PositionX, Fl(2))
 }
 
 func TestFlexItemTableWidth(t *testing.T) {
@@ -1640,8 +1641,8 @@ func TestFlexItemTableWidth(t *testing.T) {
 	article := unpack1(body)
 	table_wrapper1, table_wrapper2 := unpack2(article)
 	tu.Assert(t, table_wrapper1.Box().Width == table_wrapper2.Box().Width && table_wrapper2.Box().Width == Fl(10))
-	tu.AssertEqual(t, table_wrapper1.Box().PositionX, 0)
-	tu.AssertEqual(t, table_wrapper2.Box().PositionX, 10)
+	tu.AssertEqual(t, table_wrapper1.Box().PositionX, Fl(0))
+	tu.AssertEqual(t, table_wrapper2.Box().PositionX, Fl(10))
 }
 
 func TestFlexWidthOnParent(t *testing.T) {
@@ -1656,7 +1657,7 @@ func TestFlexWidthOnParent(t *testing.T) {
 	body := unpack1(html)
 	div := unpack1(body)
 	article := unpack1(div)
-	tu.AssertEqual(t, article.Box().Width, 8)
+	tu.AssertEqual(t, article.Box().Width, Fl(8))
 }
 
 func TestFlexColumnItemFlex_1(t *testing.T) {
@@ -1670,7 +1671,7 @@ func TestFlexColumnItemFlex_1(t *testing.T) {
 	html := unpack1(page)
 	body := unpack1(html)
 	div := unpack1(body)
-	tu.AssertEqual(t, div.Box().Height, 4)
+	tu.AssertEqual(t, div.Box().Height, Fl(4))
 }
 
 func TestFlexRowItemFlex_0(t *testing.T) {

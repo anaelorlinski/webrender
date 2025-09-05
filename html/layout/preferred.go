@@ -910,7 +910,7 @@ func flexMaxContentWidth(context *layoutContext, box Box, outer bool) pr.Float {
 			}
 		}
 	}
-	if strings.HasPrefix(string(box.Box().Style.GetFlexDirection()), "row") && box.Box().Style.GetFlexWrap() == "nowrap" {
+	if strings.HasPrefix(string(box.Box().Style.GetFlexDirection()), "row") {
 		return adjust(box, outer, sum, true, true)
 	} else {
 		return adjust(box, outer, max, true, true)

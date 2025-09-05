@@ -52,6 +52,7 @@ var expanders = [...]expander{
 	pr.SGridArea:       genericExpander(pr.PGridRowStart, pr.PGridRowEnd, pr.PGridColumnStart, pr.PGridColumnEnd)(_expandGridArea),
 	pr.SGridTemplate:   genericExpander(pr.PGridTemplateColumns, pr.PGridTemplateRows, pr.PGridTemplateAreas)(_expandGridTemplate),
 	pr.SGrid:           genericExpander(pr.PGridTemplateColumns, pr.PGridTemplateRows, pr.PGridTemplateAreas, pr.PGridAutoColumns, pr.PGridAutoRows, pr.PGridAutoFlow)(_expandGrid),
+	pr.SGap:            genericExpander(pr.PColumnGap, pr.PRowGap)(_expandGap),
 }
 
 var borderExpanders = [...]expander{
@@ -1373,6 +1374,59 @@ func _expandGridArea(_ string, _ pr.Shortand, tokens []Token) (out []namedTokens
 		out = append(out, namedTokens{name: pr.PropsFromNames["grid-"+sides[index]], tokens: tokens})
 	}
 	return
+}
+
+// @expander('grid-gap')
+// @expander('gap')
+// @generic_expander('column-gap', 'row-gap')
+// Expand the “gap“ property.
+func _expandGap(_ string, _ pr.Shortand, tokens []Token) (out []namedTokens, _ error) {
+	if len(tokens) == 1 {
+		if gap(tokens, "") == nil {
+			return nil, ErrInvalidValue
+		}
+		return []namedTokens{
+			{name: pr.PRowGap, tokens: tokens},
+			{name: pr.PColumnGap, tokens: tokens},
+		}, nil
+	} else if len(tokens) == 2 {
+		column_gap, row_gap := gap(tokens[0:1], ""), gap(tokens[1:2], "")
+		if column_gap == nil || row_gap == nil {
+			return nil, ErrInvalidValue
+		}
+		return []namedTokens{
+			{name: pr.PRowGap, tokens: tokens[0:1]},
+			{name: pr.PColumnGap, tokens: tokens[1:2]},
+		}, nil
+	} else {
+		return nil, ErrInvalidValue
+	}
+}
+
+// @expander('grid-column-gap')
+// @generic_expander('column-gap')
+// Expand legacy “grid-column-gap“ property.
+func expandLegacyColumnGap(_ string, _ pr.Shortand, tokens []Token) (out []namedTokens, _ error) {
+	keyword := gap(tokens, "")
+	if keyword == nil {
+		return nil, ErrInvalidValue
+	}
+	return []namedTokens{
+		{name: pr.PColumnGap, tokens: tokens},
+	}, nil
+}
+
+// @expander('grid-row-gap')
+// @generic_expander('row-gap')
+// Expand legacy “grid-row-gap“ property.
+func expandLegacyRowGap(_ string, _ pr.Shortand, tokens []Token) (out []namedTokens, _ error) {
+	keyword := gap(tokens, "")
+	if keyword == nil {
+		return nil, ErrInvalidValue
+	}
+	return []namedTokens{
+		{name: pr.PRowGap, tokens: tokens},
+	}, nil
 }
 
 // @expander('line-clamp')

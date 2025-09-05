@@ -92,15 +92,16 @@ func getAttr(box *bo.BoxFields, axis pr.KnownProp, min string) pr.MaybeFloat {
 }
 
 // use child.Style
-func getCrossMargins(child *bo.BoxFields, cross pr.KnownProp) bo.MaybePoint {
+func getCrossMargins(child *bo.BoxFields, cross pr.KnownProp) (out bo.MaybePoint) {
 	if cross == pr.PWidth {
-		return bo.MaybePoint{child.Style.GetMarginLeft().Value, child.Style.GetMarginRight().Value}
+		return bo.MaybePoint{child.Style.GetMarginLeft().ToMaybeFloat(), child.Style.GetMarginRight().ToMaybeFloat()}
 	}
-	return bo.MaybePoint{child.Style.GetMarginTop().Value, child.Style.GetMarginBottom().Value}
+	return bo.MaybePoint{child.Style.GetMarginTop().ToMaybeFloat(), child.Style.GetMarginBottom().ToMaybeFloat()}
 }
 
-func getDimOrS(box *bo.BoxFields, cross pr.KnownProp) pr.DimOrS {
-	out, _ := box.Style.Get(cross.Key()).(pr.DimOrS)
+// use child.Style
+func getDimOrS(box *bo.BoxFields, prop pr.KnownProp) pr.DimOrS {
+	out, _ := box.Style.Get(prop.Key()).(pr.DimOrS)
 	return out
 }
 
@@ -109,7 +110,7 @@ const (
 	directionY = false
 )
 
-func setDirection(box *bo.BoxFields, position bool, value pr.Float) {
+func setPos(box *bo.BoxFields, position bool, value pr.Float) {
 	if position == directionX {
 		box.PositionX = value
 	} else {
@@ -169,10 +170,8 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 	// Define available main space.
 	cbWidth, _ := containingBlock.ContainingBlock()
 	var availableMainSpace pr.Float
-
-	boxAxis := getAttr(box, main, "")
-	if boxAxis != pr.AutoF {
-		availableMainSpace = boxAxis.V()
+	if boxMain := getAttr(box, main, ""); boxMain != pr.AutoF {
+		availableMainSpace = boxMain.V()
 	} else {
 		// Otherwise, subtract the flex container’s margin, border, and padding…
 		if main == pr.PWidth {
@@ -361,25 +360,24 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 			}
 		}
 
-		child.Style = child.Style.Copy()
-		var flexBasis pr.DimOrS
-		if child.Style.GetFlexBasis().S == "content" {
-			flexBasis = pr.SToV("content")
+		var flexBasis pr.MaybeFloat // nil means "content"
+		if styleFlexBasis := child.Style.GetFlexBasis(); styleFlexBasis.S == "content" {
+			flexBasis = nil
 		} else {
-			resolved := pr.ResolvePercentage(child.Style.GetFlexBasis(), availableMainSpace)
+			resolved := pr.ResolvePercentage(styleFlexBasis, availableMainSpace)
 			if resolved == pr.AutoF {
-				flexBasis = getDimOrS(child, main)
-				if flexBasis.S == "auto" {
-					flexBasis = pr.SToV("content")
+				flexBasis = getAttr(child, main, "")
+				if flexBasis == pr.AutoF {
+					flexBasis = nil
 				}
 			} else {
-				flexBasis = resolved.V().ToValue()
+				flexBasis = resolved
 			}
 		}
 
 		// 3.A If the item has a definite used flex basis…
-		if flexBasis.S != "content" {
-			child.FlexBaseSize = flexBasis.Value
+		if flexBasis != nil {
+			child.FlexBaseSize = flexBasis.V()
 			if main == pr.PWidth {
 				child.MainOuterExtra = (child.BorderLeftWidth + child.BorderRightWidth +
 					child.PaddingLeft.V() + child.PaddingRight.V())
@@ -425,7 +423,7 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 				newChild_, tmp, _ = blockLevelLayout(
 					context, newChild_.(bo.BlockLevelBoxITF), bottomSpace, childSkipStack, parentBox,
 					pageIsEmpty, absoluteBoxes, fixedBoxes, nil, false, -1)
-				if newChild != nil {
+				if newChild_ != nil {
 					// As flex items margins never collapse (with other flex items or
 					// with the flex container), we can add the adjoining margins to the
 					// child height.
@@ -713,7 +711,7 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 				// As flex items margins never collapse (with other flex items or
 				// with the flex container), we can add the adjoining margins to the
 				// child height.
-				child.MarginBottom = child.MarginBottom.V() + collapseMargin(adjoiningMargins)
+				child.Height = child.Height.V() + collapseMargin(adjoiningMargins)
 			} else {
 				if child.Width == pr.AutoF {
 					minWidth := minContentWidth(context, child_, false)
@@ -796,7 +794,7 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 
 	// 8.3 If the flex container is single-line…
 	if len(flexLines) == 1 {
-		line := flexLines[0]
+		line := &flexLines[0]
 		minCrossSize := getAttr(box, cross, "min")
 		if minCrossSize == pr.AutoF {
 			minCrossSize = -pr.Inf
@@ -1216,7 +1214,7 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 					currentValue = child.PositionY
 				}
 				currentValue += crossTranslate
-				setDirection(child, direction, currentValue)
+				setPos(child, direction, currentValue)
 			}
 			if extraCrossSize == 0 {
 				continue
@@ -1224,13 +1222,13 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 			for _, child := range flexItems {
 				switch {
 				case alignContent.Intersects(kw.End, kw.FlexEnd):
-					setDirection(child, direction, currentValue+extraCrossSize)
+					setPos(child, direction, currentValue+extraCrossSize)
 				case alignContent.Has(kw.Center):
-					setDirection(child, direction, currentValue+extraCrossSize/2)
+					setPos(child, direction, currentValue+extraCrossSize/2)
 				case alignContent.Has(kw.SpaceAround):
-					setDirection(child, direction, currentValue+extraCrossSize/pr.Float(len(flexLines))/2)
+					setPos(child, direction, currentValue+extraCrossSize/pr.Float(len(flexLines))/2)
 				case alignContent.Has(kw.SpaceEvenly):
-					setDirection(child, direction, currentValue+extraCrossSize/(pr.Float(len(flexLines))+1))
+					setPos(child, direction, currentValue+extraCrossSize/(pr.Float(len(flexLines))+1))
 				}
 			}
 			switch {
