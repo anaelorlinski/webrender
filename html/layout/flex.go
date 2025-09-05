@@ -280,7 +280,6 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 		}
 
 		// See https://www.W3.org/TR/css-flexbox-1/#min-size-auto
-
 		var childContainingBlock bo.MaybePoint
 		if main == pr.PWidth {
 			childContainingBlock = bo.MaybePoint{availableMainSpace, parentBox.Height}

@@ -232,6 +232,8 @@ type BoxFields struct {
 	RemoveDecorationSides [4]bool
 
 	BorderImage, MaskBorderImage images.Image
+
+	forceNoFloated bool // bypass IsFloated regular logic
 }
 
 func newBoxFields(style pr.ElementStyle, element *html.Node, pseudoType string, children []Box) BoxFields {
@@ -520,6 +522,9 @@ func (b *BoxFields) RoundedContentBox() RoundedBox {
 
 // Return whether this box is floated.
 func (b *BoxFields) IsFloated() bool {
+	if b.forceNoFloated {
+		return false
+	}
 	return b.Style.GetFloat() != "none"
 }
 

@@ -1573,6 +1573,7 @@ func flexChildren(box Box, children []Box) []Box {
 	if _, isFlexCont := box.(FlexContainerBoxITF); isFlexCont {
 		var flexChildren []Box
 		for _, child := range children {
+			child.Box().forceNoFloated = true
 			if child.Box().IsInNormalFlow() {
 				child.Box().IsFlexItem = true
 			}
