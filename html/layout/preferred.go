@@ -401,8 +401,11 @@ func inlineLineWidths(context *layoutContext, box_ Box, outer, isLineStart,
 				break
 			}
 			// TODO: use the real next character instead of 'a' to detect line breaks.
-			lastLetter := childText[len(childText)-1]
-			canBreak := context.Fonts().CanBreakText([]rune{lastLetter, 'a'})
+			sample := []rune{'a'}
+			if len(childText) != 0 {
+				sample = []rune{childText[len(childText)-1], 'a'}
+			}
+			canBreak := context.Fonts().CanBreakText(sample)
 			if minimum && textWrap && canBreak == pr.True {
 				// Add all possible line breaks for minimal width.
 				lines = append(lines, nil)
