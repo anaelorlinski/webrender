@@ -465,7 +465,7 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 			return nil, blockLayout{nextPage: tree.PageBreak{Break: "any", Page: page_}}, maxLines
 		} else if stop {
 			if box.Height != pr.AutoF {
-				if context.overflowsPage(box.PositionY+box.BorderHeight(), positionY) {
+				if overflows(box.PositionY+box.BorderHeight(), positionY) {
 					// Box height is fixed and it doesn’t overflow page, forget
 					// overflowing children.
 					resumeAt = nil

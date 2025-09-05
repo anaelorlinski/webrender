@@ -66,7 +66,7 @@ func TestFlexDirectionRowMaxWidth(t *testing.T) {
 	html := unpack1(page)
 	body := unpack1(html)
 	article := unpack1(body)
-	tu.AssertEqual(t, article.Box().Width, 100)
+	tu.AssertEqual(t, article.Box().Width, Fl(100))
 }
 
 func TestFlexDirectionRowMinHeight(t *testing.T) {
@@ -185,7 +185,7 @@ func TestFlexDirectionColumnMinWidth(t *testing.T) {
 	html := unpack1(page)
 	body := unpack1(html)
 	article := unpack1(body)
-	tu.AssertEqual(t, article.Box().Height, 100)
+	tu.AssertEqual(t, article.Box().Height, Fl(100))
 }
 
 func TestFlexDirectionColumnMaxHeight(t *testing.T) {
@@ -303,9 +303,9 @@ func TestFlexDirectionColumnBoxSizing(t *testing.T) {
 	html := unpack1(page)
 	body := unpack1(html)
 	article := unpack1(body)
-	tu.AssertEqual(t, article.Box().Width, 10)
-	tu.AssertEqual(t, article.Box().Height, 5)
-	tu.AssertEqual(t, article.Box().PaddingTop, 5)
+	tu.AssertEqual(t, article.Box().Width, Fl(10))
+	tu.AssertEqual(t, article.Box().Height, Fl(5))
+	tu.AssertEqual(t, article.Box().PaddingTop, Fl(5))
 }
 
 func TestFlexRowWrap(t *testing.T) {
@@ -499,13 +499,13 @@ func TestFlexDirectionColumnBreak(t *testing.T) {
 	div := unpack1(article)
 	assertText(t, div.Box().Children[0].Box().Children[0], "A")
 	assertText(t, div.Box().Children[1].Box().Children[0], "B")
-	tu.AssertEqual(t, div.Box().Height, 5)
+	tu.AssertEqual(t, div.Box().Height, Fl(5))
 	html = unpack1(page2)
 	body = unpack1(html)
 	article = unpack1(body)
 	div = unpack1(article)
 	assertText(t, div.Box().Children[0].Box().Children[0], "C")
-	tu.AssertEqual(t, div.Box().Height, 2)
+	tu.AssertEqual(t, div.Box().Height, Fl(2))
 }
 
 func TestFlexDirectionColumnBreakMargin(t *testing.T) {
@@ -525,18 +525,18 @@ func TestFlexDirectionColumnBreakMargin(t *testing.T) {
 	html := unpack1(page1)
 	body := unpack1(html)
 	p, article := unpack2(body)
-	tu.AssertEqual(t, p.Box().MarginHeight(), 4)
-	tu.AssertEqual(t, article.Box().PositionY, 4)
+	tu.AssertEqual(t, p.Box().MarginHeight(), Fl(4))
+	tu.AssertEqual(t, article.Box().PositionY, Fl(4))
 	div := unpack1(article)
 	assertText(t, div.Box().Children[0].Box().Children[0], "A")
-	tu.AssertEqual(t, div.Box().Height, 3)
+	tu.AssertEqual(t, div.Box().Height, Fl(3))
 	html = unpack1(page2)
 	body = unpack1(html)
 	article = unpack1(body)
 	div = unpack1(article)
 	assertText(t, div.Box().Children[0].Box().Children[0], "B")
 	assertText(t, div.Box().Children[1].Box().Children[0], "C")
-	tu.AssertEqual(t, div.Box().Height, 4)
+	tu.AssertEqual(t, div.Box().Height, Fl(4))
 }
 
 func TestFlexDirectionColumnBreakBorder(t *testing.T) {
@@ -553,26 +553,26 @@ func TestFlexDirectionColumnBreakBorder(t *testing.T) {
 	html := unpack1(page1)
 	body := unpack1(html)
 	article := unpack1(body)
-	tu.AssertEqual(t, article.Box().BorderHeight(), 7)
-	tu.AssertEqual(t, article.Box().BorderTopWidth, 1)
-	tu.AssertEqual(t, article.Box().BorderBottomWidth, 0)
+	tu.AssertEqual(t, article.Box().BorderHeight(), Fl(7))
+	tu.AssertEqual(t, article.Box().BorderTopWidth, Fl(1))
+	tu.AssertEqual(t, article.Box().BorderBottomWidth, Fl(0))
 	div := unpack1(article)
 	assertText(t, div.Box().Children[0].Box().Children[0], "A")
 	assertText(t, div.Box().Children[1].Box().Children[0], "B")
-	tu.AssertEqual(t, div.Box().BorderHeight(), 6)
-	tu.AssertEqual(t, div.Box().BorderTopWidth, 1)
-	tu.AssertEqual(t, div.Box().BorderBottomWidth, 0)
+	tu.AssertEqual(t, div.Box().BorderHeight(), Fl(6))
+	tu.AssertEqual(t, div.Box().BorderTopWidth, Fl(1))
+	tu.AssertEqual(t, div.Box().BorderBottomWidth, Fl(0))
 	html = unpack1(page2)
 	body = unpack1(html)
 	article = unpack1(body)
-	tu.AssertEqual(t, article.Box().BorderHeight(), 4)
-	tu.AssertEqual(t, article.Box().BorderTopWidth, 0)
-	tu.AssertEqual(t, article.Box().BorderBottomWidth, 1)
+	tu.AssertEqual(t, article.Box().BorderHeight(), Fl(4))
+	tu.AssertEqual(t, article.Box().BorderTopWidth, Fl(0))
+	tu.AssertEqual(t, article.Box().BorderBottomWidth, Fl(1))
 	div = unpack1(article)
 	assertText(t, div.Box().Children[0].Box().Children[0], "C")
-	tu.AssertEqual(t, div.Box().BorderHeight(), 3)
-	tu.AssertEqual(t, div.Box().BorderTopWidth, 0)
-	tu.AssertEqual(t, div.Box().BorderBottomWidth, 1)
+	tu.AssertEqual(t, div.Box().BorderHeight(), Fl(3))
+	tu.AssertEqual(t, div.Box().BorderTopWidth, Fl(0))
+	tu.AssertEqual(t, div.Box().BorderBottomWidth, Fl(1))
 }
 
 func TestFlexDirectionColumnBreakMultipleChildren(t *testing.T) {

@@ -1265,11 +1265,12 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 					pageIsEmpty, absoluteBoxes, fixedBoxes, new([]pr.Float), discard, -1)
 				childResumeAt := tmp.resumeAt
 				if newChild == nil {
+					resumeIndex := 0
 					if resumeAt != nil {
-						if resumeIndex, _ := resumeAt.Unpack(); resumeIndex != 0 {
-							resumeAt = tree.ResumeStack{resumeIndex + i - 1: nil}
-						}
+						resumeIndex, _ = resumeAt.Unpack()
+						resumeIndex -= 1
 					}
+					resumeAt = tree.ResumeStack{resumeIndex + i: nil}
 				} else {
 					box.Children = append(box.Children, newChild)
 					if childResumeAt != nil {

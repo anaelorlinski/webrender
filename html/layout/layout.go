@@ -30,7 +30,7 @@ import (
 
 // if true, save a structured trace in an external file
 // this is a costly operation, and should only be used for debugging purpose
-const traceMode = true
+const traceMode = false
 
 var traceLogger tracer.Tracer // used only when traceMode is true
 
@@ -367,9 +367,13 @@ func (l *layoutContext) StrutLayoutsCache() map[text.StrutLayoutKey][2]pr.Float 
 }
 
 func (l *layoutContext) overflowsPage(bottomSpace, positionY pr.Float) bool {
+	return overflows(l.pageBottom-bottomSpace, positionY)
+}
+
+func overflows(bottomSpace, positionY pr.Float) bool {
 	// Use a small fudge factor to avoid floating numbers errors.
 	// The 1e-9 value comes from PEP 485.
-	return positionY > (l.pageBottom-bottomSpace)*(1+1e-9)
+	return positionY > bottomSpace*(1+1e-9)
 }
 
 func (l *layoutContext) createBlockFormattingContext() {
