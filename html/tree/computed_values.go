@@ -348,13 +348,12 @@ func length_(computer *ComputedStyle, value pr.DimOrS, fontSize pr.Float, pixels
 		case pr.Rem:
 			result = value.Value * computer.rootStyle.GetFontSize().Value
 		case pr.Lh:
-			line := text.StrutLayout(computer, computer.textContext)
-			result = value.Value * line[0]
+			line, _ := text.StrutLayout(computer, computer.textContext)
+			result = value.Value * line
 		case pr.Rlh:
-			line := text.StrutLayout(computer.rootStyle, computer.textContext)
-			result = value.Value * line[0]
+			line, _ := text.StrutLayout(computer.rootStyle, computer.textContext)
+			result = value.Value * line
 		}
-
 	default:
 		// A percentage or "auto": no conversion needed.
 		return value
@@ -538,13 +537,13 @@ func computeAttrFunction(computer *ComputedStyle, values pr.AttrData) (out pr.Co
 			prop = pr.String(attrValue) // Keep the string
 		case "url":
 			if strings.HasPrefix(attrValue, "#") {
-				prop = pr.NamedString{Name: "internal", String: utils.Unquote(attrValue[1:])}
+				prop = pr.TaggedString{Tag: pr.Internal, S: utils.Unquote(attrValue[1:])}
 			} else {
 				u, err := utils.SafeUrljoin(computer.baseUrl, attrValue, false)
 				if err != nil {
 					return out, err
 				}
-				prop = pr.NamedString{Name: "external", String: u}
+				prop = pr.TaggedString{Tag: pr.External, S: u}
 			}
 		case "color":
 			prop = pr.Color(parser.ParseColorString(strings.TrimSpace(attrValue)))
@@ -955,7 +954,7 @@ func verticalAlign(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssPropert
 	default:
 		out.Unit = pr.Scalar
 		if value.Unit == pr.Perc {
-			height := text.StrutLayout(computer, computer.textContext)[0]
+			height, _ := text.StrutLayout(computer, computer.textContext)
 			out.Value = height * value.Value / 100
 		} else {
 			out.Value = length_(computer, value, -1, true).Value

@@ -736,7 +736,6 @@ func lineBoxLayout(context *layoutContext, box_ Box, index int, child_ *bo.LineB
 				if traceMode {
 					traceLogger.Dump("lineBoxLayout -> maxLines == 0")
 				}
-
 				break
 			}
 			maxLines -= 1
@@ -856,7 +855,7 @@ func lineBoxLayout(context *layoutContext, box_ Box, index int, child_ *bo.LineB
 		skipStack = resumeAt
 
 		if traceMode {
-			traceLogger.Dump(fmt.Sprintf("lineBoxLayout at line %d -> %s", i, skipStack))
+			traceLogger.DumpTree(line_, fmt.Sprintf("lineBoxLayout at line %d -> %s", i, skipStack))
 		}
 	}
 

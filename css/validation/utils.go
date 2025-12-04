@@ -57,8 +57,8 @@ func getImage(_token Token, baseUrl string) (pr.Image, error) {
 	if err != nil {
 		return nil, err
 	}
-	if parsed.Name == "external" {
-		return pr.UrlImage(parsed.String), nil
+	if parsed.Tag == pr.External {
+		return pr.UrlImage(parsed.S), nil
 	}
 
 	token, ok := _token.(pa.FunctionBlock)
@@ -74,6 +74,7 @@ func getImage(_token Token, baseUrl string) (pr.Image, error) {
 			parsedColorsStop := make([]pr.ColorStop, len(colorStops))
 			for index, stop := range colorStops {
 				parsedColorsStop[index], err = parseColorStop(stop)
+				fmt.Println(parsedColorsStop[index], err)
 				if err != nil {
 					return nil, err
 				}
@@ -180,7 +181,7 @@ func parseRadialGradientParameters(arguments [][]Token) radialGradientParameters
 				if !length1.IsNone() && !length2.IsNone() {
 					size = pr.GradientSize{Explicit: [2]pr.Dimension{length1, length2}}
 					sizeShape = "ellipse"
-					i := utils.MaxInt(len(stack)-1, 0)
+					i := max(len(stack)-1, 0)
 					stack = stack[:i]
 				}
 			}
@@ -245,20 +246,20 @@ func parseColorStop(tokens []Token) (pr.ColorStop, error) {
 	return pr.ColorStop{}, ErrInvalidValue
 }
 
-func parseURLToken(value, baseURL string) (url pr.NamedString, attr pr.AttrData, err error) {
+func parseURLToken(value, baseURL string) (url pr.TaggedString, attr pr.AttrData, err error) {
 	if strings.HasPrefix(value, "#") {
-		return pr.NamedString{Name: "internal", String: utils.Unquote(value[1:])}, attr, nil
+		return pr.TaggedString{Tag: pr.Internal, S: utils.Unquote(value[1:])}, attr, nil
 	} else {
 		var joined string
 		joined, err = utils.SafeUrljoin(baseURL, value, false)
 		if err != nil {
 			return
 		}
-		return pr.NamedString{Name: "external", String: joined}, attr, nil
+		return pr.TaggedString{Tag: pr.External, S: joined}, attr, nil
 	}
 }
 
-func getUrl(_token Token, baseUrl string) (url pr.NamedString, attr pr.AttrData, err error) {
+func getUrl(_token Token, baseUrl string) (url pr.TaggedString, attr pr.AttrData, err error) {
 	switch token := _token.(type) {
 	case pa.URL:
 		return parseURLToken(token.Value, baseUrl)

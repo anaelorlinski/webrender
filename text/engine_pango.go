@@ -58,6 +58,7 @@ func (fc *FontConfigurationPango) spaceHeight(style *TextStyle) (height, baselin
 	layout := newTextLayout(fc, style, nil)
 	layout.SetText(" ")
 	line, _ := layout.GetFirstLine()
+	fmt.Println(line.Runs.Data.Item.Analysis.Font.FaceID())
 	sp := firstLineMetrics(line, nil, layout, -1, false, style, false, "")
 	return sp.Height, sp.Baseline
 }
@@ -157,10 +158,10 @@ func (f *FontConfigurationPango) AddFontFace(ruleDescriptors validation.FontFace
 	}
 
 	for _, url := range ruleDescriptors.Src {
-		if url.String == "" {
+		if url.S == "" {
 			continue
 		}
-		if !(url.Name == "external" || url.Name == "local") {
+		if !(url.Tag == pr.External || url.Tag == pr.Local) {
 			continue
 		}
 
@@ -184,11 +185,11 @@ func escapeXML(s string) string {
 	return b.String()
 }
 
-func (f *FontConfigurationPango) loadOneFont(url pr.NamedString, ruleDescriptors validation.FontFaceDescriptors, urlFetcher utils.UrlFetcher) (string, error) {
+func (f *FontConfigurationPango) loadOneFont(url pr.TaggedString, ruleDescriptors validation.FontFaceDescriptors, urlFetcher utils.UrlFetcher) (string, error) {
 	config := f.fontmap.Config
 
-	if url.Name == "local" {
-		fontName := url.String
+	if url.Tag == pr.Local {
+		fontName := url.S
 		pattern := fc.NewPattern()
 		config.Substitute(pattern, nil, fc.MatchResult)
 		pattern.SubstituteDefault()
@@ -206,7 +207,7 @@ func (f *FontConfigurationPango) loadOneFont(url pr.NamedString, ruleDescriptors
 		if fn := strings.ToLower(fontName); fn == strings.ToLower(family) || fn == strings.ToLower(postscript) {
 			filename := matchingPattern.FaceID().File
 			var err error
-			url.String, err = filepath.Abs(filename)
+			url.S, err = filepath.Abs(filename)
 			if err != nil {
 				return "", fmt.Errorf("failed to load local font %s: %s", fontName, err)
 			}
@@ -215,15 +216,15 @@ func (f *FontConfigurationPango) loadOneFont(url pr.NamedString, ruleDescriptors
 		}
 	}
 
-	result, err := urlFetcher(url.String)
+	result, err := urlFetcher(url.S)
 	if err != nil {
 		return "", fmt.Errorf("failed to load font at: %s", err)
 	}
-	fontFilename := escapeXML(url.String)
+	fontFilename := escapeXML(url.S)
 
 	content, err := io.ReadAll(result.Content)
 	if err != nil {
-		return "", fmt.Errorf("failed to load font at %s", url.String)
+		return "", fmt.Errorf("failed to load font at %s", url.S)
 	}
 
 	faces, format := fc.ReadFontFile(bytes.NewReader(content))
@@ -232,10 +233,10 @@ func (f *FontConfigurationPango) loadOneFont(url pr.NamedString, ruleDescriptors
 	}
 
 	if len(faces) != 1 {
-		return "", fmt.Errorf("font collections are not supported (%s)", url.String)
+		return "", fmt.Errorf("font collections are not supported (%s)", url.S)
 	}
 
-	if url.Name == "external" {
+	if url.Tag == pr.External {
 		key := FontOrigin{
 			File: fontFilename,
 		}
@@ -296,7 +297,7 @@ func (f *FontConfigurationPango) loadOneFont(url pr.NamedString, ruleDescriptors
 
 	fs, err := config.ScanFontRessource(bytes.NewReader(content), fontFilename)
 	if err != nil {
-		return "", fmt.Errorf("failed to load font at %s", url.String)
+		return "", fmt.Errorf("failed to load font at %s", url.S)
 	}
 
 	f.fontmap.Database = append(f.fontmap.Database, fs...)
@@ -452,7 +453,6 @@ func createLayout(text string, style *TextStyle, fonts FontConfiguration, maxWid
 		// signed integer. Treat bigger values same as None: unconstrained width.
 		layout.Layout.SetWidth(pango.Unit(PangoUnitsFromFloat(utils.Maxs(0, pr.Fl(maxWidth)))))
 	}
-
 	layout.SetText(text)
 	return layout
 }
@@ -646,7 +646,6 @@ func (fc *FontConfigurationPango) splitFirstLine(hyphenCache map[HyphenDictKey]h
 	if maxWidth, ok := maxWidth.(pr.Float); ok && maxWidth != pr.Inf && fontSize != 0 {
 		// Try to use a small amount of text instead of the whole text
 		shortText = shortTextHint(text, maxWidth, fontSize)
-
 		layout = createLayout(string(shortText), style, fc, maxWidth)
 		firstLine, resumeIndex = layout.GetFirstLine()
 		if resumeIndex == -1 && len(shortText) != len(text) {
@@ -660,8 +659,7 @@ func (fc *FontConfigurationPango) splitFirstLine(hyphenCache map[HyphenDictKey]h
 			// line break point required for step #3 in it, drop the end of the text.
 			if resumeIndex != -1 && resumeIndex != len(shortText) {
 				firstLineText := shortText[:resumeIndex]
-				start, end := len(firstLineText)+1, len(shortText)
-				textEndLogAttrs := fc.runeProps(layout.Text())[start:end]
+				textEndLogAttrs := fc.runeProps(firstLineText)
 				if getNextBreakPoint(textEndLogAttrs) != -1 {
 					text = shortText
 				}
@@ -692,15 +690,16 @@ func (fc *FontConfigurationPango) splitFirstLine(hyphenCache map[HyphenDictKey]h
 
 	firstLineText := text_
 	var secondLineText []rune
+	// this condition is required with Pango
+	// firstLineFits := (firstLineWidth <= maxWidthV ||
+	// 	strings.ContainsRune(strings.TrimSpace(firstLineText), ' ') ||
+	// 	fc.CanBreakText([]rune(strings.TrimSpace(firstLineText))) == pr.True)
 	if firstLineWidth <= maxWidthV {
-		if resumeIndex != -1 && resumeIndex <= len(text) {
-			firstLineText = string(text[:resumeIndex])
-		}
 		// The first line fits but may have been cut too early by Pango
 		if resumeIndex == -1 {
-			secondLineText = text
+			firstLineText, secondLineText = text_, nil
 		} else {
-			secondLineText = text[resumeIndex:]
+			firstLineText, secondLineText = string(text[:resumeIndex]), text[resumeIndex:]
 		}
 	} else {
 		// The line can't be split earlier, try to hyphenate the first word.
@@ -709,31 +708,33 @@ func (fc *FontConfigurationPango) splitFirstLine(hyphenCache map[HyphenDictKey]h
 	}
 
 	var breakPoint int
-	if len(firstLineText) == len(shortText) {
+	if len(secondLineText) == 0 {
 		// There’s no second line, don’t try to find a next word.
-		breakPoint = -1
+		breakPoint = len(secondLineText)
 	} else {
 		// Find then second line’s first break point.
-		log_attrs := fc.runeProps(layout.Text())
-		start, end := len(firstLineText)+1, len(shortText)
-		breakPoint = getNextBreakPoint(log_attrs[start:end])
-		if breakPoint != -1 {
-			breakPoint -= len(firstLineText) + 1
-		}
+		logAttrs := fc.runeProps(secondLineText)
+		breakPoint = getNextBreakPoint(logAttrs) - 1
 	}
 
-	nextWord := strings.SplitN(string(secondLineText), " ", 2)[0]
+	nextWord := string(TrimSuffix(secondLineText[:breakPoint], ' '))
 	if nextWord != "" {
-		if spaceCollapse {
-			// nextWord might fit without a space afterwards
-			// only try when space collapsing is allowed
+		var lastChar rune
+		if breakPoint == len(firstLineText) {
+			lastChar = secondLineText[breakPoint-1]
+		} else {
+			lastChar = secondLineText[breakPoint]
+		}
+		if spaceCollapse && lastChar == ' ' {
+			// Next word might fit without a space afterwards only try when
+			// space collapsing is allowed.
 			newFirstLineText := firstLineText + nextWord
 			layout.SetText(newFirstLineText)
 			firstLine, resumeIndex = layout.GetFirstLine()
 			// firstLineWidth, _ = lineSize(firstLine, style.GetLetterSpacing())
 			if resumeIndex == -1 {
 				if firstLineText != "" {
-					// The next word fits in the first line, keep the layout
+					// The next word fits in the first line, keep the layout.
 					resumeIndex = len([]rune(newFirstLineText)) + 1
 					return firstLineMetrics(firstLine, text, layout, resumeIndex, spaceCollapse, style, false, "")
 				} else {
@@ -767,27 +768,44 @@ func (fc *FontConfigurationPango) splitFirstLine(hyphenCache map[HyphenDictKey]h
 		manualHyphenation = strings.ContainsRune(firstLineText, softHyphen) || strings.ContainsRune(nextWord, softHyphen)
 	}
 
-	var startWord, stopWord int
+	var startWord, stopWord, nextTextIndex int
 	if hyphens == HAuto && lang != "" {
-		nextWordBoundaries := fc.wordBoundaries(secondLineText)
-		if len(nextWordBoundaries) == 2 {
-			// We have a word to hyphenate
-			startWord, stopWord = nextWordBoundaries[0], nextWordBoundaries[1]
-			nextWord = string(secondLineText[startWord:stopWord])
-			if stopWord-startWord >= limit.Total {
-				// This word is long enough
-				firstLineWidth, _ = lineSize(firstLine, style.LetterSpacing)
-				space := maxWidthV - firstLineWidth
-				zone := style.HyphenateLimitZone
-				limitZone := zone.Limit
-				if zone.IsPercentage {
-					limitZone = (maxWidthV * zone.Limit / 100.)
+		// Get text until next line break opportunity.
+		nextText := secondLineText
+		if nextBreakPoint := getNextBreakPointFromText(fc, secondLineText); nextBreakPoint != -1 {
+			nextText = nextText[:nextBreakPoint]
+		}
+
+		// Try all words included in this text.
+		for len(nextText) != 0 {
+			nextWordBoundaries := fc.wordBoundaries(nextText)
+			if nextWordBoundaries != nil {
+				// We have a word to hyphenate
+				startWord, stopWord = nextWordBoundaries[0], nextWordBoundaries[1]
+				nextWord = string(nextText[startWord:stopWord])
+				if stopWord-startWord >= limit.Total {
+					// This word is long enough
+					firstLineWidth, _ = lineSize(firstLine, style.LetterSpacing)
+					space := maxWidthV - firstLineWidth
+					zone := style.HyphenateLimitZone
+					limitZone := zone.Limit
+					if zone.IsPercentage {
+						limitZone = (maxWidthV * zone.Limit / 100.)
+					}
+					if space > limitZone || space < 0 {
+						// Available space is worth the try, or the line is even too long
+						// to fit: try to hyphenate.
+						autoHyphenation = true
+						nextTextIndex += startWord
+						break
+					}
 				}
-				if space > limitZone || space < 0 {
-					// Available space is worth the try, or the line is even too
-					// long to fit: try to hyphenate
-					autoHyphenation = true
-				}
+
+				// This word doesn’t work, try next one.
+				nextText = nextText[stopWord:]
+				nextTextIndex += stopWord
+			} else {
+				break
 			}
 		}
 	}
@@ -820,13 +838,14 @@ func (fc *FontConfigurationPango) splitFirstLine(hyphenCache map[HyphenDictKey]h
 			dictionary = hyphen.NewHyphener(lang, limit.Left, limit.Right)
 			hyphenCache[dictionaryKey] = dictionary
 		}
-		dictionaryIterations = dictionary.Iterate(nextWord)
+		previousWords := secondLineText[:nextTextIndex]
+		dictionaryIterations = dictionary.Iterate(nextWord, string(previousWords))
 	}
 
 	if len(dictionaryIterations) != 0 {
 		var newFirstLineText, hyphenatedFirstLineText string
 		for _, firstWordPart := range dictionaryIterations {
-			newFirstLineText = (firstLineText + string(secondLineText[:startWord]) + firstWordPart)
+			newFirstLineText = firstLineText + firstWordPart
 			hyphenatedFirstLineText = (newFirstLineText + hyphenateCharacter)
 			newLayout := createLayout(hyphenatedFirstLineText, style, fc, maxWidth)
 			newFirstLine, newIndex := newLayout.GetFirstLine()

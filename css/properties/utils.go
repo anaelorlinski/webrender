@@ -20,6 +20,11 @@ const (
 	Span        // "span"
 	Subgrid     // "subgrid"
 	Attr        // "attr()"
+
+	// url related
+	Internal
+	External
+	Local
 )
 
 // --------------- Values  -----------------------------------------------
@@ -113,7 +118,7 @@ func (s Counters) isInnerContent() {}
 func (s SContentProps) isInnerContent() {}
 
 // url
-func (s NamedString) isInnerContent() {}
+func (s TaggedString) isInnerContent() {}
 
 func (s Dimension) isInnerContent() {}
 func (s Float) isInnerContent()     {}

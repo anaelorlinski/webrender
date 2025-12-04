@@ -555,12 +555,12 @@ outerLoop:
 			if resolver.FetchImage == nil {
 				continue
 			}
-			value := content.Content.(pr.NamedString)
-			if value.Name != "external" {
+			value := content.Content.(pr.TaggedString)
+			if value.Tag != pr.External {
 				// Embedding internal references is impossible
 				continue
 			}
-			image := resolver.FetchImage(value.String, "", parentBox.Box().Style.GetImageOrientation())
+			image := resolver.FetchImage(value.S, "", parentBox.Box().Style.GetImageOrientation())
 			if image != nil {
 				contentBoxes = append(contentBoxes, InlineReplacedBoxAnonymousFrom(parentBox, image))
 			}
@@ -687,7 +687,7 @@ outerLoop:
 				isOpen := value.Open
 				insert := value.Insert && quoteStyle.Tag != pr.None
 				if !isOpen {
-					quoteDepth[0] = utils.MaxInt(0, quoteDepth[0]-1)
+					quoteDepth[0] = max(0, quoteDepth[0]-1)
 				}
 				if insert {
 					openQuotes, closeQuotes := quoteStyle.Open, quoteStyle.Close
@@ -698,7 +698,7 @@ outerLoop:
 					if isOpen {
 						quotes = openQuotes
 					}
-					addText(quotes[utils.MinInt(quoteDepth[0], len(quotes)-1)])
+					addText(quotes[min(quoteDepth[0], len(quotes)-1)])
 				}
 				if isOpen {
 					quoteDepth[0] += 1
@@ -1257,7 +1257,7 @@ func wrapTable(box TableBoxITF, children boxIterator) Box {
 						spannedRows = occupiedCellsByRow
 						cell.Rowspan = maxRowspan
 					} else {
-						cell.Rowspan = utils.MinInt(cell.Rowspan, maxRowspan)
+						cell.Rowspan = min(cell.Rowspan, maxRowspan)
 						spannedRows = occupiedCellsByRow[:cell.Rowspan-1]
 					}
 					for _, occupiedCells := range spannedRows {
@@ -1267,7 +1267,7 @@ func wrapTable(box TableBoxITF, children boxIterator) Box {
 					}
 				}
 				gridX = newGridX
-				gridWidth = utils.MaxInt(gridWidth, gridX)
+				gridWidth = max(gridWidth, gridX)
 			}
 		}
 		gridHeight += len(groupChildren)

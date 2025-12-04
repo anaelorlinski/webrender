@@ -279,16 +279,16 @@ func TestHeightAndBaseline(t *testing.T) {
 
 	fc := NewFontConfigurationPango(fontmapPango)
 	for _, desc := range []validation.FontFaceDescriptors{
-		{Src: []pr.NamedString{{Name: "external", String: "https://fonts.gstatic.com/s/googlesans/v36/4UaGrENHsxJlGDuGo1OIlL3Owps.ttf"}}, FontFamily: "Google Sans", FontStyle: "normal", FontWeight: pr.IntString{String: "", Int: 400}},
-		{Src: []pr.NamedString{{Name: "external", String: "https://fonts.gstatic.com/s/googlesans/v36/4UabrENHsxJlGDuGo1OIlLU94YtzCwM.ttf"}}, FontFamily: "Google Sans", FontStyle: "normal", FontWeight: pr.IntString{String: "", Int: 500}},
-		{Src: []pr.NamedString{{Name: "external", String: "https://fonts.gstatic.com/s/materialicons/v117/flUhRq6tzZclQEJ-Vdg-IuiaDsNZ.ttf"}}, FontFamily: "Material Icons", FontStyle: "normal", FontWeight: pr.IntString{String: "", Int: 400}},
-		{Src: []pr.NamedString{{Name: "external", String: "https://fonts.gstatic.com/s/opensans/v27/memSYaGs126MiZpBA-UvWbX2vVnXBbObj2OVZyOOSr4dVJWUgsjZ0B4gaVc.ttf"}}, FontFamily: "Open Sans", FontStyle: "normal", FontWeight: pr.IntString{String: "", Int: 400}, FontStretch: "normal"},
-		{Src: []pr.NamedString{{Name: "external", String: "https://fonts.gstatic.com/s/roboto/v29/KFOmCnqEu92Fr1Mu4mxP.ttf"}}, FontFamily: "Roboto", FontStyle: "normal", FontWeight: pr.IntString{String: "", Int: 400}},
-		{Src: []pr.NamedString{{Name: "external", String: "https://fonts.gstatic.com/s/roboto/v29/KFOlCnqEu92Fr1MmEU9fBBc9.ttf"}}, FontFamily: "Roboto", FontStyle: "normal", FontWeight: pr.IntString{String: "", Int: 500}},
-		{Src: []pr.NamedString{{Name: "external", String: "https://fonts.gstatic.com/s/roboto/v29/KFOlCnqEu92Fr1MmWUlfBBc9.ttf"}}, FontFamily: "Roboto", FontStyle: "normal", FontWeight: pr.IntString{String: "", Int: 700}},
-		{Src: []pr.NamedString{{Name: "external", String: "https://fonts.gstatic.com/s/worksans/v13/QGY_z_wNahGAdqQ43RhVcIgYT2Xz5u32K0nXBi8Jow.ttf"}}, FontFamily: "Work Sans", FontStyle: "normal", FontWeight: pr.IntString{String: "", Int: 400}},
-		{Src: []pr.NamedString{{Name: "external", String: "https://fonts.gstatic.com/s/worksans/v13/QGY_z_wNahGAdqQ43RhVcIgYT2Xz5u32K3vXBi8Jow.ttf"}}, FontFamily: "Work Sans", FontStyle: "normal", FontWeight: pr.IntString{String: "", Int: 500}},
-		{Src: []pr.NamedString{{Name: "external", String: "https://fonts.gstatic.com/s/worksans/v13/QGY_z_wNahGAdqQ43RhVcIgYT2Xz5u32K5fQBi8Jow.ttf"}}, FontFamily: "Work Sans", FontStyle: "normal", FontWeight: pr.IntString{String: "", Int: 600}},
+		{Src: []pr.TaggedString{{Tag: pr.External, S: "https://fonts.gstatic.com/s/googlesans/v36/4UaGrENHsxJlGDuGo1OIlL3Owps.ttf"}}, FontFamily: "Google Sans", FontStyle: "normal", FontWeight: pr.IntString{String: "", Int: 400}},
+		{Src: []pr.TaggedString{{Tag: pr.External, S: "https://fonts.gstatic.com/s/googlesans/v36/4UabrENHsxJlGDuGo1OIlLU94YtzCwM.ttf"}}, FontFamily: "Google Sans", FontStyle: "normal", FontWeight: pr.IntString{String: "", Int: 500}},
+		{Src: []pr.TaggedString{{Tag: pr.External, S: "https://fonts.gstatic.com/s/materialicons/v117/flUhRq6tzZclQEJ-Vdg-IuiaDsNZ.ttf"}}, FontFamily: "Material Icons", FontStyle: "normal", FontWeight: pr.IntString{String: "", Int: 400}},
+		{Src: []pr.TaggedString{{Tag: pr.External, S: "https://fonts.gstatic.com/s/opensans/v27/memSYaGs126MiZpBA-UvWbX2vVnXBbObj2OVZyOOSr4dVJWUgsjZ0B4gaVc.ttf"}}, FontFamily: "Open Sans", FontStyle: "normal", FontWeight: pr.IntString{String: "", Int: 400}, FontStretch: "normal"},
+		{Src: []pr.TaggedString{{Tag: pr.External, S: "https://fonts.gstatic.com/s/roboto/v29/KFOmCnqEu92Fr1Mu4mxP.ttf"}}, FontFamily: "Roboto", FontStyle: "normal", FontWeight: pr.IntString{String: "", Int: 400}},
+		{Src: []pr.TaggedString{{Tag: pr.External, S: "https://fonts.gstatic.com/s/roboto/v29/KFOlCnqEu92Fr1MmEU9fBBc9.ttf"}}, FontFamily: "Roboto", FontStyle: "normal", FontWeight: pr.IntString{String: "", Int: 500}},
+		{Src: []pr.TaggedString{{Tag: pr.External, S: "https://fonts.gstatic.com/s/roboto/v29/KFOlCnqEu92Fr1MmWUlfBBc9.ttf"}}, FontFamily: "Roboto", FontStyle: "normal", FontWeight: pr.IntString{String: "", Int: 700}},
+		{Src: []pr.TaggedString{{Tag: pr.External, S: "https://fonts.gstatic.com/s/worksans/v13/QGY_z_wNahGAdqQ43RhVcIgYT2Xz5u32K0nXBi8Jow.ttf"}}, FontFamily: "Work Sans", FontStyle: "normal", FontWeight: pr.IntString{String: "", Int: 400}},
+		{Src: []pr.TaggedString{{Tag: pr.External, S: "https://fonts.gstatic.com/s/worksans/v13/QGY_z_wNahGAdqQ43RhVcIgYT2Xz5u32K3vXBi8Jow.ttf"}}, FontFamily: "Work Sans", FontStyle: "normal", FontWeight: pr.IntString{String: "", Int: 500}},
+		{Src: []pr.TaggedString{{Tag: pr.External, S: "https://fonts.gstatic.com/s/worksans/v13/QGY_z_wNahGAdqQ43RhVcIgYT2Xz5u32K5fQBi8Jow.ttf"}}, FontFamily: "Work Sans", FontStyle: "normal", FontWeight: pr.IntString{String: "", Int: 600}},
 	} {
 		fc.AddFontFace(desc, utils.DefaultUrlFetcher)
 	}
@@ -304,17 +304,19 @@ func TestHeightAndBaseline(t *testing.T) {
 	}
 }
 
+func addWeayprintFont(t *testing.T, fc FontConfiguration) {
+	url, err := utils.PathToURL("../resources_test/weasyprint.otf")
+	tu.AssertNoErr(t, err)
+	fc.AddFontFace(validation.FontFaceDescriptors{
+		Src:        []pr.TaggedString{{Tag: pr.External, S: url}},
+		FontFamily: "weasyprint",
+	}, utils.DefaultUrlFetcher)
+}
+
 func newContextWithWeasyFont(t *testing.T) textContext {
 	ct := textContextPango()
 	fc := NewFontConfigurationPango(fontmapPango)
-	url, err := utils.PathToURL("../resources_test/weasyprint.otf")
-	if err != nil {
-		t.Fatal(err)
-	}
-	fc.AddFontFace(validation.FontFaceDescriptors{
-		Src:        []pr.NamedString{{Name: "external", String: url}},
-		FontFamily: "weasyprint",
-	}, utils.DefaultUrlFetcher)
+	addWeayprintFont(t, fc)
 	return ct
 }
 
@@ -716,8 +718,8 @@ func TestLetterAndWordSpacing(t *testing.T) {
 	}
 
 	for _, text := range textSamples {
-		for _, ls := range [...]float32{0, 1, 2, 10} {
-			for _, ws := range [...]float32{0, 1, 2, 10} {
+		for _, ls := range [...]pr.Fl{0, 1, 2, 10} {
+			for _, ws := range [...]pr.Fl{0, 1, 2, 10} {
 				style.LetterSpacing = ls
 				style.WordSpacing = ws
 				lineP := wrapPango(fcPango, text, style, nil)
@@ -831,4 +833,64 @@ func resolveFaceGotext(fc *FontConfigurationGotext, text string, style *TextStyl
 		})
 	}
 	return out
+}
+
+func TestBaseline(t *testing.T) {
+	fcGotext := NewFontConfigurationGotext(fontmapGotext)
+	fcPango := NewFontConfigurationPango(fontmapPango)
+
+	addWeayprintFont(t, fcGotext)
+	addWeayprintFont(t, fcPango)
+
+	style := &TextStyle{FontDescription: FontDescription{Family: []string{"weasyprint"}, Size: 1}}
+	text := "abc def ghi jkl "
+	lineP := wrapPango(fcPango, text, style, nil)
+	lineG := fcGotext.wrap([]rune(text), style, pr.Inf)
+	tu.AssertEqual(t, lineP.Baseline, lineG.Baseline)
+}
+
+func TestSpaceHeight(t *testing.T) {
+	fcGotext := NewFontConfigurationGotext(fontmapGotext)
+	fcPango := NewFontConfigurationPango(fontmapPango)
+
+	addWeayprintFont(t, fcGotext)
+	addWeayprintFont(t, fcPango)
+
+	style := &TextStyle{FontDescription: FontDescription{
+		Family:  []string{"weasyprint"},
+		Style:   FSty_Normal,
+		Weight:  400,
+		Stretch: FStr_Normal,
+		Size:    1,
+	}}
+
+	_, exp := fcPango.spaceHeight(style)
+	_, got := fcGotext.spaceHeight(style)
+	fmt.Println(exp, got)
+}
+
+func TestForcedLineBreak(t *testing.T) {
+	fcGotext := NewFontConfigurationGotext(fontmapGotext)
+	fcPango := NewFontConfigurationPango(fontmapPango)
+	addWeayprintFont(t, fcGotext)
+	addWeayprintFont(t, fcPango)
+
+	style := &TextStyle{FontDescription: FontDescription{
+		Family:  []string{"weasyprint"},
+		Style:   FSty_Normal,
+		Weight:  400,
+		Stretch: FStr_Normal,
+		Size:    10,
+	}}
+	lineGotext1 := fcGotext.wrap([]rune("test\n256"), style, pr.Inf)
+	linePango1 := wrapPango(fcPango, "test\n256", style, nil)
+	tu.AssertEqual(t, lineGotext1.Length, linePango1.Length)
+	tu.AssertEqual(t, lineGotext1.ResumeAt, linePango1.ResumeAt)
+	tu.AssertEqual(t, lineGotext1.Width, linePango1.Width)
+
+	lineGotext2 := fcGotext.wrap([]rune("\n"), style, pr.Inf)
+	linePango2 := wrapPango(fcPango, "\n", style, nil)
+	tu.AssertEqual(t, lineGotext2.Length, linePango2.Length)
+	tu.AssertEqual(t, lineGotext2.ResumeAt, linePango2.ResumeAt)
+	tu.AssertEqual(t, lineGotext2.Width, linePango2.Width)
 }

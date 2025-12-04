@@ -565,10 +565,10 @@ func setMediaBoxes(bleed bo.Bleed, mediaBox [4]fl, target backend.Page) {
 
 	// Arbitrarly set PDF BleedBox between CSS bleed box (PDF MediaBox) and
 	// CSS page box (PDF TrimBox), at most 10 px from the TrimBox.
-	bleedLeft := trimLeft - utils.MinF(10, fl(bleed.Left))
-	bleedTop := trimTop - utils.MinF(10, fl(bleed.Top))
-	bleedRight := trimRight + utils.MinF(10, fl(bleed.Right))
-	bleedBottom := trimBottom + utils.MinF(10, fl(bleed.Bottom))
+	bleedLeft := trimLeft - min(10, fl(bleed.Left))
+	bleedTop := trimTop - min(10, fl(bleed.Top))
+	bleedRight := trimRight + min(10, fl(bleed.Right))
+	bleedBottom := trimBottom + min(10, fl(bleed.Bottom))
 
 	target.SetMediaBox(left, top, right, bottom)
 	target.SetTrimBox(trimLeft, trimTop, trimRight, trimBottom)

@@ -7,7 +7,6 @@ import (
 
 	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/text"
-	"github.com/benoitkugler/webrender/utils"
 
 	pr "github.com/benoitkugler/webrender/css/properties"
 	bo "github.com/benoitkugler/webrender/html/boxes"
@@ -376,7 +375,7 @@ func inlineLineWidths(context *layoutContext, box_ Box, outer, isLineStart,
 			}
 			childText := textBox.Text[skip:]
 			if isLineStart && spaceCollapse {
-				childText = text.TrimLeft(childText, ' ')
+				childText = text.TrimPrefix(childText, ' ')
 			}
 			var maxWidth pr.MaybeFloat
 			if minimum {
@@ -492,8 +491,8 @@ func tableAndColumnsPreferredWidths(context *layoutContext, box_ Box, outer bool
 	for _, rowGroup := range table.Children {
 		for _, row := range rowGroup.Box().Children {
 			for _, cell := range row.Box().Children {
-				gridWidth = utils.MaxInt(cell.Box().GridX+cell.Box().Colspan, gridWidth)
-				gridHeight = utils.MaxInt(rowNumber+cell.Box().Rowspan, gridHeight)
+				gridWidth = max(cell.Box().GridX+cell.Box().Colspan, gridWidth)
+				gridHeight = max(rowNumber+cell.Box().Rowspan, gridHeight)
 			}
 			rowNumber += 1
 		}
@@ -948,7 +947,7 @@ func trailingWhitespaceSize(context *layoutContext, box Box) pr.Float {
 	}
 
 	// Strip text.
-	if strippedText := text.TrimRight(textBox.Text, ' '); len(strippedText) != 0 {
+	if strippedText := text.TrimSuffix(textBox.Text, ' '); len(strippedText) != 0 {
 		// Stripped text is not empty, calculate width difference.
 		resume, oldResume := 0, -1
 		var oldBox *bo.TextBox

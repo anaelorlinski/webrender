@@ -931,8 +931,8 @@ func listStyleImage(tokens []Token, baseUrl string) (pr.CssProperty, error) {
 		if err != nil {
 			return nil, err
 		}
-		if parsedUrl.Name == "external" {
-			return pr.UrlImage(parsedUrl.String), nil
+		if parsedUrl.Tag == pr.External {
+			return pr.UrlImage(parsedUrl.S), nil
 		}
 	}
 	return nil, nil
@@ -2383,9 +2383,9 @@ func opacity(tokens []Token, _ string) pr.CssProperty {
 	}
 	token := tokens[0]
 	if number, ok := token.(pa.Number); ok {
-		return pr.Float(utils.MinF(1, utils.MaxF(0, number.ValueF)))
+		return pr.Float(min(1, max(0, number.ValueF)))
 	} else if perc, ok := token.(pa.Percentage); ok {
-		return pr.Float(utils.MinF(1, utils.MaxF(0, perc.ValueF/100)))
+		return pr.Float(min(1, max(0, perc.ValueF/100)))
 	}
 
 	return nil
@@ -3179,15 +3179,15 @@ func gridTemplateAreas(tokens []Token, _ string) pr.CssProperty {
 			coordinates[[2]int{x, y}] = true
 			nx := x
 			hasBroken := false
-			for ; nx < len(row); nx++ {
-				narea := row[nx]
+			for index, narea := range row[x+1:] {
+				nx = index + x + 1
 				if narea != area {
 					hasBroken = true
 					break
 				}
 				coordinates[[2]int{nx, y}] = true
 			}
-			if hasBroken {
+			if !hasBroken {
 				nx += 1
 			}
 			for ny := y + 1; ny < len(gridAreas); ny++ {

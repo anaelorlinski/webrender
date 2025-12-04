@@ -57,13 +57,13 @@ func (h Hyphener) positions(word []rune) []dataOrInt {
 
 // Iterates over all hyphenation possibilities, the longest first,
 // for `word`.
-// The returned slice contains the starts of each possibility.
-func (h Hyphener) Iterate(word string) []string { return h.IterateRunes([]rune(word)) }
+// The returned slice contains the starts of each possibility, with [prefix] added.
+func (h Hyphener) Iterate(word, prefix string) []string { return h.IterateRunes([]rune(word), prefix) }
 
 // Iterates over all hyphenation possibilities, the longest first,
 // for `word`.
 // The returned slice contains the starts of each possibility.
-func (h Hyphener) IterateRunes(word []rune) []string {
+func (h Hyphener) IterateRunes(word []rune, prefix string) []string {
 	pos := h.positions(word)
 	L := len(pos)
 	out := make([]string, L)
@@ -88,7 +88,7 @@ func (h Hyphener) IterateRunes(word []rune) []string {
 		} else {
 			subs = string(word[:index.V])
 		}
-		out[L-1-i] = subs
+		out[L-1-i] = prefix + subs
 	}
 	return out
 }

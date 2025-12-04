@@ -57,12 +57,14 @@ func TestLineHeightInheritance(t *testing.T) {
 	tu.AssertEqual(t, html.Box().Style.GetFontSize(), pr.FToV(10))
 	tu.AssertEqual(t, div.Box().Style.GetFontSize(), pr.FToV(20))
 	// 140% of 10px = 14px is inherited from html
-	tu.AssertEqual(t, text.StrutLayout(div.Box().Style, newTextContext())[0], Fl(14))
+	lineHeight, _ := text.StrutLayout(div.Box().Style, newTextContext())
+	tu.AssertEqual(t, lineHeight, Fl(14))
 	tu.AssertEqual(t, div.Box().Style.GetVerticalAlign(), pr.FToV(7)) // 50 % of 14px
 
 	tu.AssertEqual(t, paragraph.Box().Style.GetFontSize(), pr.FToV(20))
 	// 1.4 is inherited from p, 1.4 * 20px on em = 28px
-	tu.AssertEqual(t, text.StrutLayout(paragraph.Box().Style, newTextContext())[0], Fl(28))
+	lineHeight, _ = text.StrutLayout(paragraph.Box().Style, newTextContext())
+	tu.AssertEqual(t, lineHeight, Fl(28))
 	tu.AssertEqual(t, paragraph.Box().Style.GetVerticalAlign(), pr.FToV(14)) // 50% of 28px,
 }
 

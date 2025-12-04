@@ -311,7 +311,7 @@ func ParseColor(token Token) Color {
 			}
 		}
 	case FunctionBlock:
-		args := parseCommaSeparated(token.Arguments)
+		args := RemoveWhitespace(token.Arguments)
 		if len(args) != 0 {
 			switch utils.AsciiLower(token.Name) {
 			case "rgb":
@@ -355,10 +355,13 @@ func ParseColor(token Token) Color {
 // If args is a list of a single  NUMBER token,
 // return its value clipped to the 0..1 range
 func parseAlpha(args []Token) (utils.Fl, bool) {
+	if len(args) == 0 {
+		return 1, true
+	}
 	if len(args) == 1 {
 		token, ok := args[0].(Number)
 		if ok {
-			return utils.MinF(1., utils.MaxF(0., token.ValueF)), true
+			return min(1., max(0., token.ValueF)), true
 		}
 	}
 	return 0, false
@@ -406,8 +409,8 @@ func parseHsl(args []Token, alpha utils.Fl) (RGBA, bool) {
 func hslToRgb(_hue int, saturation, lightness utils.Fl) (utils.Fl, utils.Fl, utils.Fl) {
 	hue := float64(_hue) / 360
 	hue = hue - math.Floor(hue)
-	saturation = utils.MinF(1., utils.MaxF(0, saturation/100))
-	lightness = utils.MinF(1, utils.MaxF(0, lightness/100))
+	saturation = min(1., max(0, saturation/100))
+	lightness = min(1, max(0, lightness/100))
 
 	// Translated from ABC: http://www.w3.org/TR/css3-color/#hsl-color
 	hueToRgb := func(m1, m2, h float64) utils.Fl {

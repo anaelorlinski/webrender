@@ -51,7 +51,7 @@ type NamedProp struct {
 }
 
 type FontFaceDescriptors struct {
-	Src                 []pr.NamedString
+	Src                 []pr.TaggedString
 	FontFamily          pr.String
 	FontStyle           pr.String
 	FontWeight          pr.IntString
@@ -108,7 +108,7 @@ func _src(tokens []Token, baseUrl string) (pr.InnerContent, error) {
 			token = tokens[len(tokens)-1]
 		}
 		if fn, ok := token.(pa.FunctionBlock); ok && utils.AsciiLower(fn.Name) == "local" {
-			return pr.NamedString{Name: "local", String: _fontFamilyDesc(fn.Arguments, true)}, nil
+			return pr.TaggedString{Tag: pr.Local, S: _fontFamilyDesc(fn.Arguments, true)}, nil
 		}
 		url, _, err := getUrl(token, baseUrl)
 		if err != nil {
@@ -122,13 +122,13 @@ func _src(tokens []Token, baseUrl string) (pr.InnerContent, error) {
 }
 
 func src(tokens []Token, baseUrl string, out *FontFaceDescriptors) error {
-	var l []pr.NamedString
+	var l []pr.TaggedString
 	for _, part := range pa.SplitOnComma(tokens) {
 		result, err := _src(pa.RemoveWhitespace(part), baseUrl)
 		if err != nil {
 			return err
 		}
-		if result, ok := result.(pr.NamedString); ok {
+		if result, ok := result.(pr.TaggedString); ok {
 			l = append(l, result)
 		} else {
 			return ErrInvalidValue
@@ -304,8 +304,8 @@ func stringIdentOrUrl(token Token, baseUrl string) (pr.NamedString, bool) {
 		return pr.NamedString{Name: "string", String: string(token.Value)}, true
 	default:
 		url, _, _ := getUrl(token, baseUrl)
-		if url.Name == "url" {
-			return url, true
+		if !url.IsNone() {
+			return pr.NamedString{Name: "url", String: url.S}, true
 		}
 	}
 	return pr.NamedString{}, false

@@ -7,7 +7,7 @@ import (
 )
 
 func randT() Transform {
-	return New(rand.Float32(), rand.Float32(), rand.Float32(), rand.Float32(), rand.Float32(), rand.Float32())
+	return New(fl(rand.Float64()), fl(rand.Float64()), fl(rand.Float64()), fl(rand.Float64()), fl(rand.Float64()), fl(rand.Float64()))
 }
 
 func TestDeterminant(t *testing.T) {

@@ -383,7 +383,7 @@ func distributeExtraSpace(context *layoutContext, affectedSizes, affectedTracksT
 					containingBlock, true, nil, nil, nil, false, -1)
 				space = item.Box().MarginHeight()
 			}
-			for _, sizes := range tracksSizes[utils.MinInt(i, len(tracksSizes)):utils.MinInt(i+span, len(tracksSizes))] {
+			for _, sizes := range tracksSizes[min(i, len(tracksSizes)):min(i+span, len(tracksSizes))] {
 				space -= sizes[affectedSizes].V()
 			}
 			space = max(0, space)
@@ -631,7 +631,7 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 				continue
 			}
 			hasFr := false
-			for _, functions := range sizingFunctions[utils.MinInt(i, len(sizingFunctions)):utils.MinInt(len(sizingFunctions), i+span+1)] {
+			for _, functions := range sizingFunctions[min(i, len(sizingFunctions)):min(len(sizingFunctions), i+span+1)] {
 				if isFr(functions[1]) {
 					hasFr = true
 					break
@@ -668,7 +668,7 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 			}
 
 			hasFr := false
-			for _, functions := range sizingFunctions[utils.MinInt(i, len(sizingFunctions)):utils.MinInt(len(sizingFunctions), i+span+1)] {
+			for _, functions := range sizingFunctions[min(i, len(sizingFunctions)):min(len(sizingFunctions), i+span+1)] {
 				if isFr(functions[1]) {
 					hasFr = true
 					break
@@ -1029,8 +1029,8 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 				continue
 			}
 		}
-		implicitX1 = utils.MinInt(x, implicitX1)
-		implicitX2 = utils.MaxInt(x+width, implicitX2)
+		implicitX1 = min(x, implicitX1)
+		implicitX2 = max(x+width, implicitX2)
 	}
 	// 1.3.3 Add columns to accommodate max column span.
 	for _, child := range remainingGridItems {
@@ -1045,7 +1045,7 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 		if span == 0 {
 			span = 1
 		}
-		implicitX2 = utils.MaxInt(implicitX1+span, implicitX2)
+		implicitX2 = max(implicitX1+span, implicitX2)
 	}
 
 	// 1.4 Position the remaining grid items.
@@ -1053,8 +1053,8 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 	implicitY2 := len(gridAreas)
 	for _, position := range childrenPositions {
 		_, y, _, height := position.unpack()
-		implicitY1 = utils.MinInt(y, implicitY1)
-		implicitY2 = utils.MaxInt(y+height, implicitY2)
+		implicitY1 = min(y, implicitY1)
+		implicitY2 = max(y+height, implicitY2)
 	}
 	cursorX, cursorY := implicitX1, implicitY1
 	if utils.IsIn(flow, "dense") {
@@ -1499,7 +1499,7 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 		cbW, cbH := box.ContainingBlock()
 		resolvePercentages(child, bo.MaybePoint{cbW, cbH})
 		widthF := (sum0(columnsSizes[x:x+width]) + pr.Float(width-1)*columnGap)
-		heightF := (sum0(rowsSizes[y:utils.MinInt(y+height, len(rowsSizes))]) + pr.Float(height-1)*rowGap)
+		heightF := (sum0(rowsSizes[y:min(y+height, len(rowsSizes))]) + pr.Float(height-1)*rowGap)
 		childWidth := widthF - (childB.MarginLeft.V() + childB.BorderLeftWidth + childB.PaddingLeft.V() +
 			childB.MarginRight.V() + childB.BorderRightWidth + childB.PaddingRight.V())
 		childHeight := heightF - (childB.MarginTop.V() + childB.BorderTopWidth + childB.PaddingTop.V() +

@@ -316,7 +316,7 @@ func (tk *tokenizer) consumeIdent() string {
 func (tk *tokenizer) consumeUnicodeRange() (start, end int64, err error) {
 	length := len(tk.src)
 	startPos := tk.pos
-	maxPos := utils.MinInt(tk.pos+6, length)
+	maxPos := min(tk.pos+6, length)
 	var startS, endS string
 	for tk.pos < maxPos {
 		r, w := utf8.DecodeRune(tk.src[tk.pos:])
@@ -343,7 +343,7 @@ func (tk *tokenizer) consumeUnicodeRange() (start, end int64, err error) {
 	} else if tk.pos+1 < length && tk.src[tk.pos] == '-' && strings.ContainsRune(charUnicodeRange, rune(tk.src[tk.pos+1])) {
 		tk.pos += utf8.RuneLen(rune(tk.src[tk.pos+1]))
 		startPos = tk.pos
-		maxPos = utils.MinInt(tk.pos+6, length)
+		maxPos = min(tk.pos+6, length)
 		for tk.pos < maxPos {
 			r, w := utf8.DecodeRune(tk.src[tk.pos:])
 			if !strings.ContainsRune(charUnicodeRange, r) {

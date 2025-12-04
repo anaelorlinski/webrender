@@ -7,7 +7,6 @@ import (
 	bo "github.com/benoitkugler/webrender/html/boxes"
 	"github.com/benoitkugler/webrender/html/tree"
 	"github.com/benoitkugler/webrender/logger"
-	"github.com/benoitkugler/webrender/utils"
 )
 
 // Layout for tables and internal table boxes.
@@ -811,7 +810,7 @@ func fixedTableLayout(box *bo.BoxFields) {
 	for _, cell := range firstRowCells {
 		sum += cell.Box().Colspan
 	}
-	numColumns := utils.MaxInt(len(allColumns), sum)
+	numColumns := max(len(allColumns), sum)
 	// ``None`` means not know yet.
 	columnWidths := make([]pr.MaybeFloat, numColumns)
 
@@ -1140,7 +1139,7 @@ func distributeExcessWidth(context *layoutContext, grid [][]bo.Box, excessWidth 
 		}
 	}
 	if len(columns) != 0 {
-		L := utils.MinInt(len(columnMaxContentWidths), len(currentWidths))
+		L := min(len(columnMaxContentWidths), len(currentWidths))
 		var (
 			sumDifferences pr.Float
 			differences    = make([]pr.Float, L)
@@ -1190,7 +1189,7 @@ func distributeExcessWidth(context *layoutContext, grid [][]bo.Box, excessWidth 
 		}
 	}
 	if len(columns) != 0 {
-		L := utils.MinInt(len(columnMaxContentWidths), len(currentWidths))
+		L := min(len(columnMaxContentWidths), len(currentWidths))
 		var (
 			sumDifferences pr.Float
 			differences    = make([]pr.Float, L)

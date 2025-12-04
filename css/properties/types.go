@@ -159,7 +159,7 @@ type Color pa.Color
 type ContentProperty struct {
 	// SStrings for type STRING, attr or string, counter, counters
 	// Quote for type QUOTE
-	// Url for URI
+	// TaggedString for URI
 	// String for leader()
 	Content InnerContent
 
@@ -175,6 +175,8 @@ type TaggedString struct {
 	S   string
 	Tag Tag
 }
+
+func (ts TaggedString) IsNone() bool { return ts.S == "" && ts.Tag == 0 }
 
 type Point [2]Dimension
 

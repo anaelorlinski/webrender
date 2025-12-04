@@ -170,7 +170,7 @@ func TestBreakingLineboxRegression2(t *testing.T) {
       <p style="width: %d.5em; font-family: weasyprint">ab
       <span style="padding-right: 1em; margin-right: 1em">c def</span>g
       hi</p>`
-	for i := 0; i < 16; i++ {
+	for i := range 16 {
 		page := renderOnePage(t, fmt.Sprintf(htmlSample, i))
 		html := unpack1(page)
 		body := unpack1(html)
@@ -312,9 +312,6 @@ func TestBreakingLineboxRegression6(t *testing.T) {
 
 	// Regression test for https://github.com/Kozea/WeasyPrint/issues/586
 	page := renderOnePage(t, `
-        <style>
-          @font-face {src: url(weasyprint.otf); font-family: weasyprint}
-        </style>
         <div style="width: 5.5em; font-family: weasyprint">
         a a <span style="white-space: nowrap">/ccc</span>`)
 	html := unpack1(page)
@@ -913,10 +910,9 @@ func TestVerticalAlign5(t *testing.T) {
         <style>
           @font-face {src: url(weasyprint.otf); font-family: weasyprint}
         </style>
-        <span style="line-height: 12px; font-size: 12px;
-			font-family: weasyprint"><img src="pattern.png" 
-			style="width: 40px; vertical-align: middle"><img src="pattern.png" 
-			style="width: 60px"></span>`)
+        <span style="line-height: 12px; font-size: 12px; font-family: weasyprint">`+
+		`<img src="pattern.png" style="width: 40px; vertical-align: middle">`+
+		`<img src="pattern.png" style="width: 60px"></span>`)
 	html := unpack1(page)
 	body := unpack1(html)
 	line := unpack1(body)
@@ -926,7 +922,7 @@ func TestVerticalAlign5(t *testing.T) {
 	tu.AssertEqual(t, img2.Box().Height, Fl(60))
 	// middle of the image (positionY + 20) is at half the ex-height above
 	// the baseline of the parent. The ex-height of weasyprint.otf is 0.8em
-	tu.AssertEqual(t, img1.Box().PositionY, Fl(35.201202))
+	tu.AssertEqual(t, img1.Box().PositionY, Fl(35.20096))
 	tu.AssertEqual(t, img2.Box().PositionY, Fl(0))
 	tu.AssertEqual(t, line.Box().Height, Fl(75.2012))
 	tu.AssertEqual(t, body.Box().Height, line.Box().Height)
@@ -1100,7 +1096,7 @@ func TestVerticalAlign11(t *testing.T) {
 	span := unpack1(line)
 	img1, img2 := unpack2(span)
 	tu.AssertEqual(t, img1.Box().PositionY, Fl(96))
-	tu.AssertEqual(t, img2.Box().PositionY, Fl(0))
+	approxEqual(t, fl(img2.Box().PositionY), 0) // float rounding errors
 }
 
 func TestVerticalAlign12(t *testing.T) {

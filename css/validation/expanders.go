@@ -531,7 +531,7 @@ func expandBackground(baseURL string, shortand pr.Shortand, tokens []Token) (out
 		// Make `tokens` a stack
 		tokens = reverse(tokens)
 		for len(tokens) > 0 {
-			i := utils.MaxInt(len(tokens)-2, 0)
+			i := max(len(tokens)-2, 0)
 			repeat := _backgroundRepeat(reverse(tokens[i:]))
 			if repeat != [2]string{} {
 				if err = results.add("repeat"); err != nil {
@@ -610,7 +610,7 @@ func expandBackground(baseURL string, shortand pr.Shortand, tokens []Token) (out
 							}
 							for n := start; n >= 2; n-- {
 								// n includes the "/" delimiter.
-								i, j := utils.MaxInt(0, len(tokens)-n), utils.MaxInt(0, len(tokens)-1)
+								i, j := max(0, len(tokens)-n), max(0, len(tokens)-1)
 								positionT = reverse(tokens[i:j])
 								size := _backgroundSize(positionT)
 								if !size.IsNone() {
@@ -638,7 +638,7 @@ func expandBackground(baseURL string, shortand pr.Shortand, tokens []Token) (out
 				results.origin = origin
 				tokens = tokens[:len(tokens)-1]
 
-				nextToken := tokens[utils.MaxInt(0, len(tokens)-1):]
+				nextToken := tokens[max(0, len(tokens)-1):]
 
 				clip := _box(nextToken)
 				if clip != "" {

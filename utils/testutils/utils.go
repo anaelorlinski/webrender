@@ -12,7 +12,7 @@ func Assert(t *testing.T, b bool) {
 	}
 }
 
-func AssertEqual(t *testing.T, got, exp interface{}) {
+func AssertEqual(t *testing.T, got, exp any) {
 	t.Helper()
 	if !reflect.DeepEqual(exp, got) {
 		t.Fatalf("expected\n%v\n got \n%v", exp, got)

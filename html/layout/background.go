@@ -10,7 +10,6 @@ import (
 	bo "github.com/benoitkugler/webrender/html/boxes"
 	"github.com/benoitkugler/webrender/html/tree"
 	"github.com/benoitkugler/webrender/images"
-	"github.com/benoitkugler/webrender/utils"
 )
 
 func boxRectangle(box bo.BoxFields, whichRectangle string) [4]pr.Float {
@@ -277,7 +276,7 @@ func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.DimOrS, ima
 	repeatX, repeatY := repeat[0], repeat[1]
 
 	if repeatX == "round" {
-		nRepeats := utils.MaxInt(1, int(math.Round(float64(positioningWidth/imageWidth))))
+		nRepeats := max(1, int(math.Round(float64(positioningWidth/imageWidth))))
 		newWidth := positioningWidth / pr.Float(nRepeats)
 		positionX = pr.Float(0) // Ignore background-position for this dimension
 		if repeatY != "round" && size.Height.S == "auto" {
@@ -286,7 +285,7 @@ func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.DimOrS, ima
 		imageWidth = newWidth
 	}
 	if repeatY == "round" {
-		nRepeats := utils.MaxInt(1, int(math.Round(float64(positioningHeight/imageHeight))))
+		nRepeats := max(1, int(math.Round(float64(positioningHeight/imageHeight))))
 		newHeight := positioningHeight / pr.Float(nRepeats)
 		positionY = pr.Float(0) // Ignore background-position for this dimension
 		if repeatX != "round" && size.Width.S == "auto" {

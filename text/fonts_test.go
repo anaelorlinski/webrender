@@ -11,7 +11,6 @@ import (
 
 	"github.com/benoitkugler/textlayout/fonts"
 	"github.com/benoitkugler/textprocessing/fontconfig"
-	"github.com/benoitkugler/webrender/css/properties"
 	pr "github.com/benoitkugler/webrender/css/properties"
 	"github.com/benoitkugler/webrender/css/validation"
 	"github.com/benoitkugler/webrender/utils"
@@ -68,17 +67,13 @@ func TestAddFontFace(t *testing.T) {
 	fcG := NewFontConfigurationGotext(fontmapGotext)
 
 	url, err := utils.PathToURL("../resources_test/weasyprint.otf")
-	if err != nil {
-		t.Fatal(err)
-	}
+	tu.AssertNoErr(t, err)
 	desc := validation.FontFaceDescriptors{
-		Src:        []properties.NamedString{{Name: "external", String: url}},
+		Src:        []pr.TaggedString{{Tag: pr.External, S: url}},
 		FontFamily: "weasyprint",
 	}
 	expected, err := os.ReadFile("../resources_test/weasyprint.otf")
-	if err != nil {
-		t.Fatal(err)
-	}
+	tu.AssertNoErr(t, err)
 
 	// Pango
 	filename := fcP.AddFontFace(desc, utils.DefaultUrlFetcher)
@@ -111,7 +106,7 @@ func TestAddFontFaceAspect(t *testing.T) {
 	}
 
 	desc := validation.FontFaceDescriptors{
-		Src:        []properties.NamedString{{Name: "external", String: url}},
+		Src:        []pr.TaggedString{{Tag: pr.External, S: url}},
 		FontFamily: "weasyprint",
 		// provide user metadata
 		FontStyle:   "italic",
@@ -206,10 +201,11 @@ func TestResolveFont(t *testing.T) {
 		{[]string{"BlinkMacSystemFont", "Helvetica"}, "Nimbus Sans"},
 		{[]string{"Times"}, "Nimbus Roman"},
 		{[]string{"Mononoki"}, "Noto Sans"},
+		{[]string{"serif"}, "Noto Serif"},
 	} {
-		fc := NewFontConfigurationGotext(fontmapGotext)
-		fc.fm.SetQuery(fontscan.Query{Families: test.query})
-		face := fc.fm.ResolveFace('a')
+		fm := NewFontConfigurationGotext(fontmapGotext).fm
+		fm.SetQuery(fontscan.Query{Families: test.query})
+		face := fm.ResolveFace('a')
 		tu.AssertEqual(t, face.Font.Describe().Family, test.resolved)
 	}
 }
@@ -241,6 +237,26 @@ func TestMetricsLinuxFonts(t *testing.T) {
 			}
 		}
 	}
+}
+
+func Test_heightx(t *testing.T) {
+	fcGotext := NewFontConfigurationGotext(fontmapGotext)
+
+	addWeayprintFont(t, fcGotext)
+
+	style := &TextStyle{FontDescription: FontDescription{
+		Family:  []string{"weasyprint"},
+		Style:   FSty_Normal,
+		Stretch: FStr_Normal,
+		Weight:  400,
+		Size:    100,
+	}}
+	h := fcGotext.heightx(style)
+	assertApprox(t, pr.Float(h), 79.98, "")
+
+	style.Size = 1000
+	h = fcGotext.heightx(style)
+	assertApprox(t, pr.Float(h), 799.8, "")
 }
 
 func BenchmarkMetrics(b *testing.B) {

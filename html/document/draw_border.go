@@ -253,7 +253,7 @@ func (ctx drawContext) drawBorderImage(box *bo.BoxFields, forMask bool) {
 				// so there"s one more space than repeat.
 				extraDx = ((width/scaleX - fl(nRepeatsX)*sliceWidth) / (fl(nRepeatsX) + 1))
 			case "round":
-				nRepeatsX = utils.MaxInt(1, int(utils.Round(width/sliceWidth/scaleX)))
+				nRepeatsX = max(1, int(utils.Round(width/sliceWidth/scaleX)))
 				scaleX = width / (fl(nRepeatsX) * sliceWidth)
 			default:
 				nRepeatsX = 1
@@ -281,7 +281,7 @@ func (ctx drawContext) drawBorderImage(box *bo.BoxFields, forMask bool) {
 				// so there"s one more space than repeat.
 				extraDy = ((height/scaleY - fl(nRepeatsY)*sliceHeight) / (fl(nRepeatsY) + 1))
 			case "round":
-				nRepeatsY = utils.MaxInt(1, int(utils.Round(height/sliceHeight/scaleY)))
+				nRepeatsY = max(1, int(utils.Round(height/sliceHeight/scaleY)))
 				scaleY = height / (fl(nRepeatsY) * sliceHeight)
 			default:
 				nRepeatsY = 1
@@ -502,14 +502,12 @@ func clipBorderSegment(context backend.Canvas, style pr.String, width fl, side p
 					i := fl(i_) + 0.5 // half dash
 					angle1 = ((2*angle - way) + i*way*dash/chl) / 4 * pi
 
-					fn := utils.MaxF
+					arg1 := ((2*angle - way) + (i+1)*way*dash/chl) / 4 * pi
 					if way > 0 {
-						fn = utils.MinF
+						angle2 = min(arg1, angle*pi/2)
+					} else {
+						angle2 = max(arg1, angle*pi/2)
 					}
-					angle2 = fn(
-						((2*angle-way)+(i+1)*way*dash/chl)/4*pi,
-						angle*pi/2,
-					)
 					if side == top || side == bottom {
 						context.MoveTo(x+px, mainOffset+py)
 						context.LineTo(x+px-way*px*1/fl(math.Tan(float64(angle2))), mainOffset)
@@ -541,16 +539,16 @@ func clipBorderSegment(context backend.Canvas, style pr.String, width fl, side p
 					i := fl(i_) + offset
 					var x1, x2, y1, y2 fl
 					if side == top || side == bottom {
-						x1 = utils.MaxF(bbx+px1+i*dash, bbx+px1)
-						x2 = utils.MinF(bbx+px1+(i+1)*dash, bbx+bbw+px2)
+						x1 = max(bbx+px1+i*dash, bbx+px1)
+						x2 = min(bbx+px1+(i+1)*dash, bbx+bbw+px2)
 						y1 = mainOffset
 						if way < 0 {
 							y1 -= width
 						}
 						y2 = y1 + width
 					} else if side == left || side == right {
-						y1 = utils.MaxF(bby+py1+i*dash, bby+py1)
-						y2 = utils.MinF(bby+py1+(i+1)*dash, bby+bbh+py2)
+						y1 = max(bby+py1+i*dash, bby+py1)
+						y2 = min(bby+py1+(i+1)*dash, bby+bbh+py2)
 						x1 = mainOffset
 						if way > 0 {
 							x1 -= width

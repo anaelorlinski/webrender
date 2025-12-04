@@ -6,8 +6,8 @@ toolchain go1.24.1
 
 require (
 	github.com/benoitkugler/textlayout v0.3.1
-	github.com/benoitkugler/textprocessing v0.0.3
-	github.com/go-text/typesetting v0.3.0
+	github.com/benoitkugler/textprocessing v0.0.4
+	github.com/go-text/typesetting v0.3.1
 	golang.org/x/image v0.29.0
 	golang.org/x/net v0.42.0
 	golang.org/x/text v0.27.0

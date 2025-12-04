@@ -29,7 +29,7 @@ func NewTracer(outFile string) Tracer {
 
 func FormatMaybeFloat(v properties.MaybeFloat) string {
 	if v, ok := v.(properties.Float); ok {
-		return strconv.FormatFloat(float64(utils.RoundPrec(float32(v), 1)), 'g', -1, 32)
+		return strconv.FormatFloat(float64(utils.RoundPrec(fl(v), 1)), 'g', -1, 32)
 	}
 	return fmt.Sprintf("%v", v)
 }

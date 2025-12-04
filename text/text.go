@@ -128,46 +128,46 @@ type StrutLayoutKey struct {
 // StrutLayout returns a tuple of the used value of `line-height` and the baseline.
 // The baseline is given from the top edge of line height.
 // [context] is mandatory for the text layout.
-func StrutLayout(style_ pr.StyleAccessor, context TextLayoutContext) (result [2]pr.Float) {
+func StrutLayout(style_ pr.StyleAccessor, context TextLayoutContext) (lineHeight, baseline pr.Float) {
 	style := NewTextStyle(style_, false)
 
 	fontSize := style.Size
 	if fontSize == 0 {
-		return [2]pr.Float{}
+		return 0, 0
 	}
 
-	lineHeight := style_.GetLineHeight()
+	lineHeightV := style_.GetLineHeight()
 
 	key := StrutLayoutKey{
-		fontSize:             fontSize,
-		fontLanguageOverride: style.FontLanguageOverride,
 		lang:                 style.Lang,
 		fontFamily:           strings.Join(style.Family, ""),
-		fontStyle:            style.Style,
-		fontStretch:          style.Stretch,
+		lineHeight:           lineHeightV,
 		fontWeight:           style.Weight,
-		lineHeight:           lineHeight,
+		fontSize:             fontSize,
+		fontLanguageOverride: style.FontLanguageOverride,
+		fontStretch:          style.Stretch,
+		fontStyle:            style.Style,
 	}
 
 	cache := context.StrutLayoutsCache()
 	if v, ok := cache[key]; ok {
-		return v
+		return v[0], v[1]
 	}
 
 	height, baseline := context.Fonts().spaceHeight(style)
 
-	if lineHeight.S == "normal" {
-		result = [2]pr.Float{height, baseline}
+	if lineHeightV.S == "normal" {
+		lineHeight = height
 	} else {
-		lineHeightV := lineHeight.Value
-		if lineHeight.Unit == pr.Scalar {
-			lineHeightV *= pr.Float(fontSize)
+		lineHeight = lineHeightV.Value
+		if lineHeightV.Unit == pr.Scalar {
+			lineHeight *= pr.Float(fontSize)
 		}
-		result = [2]pr.Float{lineHeightV, baseline + (lineHeightV-height)/2}
+		baseline = baseline + (lineHeight-height)/2
 	}
 
-	cache[key] = result
-	return result
+	cache[key] = [2]pr.Float{lineHeight, baseline}
+	return lineHeight, baseline
 }
 
 // CharacterRatio returns the ratio 1ex/font_size or 1ch/font_size, according to given style.
@@ -186,7 +186,7 @@ func CharacterRatio(style_ pr.ElementStyle, cache pr.TextRatioCache, isCh bool, 
 	}
 
 	// Random big value
-	const fontSize pr.Fl = 1000
+	const fontSize pr.Fl = 100
 	style.FontDescription.Size = fontSize
 
 	var measure pr.Fl
@@ -227,25 +227,34 @@ func HasSuffix(s []rune, r rune) bool {
 	return len(s) != 0 && s[len(s)-1] == r
 }
 
-func TrimRight(s []rune, r rune) []rune {
+func TrimSuffix(s []rune, r rune) []rune {
 	for len(s) > 0 && s[len(s)-1] == r {
 		s = s[:len(s)-1]
 	}
 	return s
 }
 
-func TrimLeft(s []rune, r rune) []rune {
+func TrimPrefix(s []rune, r rune) []rune {
 	for len(s) > 0 && s[0] == r {
 		s = s[1:]
 	}
 	return s
 }
 
+// returns len(attrs) if not found
 func getNextBreakPoint(attrs []runeProp) int {
 	for i, attr := range attrs {
 		if attr&isLineBreak != 0 {
 			return i
 		}
 	}
-	return -1
+	return len(attrs)
+}
+
+func getNextBreakPointFromText(fc *FontConfigurationPango, text []rune) int {
+	if len(text) < 2 {
+		return -1
+	}
+	props := fc.runeProps(text)
+	return getNextBreakPoint(props[1:len(text)])
 }

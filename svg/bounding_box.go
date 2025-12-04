@@ -2,8 +2,6 @@ package svg
 
 import (
 	"math"
-
-	"github.com/benoitkugler/webrender/utils"
 )
 
 // if withStroke is true, add the stroke shape
@@ -42,8 +40,8 @@ func (r *Rectangle) add(x, y Fl) {
 		r.X, r.Y = x, y
 		return
 	}
-	minX, minY := utils.MinF(r.X, x), utils.MinF(r.Y, y)
-	maxX, maxY := utils.MaxF(r.X+r.Width, x), utils.MaxF(r.Y+r.Height, y)
+	minX, minY := min(r.X, x), min(r.Y, y)
+	maxX, maxY := max(r.X+r.Width, x), max(r.Y+r.Height, y)
 	r.X, r.Y, r.Width, r.Height = minX, minY, maxX-minX, maxY-minY
 }
 
@@ -68,8 +66,8 @@ func (e ellipse) boundingBox(_ *attributes, dims drawingDims) (Rectangle, bool) 
 func (l line) boundingBox(_ *attributes, dims drawingDims) (Rectangle, bool) {
 	x1, y1 := dims.point(l.x1, l.y1)
 	x2, y2 := dims.point(l.x2, l.y2)
-	x, y := utils.MinF(x1, x2), utils.MinF(y1, y2)
-	width, height := utils.MaxF(x1, x2)-x, utils.MaxF(y1, y2)-y
+	x, y := min(x1, x2), min(y1, y2)
+	width, height := max(x1, x2)-x, max(y1, y2)-y
 	return Rectangle{x, y, width, height}, true
 }
 
@@ -238,10 +236,10 @@ func computeBezierBoundingBox(curve bezier) Rectangle {
 	maxX, maxY := minX, minY
 
 	for _, e := range bbox[1:] {
-		minX = utils.MinF(e.x, minX)
-		minY = utils.MinF(e.y, minY)
-		maxX = utils.MaxF(e.x, maxX)
-		maxY = utils.MaxF(e.y, maxY)
+		minX = min(e.x, minX)
+		minY = min(e.y, minY)
+		maxX = max(e.x, maxX)
+		maxY = max(e.y, maxY)
 	}
 	return Rectangle{minX, minY, maxX - minX, maxY - minY}
 }

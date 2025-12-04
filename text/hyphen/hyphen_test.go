@@ -21,7 +21,7 @@ import (
 func TestIterate(t *testing.T) {
 	dic := NewHyphener(language.NewLanguage("nl_NL"), 2, 2)
 	exp := []string{"Amster", "Am"}
-	got := dic.Iterate("Amsterdam")
+	got := dic.Iterate("Amsterdam", "")
 	if !reflect.DeepEqual(exp, got) {
 		t.Fatalf("expected %v, got %v", exp, got)
 	}
@@ -30,7 +30,7 @@ func TestIterate(t *testing.T) {
 func TestAlternative(t *testing.T) {
 	dic := NewHyphener("hu", 1, 1)
 	exp := []string{"kulisz", "ku"}
-	got := dic.Iterate("kulissza")
+	got := dic.Iterate("kulissza", "")
 	if !reflect.DeepEqual(exp, got) {
 		t.Fatalf("expected %v, got %v", exp, got)
 	}
@@ -39,7 +39,7 @@ func TestAlternative(t *testing.T) {
 func TestFallbackDict(t *testing.T) {
 	dic := NewHyphener(language.NewLanguage("nl_NL-variant"), 2, 2)
 	exp := []string{"Amster", "Am"}
-	got := dic.Iterate("Amsterdam")
+	got := dic.Iterate("Amsterdam", "")
 	if !reflect.DeepEqual(exp, got) {
 		t.Fatalf("expected %v, got %v", exp, got)
 	}
@@ -112,7 +112,7 @@ func TestFallback(t *testing.T) {
 
 func TestCache(t *testing.T) {
 	dic := NewHyphener("fr", 2, 2)
-	dic.Iterate("éléphant")
+	dic.Iterate("éléphant", "")
 	if len(dic.hd.cache) == 0 {
 		t.Fatal("missing cache")
 	}
@@ -120,7 +120,7 @@ func TestCache(t *testing.T) {
 
 func TestUnicode(t *testing.T) {
 	dictionary := NewHyphener("fr", 2, 2)
-	res := dictionary.Iterate("hyphénation")
+	res := dictionary.Iterate("hyphénation", "")
 	if !reflect.DeepEqual(res, []string{"hyphéna", "hyphé", "hy"}) {
 		t.Fatal()
 	}

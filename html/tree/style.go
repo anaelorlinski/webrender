@@ -839,7 +839,7 @@ func findStyleAttributes(tree *utils.HTMLNode, presentationalHints bool, baseUrl
 					} else if relativeMinus {
 						sizeI -= 3
 					}
-					sizeI = utils.MaxInt(1, utils.MinInt(7, sizeI))
+					sizeI = max(1, min(7, sizeI))
 					out = append(out, styleAttrSpec{specificity: specificity, styleAttr: checkStyleAttribute(element, fmt.Sprintf("font-size:%s", fontSizes[sizeI]))})
 				}
 			}
@@ -1531,6 +1531,10 @@ func (styleFor StyleFor) SetPageComputedStylesT(pageType utils.PageElement, html
 func resolveVar(computed map[string]pr.RawTokens, token Token, knownVariables utils.Set) []Token {
 	if !validation.HasVar(token) {
 		return nil
+	}
+
+	if knownVariables == nil {
+		knownVariables = make(utils.Set)
 	}
 
 	fn := token.(pa.FunctionBlock)

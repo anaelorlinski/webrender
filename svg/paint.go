@@ -328,7 +328,7 @@ func (gr gradient) paint(dst backend.Canvas, node *svgNode, opacity Fl, dims dra
 	var previousPos Fl
 	for i, p := range gr.positions {
 		pos := p.Resolve(dims.fontSize, 1)
-		positions[i] = utils.MaxF(pos, previousPos) // ensure positions is increasing
+		positions[i] = max(pos, previousPos) // ensure positions is increasing
 		previousPos = pos
 	}
 	colors := append([]parser.RGBA(nil), gr.colors...)
@@ -375,7 +375,7 @@ func (gr gradient) paint(dst backend.Canvas, node *svgNode, opacity Fl, dims dra
 			x2 -= x
 			y2 -= y
 		} else {
-			length := utils.MinF(width, height)
+			length := min(width, height)
 			x1 *= length
 			y1 *= length
 			x2 *= length
@@ -412,7 +412,7 @@ func (gr gradient) paint(dst backend.Canvas, node *svgNode, opacity Fl, dims dra
 			fx -= x
 			fy -= y
 		} else {
-			length := utils.MinF(width, height)
+			length := min(width, height)
 			cx *= length
 			cy *= length
 			r *= length

@@ -50,11 +50,11 @@ func (fd FontDescription) binary(dst []byte, includeSize bool) []byte {
 	dst = append(dst, byte(fd.Style), byte(fd.Stretch), byte(fd.VariantCaps))
 	dst = binary.BigEndian.AppendUint16(dst, fd.Weight)
 	if includeSize {
-		dst = binary.BigEndian.AppendUint32(dst, math.Float32bits(fd.Size))
+		dst = binary.BigEndian.AppendUint32(dst, math.Float32bits(float32(fd.Size)))
 	}
 	for _, v := range fd.VariationSettings {
 		dst = append(dst, v.Tag[:]...)
-		dst = binary.BigEndian.AppendUint32(dst, math.Float32bits(v.Value))
+		dst = binary.BigEndian.AppendUint32(dst, math.Float32bits(float32(v.Value)))
 	}
 	return dst
 }

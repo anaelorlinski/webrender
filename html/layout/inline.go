@@ -9,6 +9,7 @@ import (
 	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/text"
 	"github.com/benoitkugler/webrender/utils"
+	"github.com/benoitkugler/webrender/utils/testutils/tracer"
 
 	pr "github.com/benoitkugler/webrender/css/properties"
 	bo "github.com/benoitkugler/webrender/html/boxes"
@@ -131,7 +132,7 @@ func getNextLinebox(context *layoutContext, linebox *bo.LineBox, positionY, bott
 	if len(context.excludedShapes.list) != 0 {
 		// Width and height must be calculated to avoid floats
 		linebox.Width = inlineMinContentWidth(context, linebox, true, skipStack, true, false)
-		linebox.Height = text.StrutLayout(linebox.Style, context)[0]
+		linebox.Height, _ = text.StrutLayout(linebox.Style, context)
 	} else {
 		// No float, width and height will be set by the lines
 		linebox.Width = pr.Float(0)
@@ -328,7 +329,7 @@ func removeLastWhitespace(context *layoutContext, line Box) {
 	if ws := box.Box().Style.GetWhiteSpace(); !(ok && (ws == "normal" || ws == "nowrap" || ws == "pre-line")) {
 		return
 	}
-	newText := text.TrimRight(textBox.Text, ' ')
+	newText := text.TrimSuffix(textBox.Text, ' ')
 	var spaceWidth pr.Float
 	if L := len(newText); L != 0 {
 		if L == len(textBox.Text) {
@@ -1005,9 +1006,8 @@ func splitInlineBox(context *layoutContext, box_ Box, positionX, maxX, bottomSpa
 		newBox.Width = positionX - contentBoxLeft
 		newBox_.Translate(newBox_, floatWidths.left, 0, true)
 	}
-	stl := text.StrutLayout(box.Style, context)
-	lineHeight := stl[0]
-	newBox.Baseline = stl[1]
+	lineHeight, baseline := text.StrutLayout(box.Style, context)
+	newBox.Baseline = baseline
 	newBox.Height = box.Style.GetFontSize().ToMaybeFloat()
 	halfLeading := (lineHeight - newBox.Height.V()) / 2.
 	// Set margins to the half leading but also compensate for borders and
@@ -1164,9 +1164,13 @@ func splitTextBox(context *layoutContext, box *bo.TextBox, availableWidth pr.May
 		return nil, -1, false
 	}
 	v := text.SplitFirstLine(text_, box.Style, context, availableWidth, false, isLineStart)
-	layout, length, resumeIndex, width, height, baseline := v.Layout, v.Length, v.ResumeAt, v.Width, v.Height, v.Baseline
+	layout, length, resumeIndex, width, height := v.Layout, v.Length, v.ResumeAt, v.Width, v.Height
 	if resumeIndex == 0 {
 		panic("resumeAt should not be 0 here")
+	}
+
+	if traceMode {
+		traceLogger.Dump(fmt.Sprintf("splitTextBox (availableWidth %v) <%q> (len: %d) resumeIndex: %d", tracer.FormatMaybeFloat(availableWidth), string(text_), len(text_), resumeIndex))
 	}
 
 	if newText := layout.Text(); length > 0 {
@@ -1182,12 +1186,12 @@ func splitTextBox(context *layoutContext, box *bo.TextBox, availableWidth pr.May
 		// "only the "line-height" is used when calculating the height
 		//  of the line box."
 		// Set margins so that marginHeight() == lineHeight
-		lineHeight := text.StrutLayout(box.Style, context)[0]
+		lineHeight, _ := text.StrutLayout(box.Style, context)
 		halfLeading := (lineHeight - height) / 2.
 		box.MarginTop = halfLeading
 		box.MarginBottom = halfLeading
 		// form the top of the content box
-		box.Baseline = baseline + box.MarginTop.V() // form the top of the margin box
+		box.Baseline = v.Baseline + box.MarginTop.V() // form the top of the margin box
 	} else {
 		box = nil
 	}
@@ -1215,7 +1219,7 @@ type boxMinMax struct {
 	max, min pr.MaybeFloat
 }
 
-// Handle “vertical-align“ within an :class:`LineBox` (or of a
+// Handle “vertical-align“ within an `LineBox` (or of a
 // non-align sub-tree).
 // Place all boxes vertically assuming that the baseline of “box“
 // is at `y = 0`.
@@ -1293,7 +1297,7 @@ func alignedSubtreeVerticality(context *layoutContext, box Box, topBottomSubtree
 	return maxY.V(), minY.V()
 }
 
-// Handle “vertical-align“ within an :class:`InlineBox`.
+// Handle “vertical-align“ within an `InlineBox`.
 //
 //	Place all boxes vertically assuming that the baseline of ``box``
 //	is at `y = baselineY`.

@@ -4,34 +4,6 @@ import (
 	"math"
 )
 
-func MinInt(x, y int) int {
-	if x < y {
-		return x
-	}
-	return y
-}
-
-func MaxInt(x, y int) int {
-	if x > y {
-		return x
-	}
-	return y
-}
-
-func MinF(x, y Fl) Fl {
-	if x < y {
-		return x
-	}
-	return y
-}
-
-func MaxF(x, y Fl) Fl {
-	if x > y {
-		return x
-	}
-	return y
-}
-
 type Fl = float32
 
 func Maxs(values ...Fl) Fl {

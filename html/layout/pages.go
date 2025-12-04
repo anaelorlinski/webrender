@@ -949,12 +949,11 @@ type pageGroup struct {
 func updatePageGroups(pageGroups *[]pageGroup, resumeAt tree.ResumeStack, nextPage tree.PageBreak, rootBox Box, blank bool) pr.Page {
 	// https://www.w3.org/TR/css-gcpm-3/#document-sequence-selectors
 	// Remove or increment page groups.
-	pageGroupsLength := len(*pageGroups)
 	for i, pageGroup := range slices.Clone(*pageGroups) {
 		if includesResumeAt(resumeAt, pageGroup.resumeAt) {
 			(*pageGroups)[i].index += 1
 		} else {
-			*pageGroups = slices.Delete(*pageGroups, i-pageGroupsLength, i-pageGroupsLength)
+			*pageGroups = slices.Delete(*pageGroups, i, i)
 		}
 	}
 

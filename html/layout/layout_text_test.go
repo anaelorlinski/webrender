@@ -16,7 +16,6 @@ func TestLineBreakingNbsp(t *testing.T) {
 	// Regression test for #1561
 	page := renderOnePage(t, `
       <style>
-        @font-face {src: url(weasyprint.otf); font-family: weasyprint}
         body { font-family: weasyprint; width: 7.5em }
       </style>
       <body>a <span>b</span> c d&nbsp;<span>ef
