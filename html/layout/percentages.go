@@ -21,11 +21,11 @@ func resolveOnePercentage(value pr.DimOrS, propertyName pr.KnownProp, referTo pr
 		percent = pr.Float(0)
 	}
 
-	if traceMode {
-		traceLogger.Dump(fmt.Sprintf("resolveOnePercentage %s: %v %s -> %s", propertyName,
-			tracer.FormatMaybeFloat(value.ToMaybeFloat()), tracer.FormatMaybeFloat(referTo),
-			tracer.FormatMaybeFloat(percent)))
-	}
+	// if traceMode {
+	// 	traceLogger.Dump(fmt.Sprintf("resolveOnePercentage %s: %v %s -> %s", propertyName,
+	// 		tracer.FormatMaybeFloat(value.ToMaybeFloat()), tracer.FormatMaybeFloat(referTo),
+	// 		tracer.FormatMaybeFloat(percent)))
+	// }
 
 	return percent
 }

@@ -20,7 +20,9 @@ func assertText(t *testing.T, box Box, exp string) {
 	t.Helper()
 	tb, ok := box.(*bo.TextBox)
 	tu.AssertEqual(t, ok, true)
-	tu.AssertEqual(t, fmt.Sprintf("<%s>", tb.TextS()), fmt.Sprintf("<%s>", exp))
+	if got := tb.TextS(); got != exp {
+		t.Fatalf("expected <%s> (%v), got <%s> (%v)", exp, []rune(exp), got, []rune(got))
+	}
 }
 
 func columnsMetrics(columns []Box) (widths, heights, xs, ys []pr.Float) {

@@ -198,7 +198,7 @@ type TabSize struct {
 func newTabSize(ts pr.DimOrS) TabSize {
 	return TabSize{
 		Width:      int(ts.Value),
-		IsMultiple: ts.Unit == 0,
+		IsMultiple: ts.Unit == 0 && ts.Value != 0,
 	}
 }
 

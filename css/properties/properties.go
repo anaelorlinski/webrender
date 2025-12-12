@@ -409,7 +409,7 @@ var InitialValues = Properties{
 	PMarks:       Marks{}, // computed value for 'none'
 
 	// Text 3/4 (WD/WD): https://www.w3.org/TR/css-text-4/
-	PHyphenateCharacter:  String("-"), // computed value chosen by the user agent
+	PHyphenateCharacter:  String("‐"), // computed value chosen by the user agent
 	PHyphenateLimitChars: Limits{5, 2, 2},
 	PHyphenateLimitZone:  zeroPixelsValue,
 	PHyphens:             String("manual"),

@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 
 	bkLang "github.com/benoitkugler/textlayout/language"
@@ -294,6 +295,16 @@ func (fc *FontConfigurationGotext) spaceHeight(style *TextStyle) (height, baseli
 	return height, baseline
 }
 
+func (fc *FontConfigurationGotext) widthSpace(style *TextStyle) pr.Fl {
+	glyphs, _, sizeFactor := fc.shapeRune(' ', style.FontDescription, style.FontFeatures)
+
+	if len(glyphs) == 0 { // fontmap is broken, return a 'reasonnable' value
+		return style.FontDescription.Size
+	}
+
+	return pr.Fl(fixedToFloat(glyphs[0].XAdvance) / sizeFactor) // fixed to float
+}
+
 func (fc *FontConfigurationGotext) CanBreakText(t []rune) pr.MaybeBool {
 	if len(t) < 2 {
 		return nil
@@ -446,6 +457,16 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 		outputs[i] = output
 	}
 
+	// do we have some tabs ?
+	if indexRune(text, '\t') != -1 {
+		tabWidth := fixed.I(style.TabSize.Width)
+		if style.TabSize.IsMultiple {
+			spaceW := fc.widthSpace(style)
+			tabWidth = floatToFixed(spaceW * pr.Fl(style.TabSize.Width))
+		}
+		outputs.AlignTabs(text, tabWidth)
+	}
+
 	if style.LetterSpacing != 0 || style.WordSpacing != 0 {
 		ws, ls := floatToFixed(style.WordSpacing), floatToFixed(style.LetterSpacing)
 		shaping.AddSpacing(outputs, text, ws, ls)
@@ -459,7 +480,7 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 	config := shaping.WrapConfig{
 		Direction:                     outputs[0].Direction, // overall direction of the text, deduced from the first runes
 		BreakPolicy:                   shaping.Never,        // mimic the default pango behavior
-		DisableTrailingWhitespaceTrim: true,
+		DisableTrailingWhitespaceTrim: !spaceCollapse,
 	}
 	if allowWordBreak {
 		config.BreakPolicy = shaping.Always
@@ -484,9 +505,14 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 		resumeAt = -1
 	}
 
-	// handle \n properly : go-text keeps it on the first line,
+	// handle mandatory break properly : go-text keeps it on the first line,
 	// while weasyprint skips it
-	if text[wLine.NextLine-1] == '\n' {
+	// See https://unicode.org/reports/tr14/#BK
+	// 000B LINE TABULATION (VT)
+	// 000C FORM FEED (FF)
+	// 2028 LINE SEPARATOR
+	// 2029 PARAGRAPH SEPARATOR
+	if r := text[wLine.NextLine-1]; r == '\n' || r == '\u000B' || r == '\u000C' || r == '\u2028' || r == '\u2029' {
 		resumeAt = wLine.NextLine
 		firstLineLength = wLine.NextLine - 1
 		lastRun := &line[len(line)-1]
@@ -540,6 +566,13 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 			bottom = descent
 		}
 		height = top - bottom
+	}
+
+	if fitsOnFirstLine && spaceCollapse {
+		// weasyprint puts the collapsed space on the line...
+		if (width + wLine.TrimmedTrailingWhitespace).Ceil() <= mw {
+			width += wLine.TrimmedTrailingWhitespace
+		}
 	}
 
 	out := FirstLine{
@@ -637,12 +670,13 @@ func (fc *FontConfigurationGotext) splitFirstLine(hyphenCache map[HyphenDictKey]
 			breakPoint = len(secondLineText)
 		}
 	}
+
 	nextWord := trimTrailingSpaces(secondLineText[:breakPoint])
 	if len(nextWord) != 0 {
 		if style.spaceCollapse() && hasSuffix(secondLineText[:breakPoint], ' ') {
-			// Next word might fit without a space afterwards only try when
+			// Next word might fit without a space afterwards; only try when
 			// space collapsing is allowed.
-			newFirstLineText := append(firstLineText, nextWord...)
+			newFirstLineText := slices.Concat(firstLineText, nextWord)
 			firstLine = fc.wrap(newFirstLineText, style, maxWidthV)
 			if firstLine.ResumeAt == -1 {
 				if len(firstLineText) != 0 {
@@ -679,7 +713,7 @@ func (fc *FontConfigurationGotext) splitFirstLine(hyphenCache map[HyphenDictKey]
 		manualHyphenation = index(firstLineText, softHyphen) != -1 || index(nextWord, softHyphen) != -1
 	}
 
-	var startWord, stopWord int
+	var startWord, stopWord, nextTextIndex int
 	if hyphens == HAuto && lang != "" {
 		// Get text until next line break opportunity.
 		nextText := secondLineText
@@ -688,7 +722,6 @@ func (fc *FontConfigurationGotext) splitFirstLine(hyphenCache map[HyphenDictKey]
 		}
 
 		// Try all words included in this text.
-		nextTextIndex := 0
 		for len(nextText) != 0 {
 			nextWordBoundaries := fc.wordBoundaries(nextText)
 			if nextWordBoundaries != nil {
@@ -747,28 +780,22 @@ func (fc *FontConfigurationGotext) splitFirstLine(hyphenCache map[HyphenDictKey]
 			dictionary = hyphen.NewHyphener(lang, hyphenLimit.Left, hyphenLimit.Right)
 			hyphenCache[dictionaryKey] = dictionary
 		}
-		dictionaryIterations = dictionary.IterateRunes(nextWord, "")
+		previousWords := secondLineText[:nextTextIndex]
+		dictionaryIterations = dictionary.IterateRunes(nextWord, string(previousWords))
 	}
 
 	var hyphenatedFirstLineText []rune
 	if len(dictionaryIterations) != 0 {
 		var newFirstLineText []rune
 		for _, firstWordPart := range dictionaryIterations {
-			newFirstLineText = append(append(append([]rune(nil), firstLineText...), secondLineText[:startWord]...), []rune(firstWordPart)...)
+			newFirstLineText = slices.Concat(firstLineText, []rune(firstWordPart))
 			hyphenatedFirstLineText = append(newFirstLineText, hyphenateCharacter...)
 			newFirstLine := fc.wrap(hyphenatedFirstLineText, style, maxWidthV)
 			newSpace := maxWidthV - newFirstLine.Width
 			hyphenated = newFirstLine.ResumeAt == -1 && (newSpace >= 0 || firstWordPart == dictionaryIterations[len(dictionaryIterations)-1])
 			if hyphenated {
 				firstLine = newFirstLine
-				firstLine.Length -= len(hyphenateCharacter) // do not consider hyphen for length
 				firstLine.ResumeAt = len(newFirstLineText)
-				if text[firstLine.ResumeAt] == softHyphen {
-					// Recreate the layout with no maxWidth to be sure that
-					// we don't break before the soft hyphen
-					firstLine.Layout = fc.wrap(hyphenatedFirstLineText, style, pr.Inf).Layout
-					firstLine.ResumeAt += 1
-				}
 				break
 			}
 		}
@@ -789,7 +816,7 @@ func (fc *FontConfigurationGotext) splitFirstLine(hyphenCache map[HyphenDictKey]
 		// Recreate the layout with no maxWidth to be sure that
 		// we don't break inside the hyphenate-character string
 		hyphenated = true
-		hyphenatedFirstLineText = append(append([]rune(nil), firstLineText...), hyphenateCharacter...)
+		hyphenatedFirstLineText = slices.Concat(firstLineText, hyphenateCharacter)
 		firstLine = fc.wrap(hyphenatedFirstLineText, style, pr.Inf)
 		firstLine.ResumeAt = len(firstLineText)
 	}

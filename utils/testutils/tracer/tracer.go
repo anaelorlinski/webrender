@@ -15,6 +15,8 @@ import (
 
 type Tracer struct {
 	out *os.File
+
+	indentation int
 }
 
 // NewTracer panics if an error occurs.
@@ -27,6 +29,9 @@ func NewTracer(outFile string) Tracer {
 	return Tracer{out: f}
 }
 
+func (tr *Tracer) Indent()   { tr.indentation += 1 }
+func (tr *Tracer) DeIndent() { tr.indentation -= 1 }
+
 func FormatMaybeFloat(v properties.MaybeFloat) string {
 	if v, ok := v.(properties.Float); ok {
 		return strconv.FormatFloat(float64(utils.RoundPrec(fl(v), 1)), 'g', -1, 32)
@@ -34,21 +39,23 @@ func FormatMaybeFloat(v properties.MaybeFloat) string {
 	return fmt.Sprintf("%v", v)
 }
 
-func (t Tracer) Dump(line string) {
-	fmt.Fprintln(t.out, line)
+func (t Tracer) print(line string) {
+	fmt.Fprintln(t.out, strings.Repeat(" ", t.indentation)+line)
 }
 
+func (t Tracer) Dump(line string) { t.print(line) }
+
 func (t Tracer) DumpTree(box boxes.Box, context string) {
-	fmt.Fprintln(t.out, "\nBOX TREE AT "+context+":")
+	t.print("BOX TREE AT " + context + ":")
 
 	var printer func(box boxes.Box, indent int)
 	printer = func(box boxes.Box, indent int) {
-		fmt.Fprint(t.out, strings.Repeat(" ", indent))
 		if box == nil {
-			fmt.Fprintf(t.out, "<nil>")
+			t.print(strings.Repeat(" ", indent) + "<nil>")
 			return
 		}
-		fmt.Fprintf(t.out, "%s: %s %s %s %s ; %s %s %s %s ; %s %s %s %s\n", box.Type(),
+
+		line := fmt.Sprintf("%s: %s %s %s %s ; %s %s %s %s ; %s %s %s %s", box.Type(),
 			FormatMaybeFloat(box.Box().PositionX),
 			FormatMaybeFloat(box.Box().PositionY),
 			FormatMaybeFloat(box.Box().Width),
@@ -64,8 +71,9 @@ func (t Tracer) DumpTree(box boxes.Box, context string) {
 			FormatMaybeFloat(box.Box().BorderRightWidth),
 			FormatMaybeFloat(box.Box().BorderLeftWidth),
 		)
+		t.print(strings.Repeat(" ", indent) + line)
 		if tb, ok := box.(*boxes.TextBox); ok {
-			fmt.Fprintln(t.out, tb.TextS())
+			t.print(fmt.Sprintf("%q", tb.TextS()))
 		}
 
 		for _, child := range box.Box().Children {
@@ -75,5 +83,5 @@ func (t Tracer) DumpTree(box boxes.Box, context string) {
 
 	printer(box, 0)
 
-	fmt.Fprint(t.out, "END BOX TREE\n\n")
+	t.print("END BOX TREE\n")
 }

@@ -802,7 +802,7 @@ func splitInlineBox(context *layoutContext, box_ Box, positionX, maxX, bottomSpa
 	}
 
 	if traceMode {
-		traceLogger.DumpTree(box_, fmt.Sprintf("splitInlineBox %d", skip))
+		traceLogger.DumpTree(box_, fmt.Sprintf("splitInlineBox %d %v", skip, tracer.FormatMaybeFloat(maxX)))
 	}
 
 	// In some cases (shrink-to-fit result being the preferred width)
@@ -871,7 +871,6 @@ func splitInlineBox(context *layoutContext, box_ Box, positionX, maxX, bottomSpa
 			// TODO: we should take care of children added into absoluteBoxes,
 			// fixedBoxes and other lists.
 			availableWidth -= endSpacing
-
 			v := splitInlineLevel(context, child_, positionX, availableWidth, bottomSpace, skipStack,
 				containingBlock, absoluteBoxes, fixedBoxes, linePlaceholders, &childWaitingFloats, lineChildren)
 			newChild, resumeAt, preserved, first, last, newFloatWidths = v.newBox, v.resumeAt, v.preservedLineBreak, v.firstLetter, v.lastLetter, v.floatWidths
@@ -1201,8 +1200,11 @@ func splitTextBox(context *layoutContext, box *bo.TextBox, availableWidth pr.May
 		if resumeIndex > len(text_) {
 			resumeIndex = len(text_)
 		}
+		if length > resumeIndex {
+			length = resumeIndex
+		}
 		between := string(text_[length:resumeIndex])
-		preservedLineBreak = (length != resumeIndex) && len(strings.Trim(between, " ")) != 0
+		preservedLineBreak = len(strings.Trim(between, " ")) != 0
 		if preservedLineBreak {
 			if !lineBreaks.Has(between) {
 				panic(fmt.Sprintf("Got %s between two lines. Expected nothing or a preserved line break", between))

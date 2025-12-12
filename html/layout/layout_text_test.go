@@ -732,9 +732,9 @@ func TestHyphenateManual3(t *testing.T) {
 	html := unpack1(page)
 	body := unpack1(html)
 	line1, line2, line3, line4 := unpack4(body)
-	assertText(t, unpack1(line1), "in\u00ad-")
-	assertText(t, unpack1(line2), "lighten\u00ad-")
-	assertText(t, unpack1(line3), "lighten\u00ad-")
+	assertText(t, unpack1(line1), "in\u00ad\u2010")
+	assertText(t, unpack1(line2), "lighten\u00ad\u2010")
+	assertText(t, unpack1(line3), "lighten\u00ad\u2010")
 	assertText(t, unpack1(line4), "in")
 }
 
@@ -766,14 +766,14 @@ func TestHyphenateLimitZone1(t *testing.T) {
 	lines := body.Box().Children
 	tu.AssertEqual(t, len(lines), 2)
 
-	if text := unpack1(lines[0]).(*bo.TextBox).TextS(); !strings.HasSuffix(text, "-") {
+	if text := unpack1(lines[0]).(*bo.TextBox).TextS(); !strings.HasSuffix(text, "\u2010") {
 		t.Fatalf("unexpected <%s>", text)
 	}
 	fullText := ""
 	for _, line := range lines {
 		fullText += unpack1(line).(*bo.TextBox).TextS()
 	}
-	tu.AssertEqual(t, strings.ReplaceAll(fullText, "-", ""), "mmmmm hyphénation")
+	tu.AssertEqual(t, strings.ReplaceAll(fullText, "\u2010", ""), "mmmmm hyphénation")
 }
 
 func TestHyphenateLimitZone2(t *testing.T) {
@@ -814,14 +814,14 @@ func TestHyphenateLimitZone3(t *testing.T) {
 	lines := body.Box().Children
 	tu.AssertEqual(t, len(lines), 2)
 
-	if text := unpack1(lines[0]).(*bo.TextBox).TextS(); !strings.HasSuffix(text, "-") {
+	if text := unpack1(lines[0]).(*bo.TextBox).TextS(); !strings.HasSuffix(text, "\u2010") {
 		t.Fatalf("unexpected <%s>", text)
 	}
 	fullText := ""
 	for _, line := range lines {
 		fullText += unpack1(line).(*bo.TextBox).TextS()
 	}
-	tu.AssertEqual(t, strings.ReplaceAll(fullText, "-", ""), "mmmmm hyphénation")
+	tu.AssertEqual(t, strings.ReplaceAll(fullText, "\u2010", ""), "mmmmm hyphénation")
 }
 
 func TestHyphenateLimitZone4(t *testing.T) {
@@ -933,8 +933,8 @@ func TestOverflowWrap(t *testing.T) {
 		{"anywhere", "aaaaaaaa", func(a int) bool { return a > 1 }, "aaaaaaaa"},
 		{"break-word", "aaaaaaaa", func(a int) bool { return a > 1 }, "aaaaaaaa"},
 		{"normal", "aaaaaaaa", func(a int) bool { return a == 1 }, "aaaaaaaa"},
-		{"break-word", "hyphenations", func(a int) bool { return a > 3 }, "hy-phen-ations"},
-		{"break-word", "A splitted word.  An hyphenated word.", func(a int) bool { return a > 8 }, "Asplittedword.Anhy-phen-atedword."},
+		{"break-word", "hyphenations", func(a int) bool { return a > 3 }, "hy\u2010phen\u2010ations"},
+		{"break-word", "A splitted word.  An hyphenated word.", func(a int) bool { return a > 8 }, "Asplittedword.Anhy\u2010phen\u2010atedword."},
 	} {
 		page := renderOnePage(t, fmt.Sprintf(`
       <style>
@@ -954,7 +954,7 @@ func TestOverflowWrap(t *testing.T) {
 		if !v.test(len(lines)) {
 			t.Fatal()
 		}
-		tu.AssertEqual(t, v.fullText, strings.Join(lines, ""))
+		tu.AssertEqual(t, strings.Join(lines, ""), v.fullText)
 	}
 }
 
@@ -1198,7 +1198,7 @@ func TestTabSize(t *testing.T) {
 		{"4", 80},    // (2 + (4 - 1)) * 16
 		{"3em", 64},  // (2 + (3 - 1)) * 16
 		{"25px", 41}, // 2 * 16 + 25 - 1 * 16
-		// (0, 32),  // See Layout.setTabs
+		{"0", 32},    // tabs are trimmed
 	} {
 		page := renderOnePage(t, fmt.Sprintf(`
       <style>
