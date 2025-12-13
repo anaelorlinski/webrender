@@ -600,6 +600,8 @@ func splitInlineLevel(context *layoutContext, box_ Box, positionX, maxX, bottomS
 	linePlaceholders *[]*AbsolutePlaceholder, waitingFloats *[]Box, lineChildren []indexedBox,
 ) splitedInline {
 	if traceMode {
+		traceLogger.Indent()
+		defer traceLogger.DeIndent()
 		traceLogger.DumpTree(box_, "splitInlineLevel")
 	}
 

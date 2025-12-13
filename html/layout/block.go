@@ -642,10 +642,11 @@ func outOfFlowLayout(context *layoutContext, box bo.Box, index int, child_ Box, 
 		newChild, outOfFlowLayoutResumeAt = floatLayout(context, child_, box.Box(), absoluteBoxes, fixedBoxes, bottomSpace, nil)
 		// Check that child doesn’t overflow page.
 		pageOverflow := context.overflowsPage(bottomSpace, newChild.Box().PositionY+newChild.Box().Height.V())
-		if (pageIsEmpty && len(*newChildren) == 0) || !pageOverflow || bo.IsMonolithic(box) {
+		addChild := (pageIsEmpty && len(*newChildren) == 0) || !pageOverflow || bo.IsMonolithic(box)
+		if addChild {
 			// Child fits or has to fit, add it.
 			newChild.Box().Index = index
-			*newChildren = append(*newChildren, &AbsolutePlaceholder{AliasBox: newChild})
+			*newChildren = append(*newChildren, newChild)
 		} else {
 			// Child doesn’t fit and we can break, find where to break and stop
 			// parent rendering.

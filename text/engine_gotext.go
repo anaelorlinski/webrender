@@ -124,10 +124,6 @@ func (f *FontConfigurationGotext) loadOneFont(url pr.TaggedString, ruleDescripto
 		return "", fmt.Errorf("failed to parse font at %s : %s", url.S, err)
 	}
 
-	if url.Tag == pr.External {
-		f.fontsContent[url.S] = content
-	}
-
 	desc := font.Description{
 		Family: string(ruleDescriptors.FontFamily),
 		Aspect: newAspect(
@@ -136,7 +132,13 @@ func (f *FontConfigurationGotext) loadOneFont(url pr.TaggedString, ruleDescripto
 			newFontStretch(ruleDescriptors.FontStretch),
 		),
 	}
-	f.fm.AddFace(font.NewFace(ft), fontscan.Location{File: url.S}, desc)
+	// add the face with a "unique" ID
+	key := fmt.Sprintf("%s+%v", url.S, desc)
+	f.fm.AddFace(font.NewFace(ft), fontscan.Location{File: key}, desc)
+
+	if url.Tag == pr.External {
+		f.fontsContent[key] = content
+	}
 
 	// track the font features to apply
 	f.fontsFeatures[ft] = getFontFaceFeatures(ruleDescriptors)
@@ -518,6 +520,7 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 		lastRun := &line[len(line)-1]
 		lastRun.Glyphs = lastRun.Glyphs[:len(lastRun.Glyphs)-1]
 		lastRun.RecalculateAll()
+		wLine.TrimmedTrailingWhitespace = 0 // not to interfere with latter space handling
 	}
 
 	firstLineRTL := line[0].Direction.Progression() == di.TowardTopLeft

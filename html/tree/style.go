@@ -1118,14 +1118,8 @@ type cascadedStyle = map[pr.PropKey]weigthedValue
 
 // Parse a page selector rule.
 //
-//	Return a list of page data if the rule is correctly parsed. Page data are a
-//	dict containing:
-//	- "side" ("left", "right" or ""),
-//	- "blank" (true or false),
-//	- "first" (true or false),
-//	- "name" (page name string or ""), and
-//	- "specificity" (list of numbers).
-//	Return ``None` if something went wrong while parsing the rule.
+// Return a list of page data if the rule is correctly parsed.
+// Return nil if something went wrong while parsing the rule.
 func parsePageSelectors(rule pa.QualifiedRule) (out []pageSelector) {
 	// See https://drafts.csswg.org/css-page-3/#syntax-page-selector
 
@@ -1196,7 +1190,7 @@ func parsePageSelectors(rule pa.QualifiedRule) (out []pageSelector) {
 					for i, argument := range firstToken.Arguments {
 						if ident, ok := argument.(pa.Ident); ok && ident.Value == "of" {
 							nth = (firstToken.Arguments)[:(i - 1)]
-							group = (firstToken.Arguments)[i:]
+							group = (firstToken.Arguments)[i+1:]
 						}
 					}
 					nthValues := pa.ParseNth(nth)

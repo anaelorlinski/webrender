@@ -111,7 +111,11 @@ func SplitFirstLine(text []rune, style_ pr.StyleAccessor, context TextLayoutCont
 	maxWidth pr.MaybeFloat, minimum, isLineStart bool,
 ) FirstLine {
 	style := NewTextStyle(style_, false)
-	return context.Fonts().splitFirstLine(context.HyphenCache(), text, style, maxWidth, minimum, isLineStart)
+	// fmt.Printf("SplitFirstLine in: %q %v %v\n", string(text), text, maxWidth)
+	out := context.Fonts().splitFirstLine(context.HyphenCache(), text, style, maxWidth, minimum, isLineStart)
+	// fmt.Println("SplitFirstLine out:", out.Length, out.ResumeAt, out.Width)
+	// fmt.Println()
+	return out
 }
 
 type StrutLayoutKey struct {

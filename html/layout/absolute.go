@@ -22,7 +22,7 @@ type AbsolutePlaceholder struct {
 }
 
 func NewAbsolutePlaceholder(box Box) *AbsolutePlaceholder {
-	out := AbsolutePlaceholder{AliasBox: box, layoutDone: false}
+	out := AbsolutePlaceholder{AliasBox: box}
 	return &out
 }
 

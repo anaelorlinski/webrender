@@ -230,8 +230,8 @@ func (p pageIndex) IsNone() bool {
 }
 
 type pageSelector struct {
-	Side        string
-	Name        string
+	Side        string // "left", "right" or ""
+	Name        string // page name string or ""
 	Index       pageIndex
 	Specificity selector.Specificity
 	Blank       bool

@@ -182,6 +182,7 @@ func TestMarginBoxes(t *testing.T) {
 }
 
 func TestMarginBoxStringSet1(t *testing.T) {
+	t.Skip("Waiting for floating max width in go-text")
 	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Test that both pages get string in the `bottom-center` margin box
@@ -200,23 +201,17 @@ func TestMarginBoxStringSet1(t *testing.T) {
       <p>first assignment</p>
       <div class="page"></div>
     `)
-	if len(pages) != 2 {
-		t.Fatalf("expected 2 pages, got %v", pages)
-	}
+	tu.Assert(t, len(pages) == 2)
 	page1, page2 := pages[0], pages[1]
 
-	if len(page2.Children) != 2 {
-		t.Fatalf("expected two children, got %v", page2.Children)
-	}
-	_, bottomCenter := page2.Children[0], page2.Children[1]
+	tu.AssertEqual(t, len(page2.Children), 2)
+	_, bottomCenter := unpack2(page2)
 	lineBox := unpack1(bottomCenter)
 	textBox, _ := unpack1(lineBox).(*bo.TextBox)
 	assertText(t, textBox, "first assignment")
 
-	if len(page1.Children) != 2 {
-		t.Fatalf("expected two children, got %v", page1.Children)
-	}
-	_, bottomCenter = page1.Children[0], page1.Children[1]
+	tu.AssertEqual(t, len(page1.Children), 2)
+	_, bottomCenter = unpack2(page1)
 
 	lineBox = unpack1(bottomCenter)
 	textBox, _ = unpack1(lineBox).(*bo.TextBox)

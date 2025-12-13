@@ -1037,50 +1037,50 @@ func TestPageGroups(t *testing.T) {
 
 	tu.AssertEqual(t, [2]pr.Float{page1.Box().Width.V(), page1.Box().Height.V()}, [2]pr.Float{200, 200})
 	div := unpack1(unpack1(unpack1(page1)))
-	tu.AssertEqual(t, div.Box().ElementTag, "div")
+	tu.AssertEqual(t, div.Box().ElementTag(), "div")
 
 	tu.AssertEqual(t, [2]pr.Float{page2.Box().Width.V(), page2.Box().Height.V()}, [2]pr.Float{200, 200})
 	article := unpack1(unpack1(unpack1(page2)))
-	tu.AssertEqual(t, article.Box().ElementTag, "article")
+	tu.AssertEqual(t, article.Box().ElementTag(), "article")
 
 	tu.AssertEqual(t, [2]pr.Float{page3.Box().Width.V(), page3.Box().Height.V()}, [2]pr.Float{50, 50})
 	section := unpack1(unpack1(unpack1(page3)))
-	tu.AssertEqual(t, section.Box().ElementTag, "section")
+	tu.AssertEqual(t, section.Box().ElementTag(), "section")
 	div = unpack1(section)
-	tu.AssertEqual(t, div.Box().ElementTag, "div")
+	tu.AssertEqual(t, div.Box().ElementTag(), "div")
 
 	tu.AssertEqual(t, [2]pr.Float{page4.Box().Width.V(), page4.Box().Height.V()}, [2]pr.Float{100, 100})
 	section = unpack1(unpack1(unpack1(page4)))
-	tu.AssertEqual(t, section.Box().ElementTag, "section")
+	tu.AssertEqual(t, section.Box().ElementTag(), "section")
 	div = unpack1(section)
-	tu.AssertEqual(t, div.Box().ElementTag, "div")
+	tu.AssertEqual(t, div.Box().ElementTag(), "div")
 
 	tu.AssertEqual(t, [2]pr.Float{page5.Box().Width.V(), page5.Box().Height.V()}, [2]pr.Float{50, 50})
 	section, div = unpack2(unpack1(unpack1(page5)))
-	tu.AssertEqual(t, section.Box().ElementTag, "section")
-	tu.AssertEqual(t, div.Box().ElementTag, "div")
+	tu.AssertEqual(t, section.Box().ElementTag(), "section")
+	tu.AssertEqual(t, div.Box().ElementTag(), "div")
 
 	tu.AssertEqual(t, [2]pr.Float{page6.Box().Width.V(), page6.Box().Height.V()}, [2]pr.Float{200, 200})
 	div = unpack1(unpack1(unpack1(page6)))
-	tu.AssertEqual(t, div.Box().ElementTag, "div")
+	tu.AssertEqual(t, div.Box().ElementTag(), "div")
 
 	tu.AssertEqual(t, [2]pr.Float{page7.Box().Width.V(), page7.Box().Height.V()}, [2]pr.Float{50, 50})
 	section = unpack1(unpack1(unpack1(page7)))
-	tu.AssertEqual(t, section.Box().ElementTag, "section")
+	tu.AssertEqual(t, section.Box().ElementTag(), "section")
 	div = unpack1(section)
-	tu.AssertEqual(t, div.Box().ElementTag, "div")
+	tu.AssertEqual(t, div.Box().ElementTag(), "div")
 
 	tu.AssertEqual(t, [2]pr.Float{page8.Box().Width.V(), page8.Box().Height.V()}, [2]pr.Float{50, 50})
 	div = unpack1(unpack1(unpack1(page8)))
-	tu.AssertEqual(t, div.Box().ElementTag, "div")
+	tu.AssertEqual(t, div.Box().ElementTag(), "div")
 	section = unpack1(div)
-	tu.AssertEqual(t, section.Box().ElementTag, "section")
+	tu.AssertEqual(t, section.Box().ElementTag(), "section")
 
 	tu.AssertEqual(t, [2]pr.Float{page9.Box().Width.V(), page9.Box().Height.V()}, [2]pr.Float{50, 50})
 	div = unpack1(unpack1(unpack1(page9)))
-	tu.AssertEqual(t, div.Box().ElementTag, "div")
+	tu.AssertEqual(t, div.Box().ElementTag(), "div")
 	section = unpack1(div)
-	tu.AssertEqual(t, section.Box().ElementTag, "section")
+	tu.AssertEqual(t, section.Box().ElementTag(), "section")
 }
 
 // Regression test for #1076.

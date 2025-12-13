@@ -10,21 +10,14 @@ import (
 
 func TestLoadFont(t *testing.T) {
 	f, err := os.Open("../../resources_test/weasyprint.otf")
-	if err != nil {
-		t.Fatal(err)
-	}
+	tu.AssertNoErr(t, err)
 
 	font, err := truetype.Parse(f)
-	if err != nil {
-		t.Fatal(err)
-	}
+	tu.AssertNoErr(t, err)
 
 	gsub := font.LayoutTables().GSUB
-
 	_, ok := gsub.FindFeatureIndex(truetype.MustNewTag("liga"))
-	if !ok {
-		t.Fatal()
-	}
+	tu.Assert(t, ok)
 }
 
 func TestFontFace(t *testing.T) {

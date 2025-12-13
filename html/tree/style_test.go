@@ -385,68 +385,67 @@ func TestPage(t *testing.T) {
 	assertProp(t, style, pr.PFontSize, pr.FToV(10))
 }
 
-type testPageSelector struct {
-	sel string
-	out []pageSelector
-}
-
-var tests = []testPageSelector{
-	{sel: "@page {}", out: []pageSelector{
-		{Specificity: selector.Specificity{0, 0, 0}},
-	}},
-	{sel: "@page :left {}", out: []pageSelector{
-		{Side: "left", Specificity: selector.Specificity{0, 0, 1}},
-	}},
-	{sel: "@page:first:left {}", out: []pageSelector{
-		{Side: "left", First: true, Specificity: selector.Specificity{0, 1, 1}},
-	}},
-	{sel: "@page pagename {}", out: []pageSelector{
-		{Name: "pagename", Specificity: selector.Specificity{1, 0, 0}},
-	}},
-	{sel: "@page pagename:first:right:blank {}", out: []pageSelector{
-		{Side: "right", Blank: true, First: true, Name: "pagename", Specificity: selector.Specificity{1, 2, 1}},
-	}},
-	{sel: "@page pagename, :first {}", out: []pageSelector{
-		{Name: "pagename", Specificity: selector.Specificity{1, 0, 0}},
-		{First: true, Specificity: selector.Specificity{0, 1, 0}},
-	}},
-	{sel: "@page :first:first {}", out: []pageSelector{
-		{First: true, Specificity: selector.Specificity{0, 2, 0}},
-	}},
-	{sel: "@page :left:left {}", out: []pageSelector{
-		{Side: "left", Specificity: selector.Specificity{0, 0, 2}},
-	}},
-	{sel: "@page :nth(2) {}", out: []pageSelector{
-		{Index: pageIndex{A: 0, B: 2}, Specificity: selector.Specificity{0, 1, 0}},
-	}},
-	{sel: "@page :nth(2n + 4) {}", out: []pageSelector{
-		{Index: pageIndex{A: 2, B: 4}, Specificity: selector.Specificity{0, 1, 0}},
-	}},
-	{sel: "@page :nth(3n) {}", out: []pageSelector{
-		{Index: pageIndex{A: 3, B: 0}, Specificity: selector.Specificity{0, 1, 0}},
-	}},
-	{sel: "@page :nth( n+2 ) {}", out: []pageSelector{
-		{Index: pageIndex{A: 1, B: 2}, Specificity: selector.Specificity{0, 1, 0}},
-	}},
-	{sel: "@page :nth(even) {}", out: []pageSelector{
-		{Index: pageIndex{A: 2, B: 0}, Specificity: selector.Specificity{0, 1, 0}},
-	}},
-	{sel: "@page pagename:nth(2) {}", out: []pageSelector{
-		{Name: "pagename", Index: pageIndex{A: 0, B: 2}, Specificity: selector.Specificity{1, 1, 0}},
-	}},
-	{sel: "@page page page {}"},
-	{sel: "@page :left page {}"},
-	{sel: "@page :left, {}"},
-	{sel: "@page , {}"},
-	{sel: "@page :left, test, {}"},
-	{sel: "@page :wrong {}"},
-	{sel: "@page :left:wrong {}"},
-	{sel: "@page :left:right {}"},
-}
-
 func TestPageSelectors(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
-	for _, te := range tests {
+	for _, te := range []struct {
+		sel string
+		out []pageSelector
+	}{
+		{sel: "@page {}", out: []pageSelector{
+			{Specificity: selector.Specificity{0, 0, 0}},
+		}},
+		{sel: "@page :left {}", out: []pageSelector{
+			{Side: "left", Specificity: selector.Specificity{0, 0, 1}},
+		}},
+		{sel: "@page:first:left {}", out: []pageSelector{
+			{Side: "left", First: true, Specificity: selector.Specificity{0, 1, 1}},
+		}},
+		{sel: "@page pagename {}", out: []pageSelector{
+			{Name: "pagename", Specificity: selector.Specificity{1, 0, 0}},
+		}},
+		{sel: "@page pagename:first:right:blank {}", out: []pageSelector{
+			{Side: "right", Blank: true, First: true, Name: "pagename", Specificity: selector.Specificity{1, 2, 1}},
+		}},
+		{sel: "@page pagename, :first {}", out: []pageSelector{
+			{Name: "pagename", Specificity: selector.Specificity{1, 0, 0}},
+			{First: true, Specificity: selector.Specificity{0, 1, 0}},
+		}},
+		{sel: "@page :first:first {}", out: []pageSelector{
+			{First: true, Specificity: selector.Specificity{0, 2, 0}},
+		}},
+		{sel: "@page :left:left {}", out: []pageSelector{
+			{Side: "left", Specificity: selector.Specificity{0, 0, 2}},
+		}},
+		{sel: "@page :nth(2) {}", out: []pageSelector{
+			{Index: pageIndex{A: 0, B: 2}, Specificity: selector.Specificity{0, 1, 0}},
+		}},
+		{sel: "@page :nth(2n + 4) {}", out: []pageSelector{
+			{Index: pageIndex{A: 2, B: 4}, Specificity: selector.Specificity{0, 1, 0}},
+		}},
+		{sel: "@page :nth(3n) {}", out: []pageSelector{
+			{Index: pageIndex{A: 3, B: 0}, Specificity: selector.Specificity{0, 1, 0}},
+		}},
+		{sel: "@page :nth( n+2 ) {}", out: []pageSelector{
+			{Index: pageIndex{A: 1, B: 2}, Specificity: selector.Specificity{0, 1, 0}},
+		}},
+		{sel: "@page :nth(even) {}", out: []pageSelector{
+			{Index: pageIndex{A: 2, B: 0}, Specificity: selector.Specificity{0, 1, 0}},
+		}},
+		{sel: "@page pagename:nth(2) {}", out: []pageSelector{
+			{Name: "pagename", Index: pageIndex{A: 0, B: 2}, Specificity: selector.Specificity{1, 1, 0}},
+		}},
+		{sel: "@page :nth(1 of small) {}", out: []pageSelector{
+			{Index: pageIndex{"small", 0, 1}, Specificity: selector.Specificity{1, 1, 0}},
+		}},
+		{sel: "@page page page {}"},
+		{sel: "@page :left page {}"},
+		{sel: "@page :left, {}"},
+		{sel: "@page , {}"},
+		{sel: "@page :left, test, {}"},
+		{sel: "@page :wrong {}"},
+		{sel: "@page :left:wrong {}"},
+		{sel: "@page :left:right {}"},
+	} {
 		atRule_ := parser.ParseStylesheetBytes([]byte(te.sel), false, false)[0]
 		atRule, ok := atRule_.(parser.QualifiedRule)
 		if !ok {

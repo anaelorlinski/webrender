@@ -3,7 +3,6 @@ package fonts
 import (
 	_ "embed"
 	"fmt"
-	"io"
 	"log"
 
 	fc "github.com/benoitkugler/textprocessing/fontconfig"
@@ -38,7 +37,7 @@ func init() {
 	// 	panic(err)
 	// }
 	if useGoText {
-		fontmapGotext := fontscan.NewFontMap(log.New(io.Discard, "", 0))
+		fontmapGotext := fontscan.NewFontMap(log.Default())
 		err := fontmapGotext.UseSystemFonts(fontmapCacheGotext)
 		if err != nil {
 			panic(err)
