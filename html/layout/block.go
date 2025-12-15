@@ -381,11 +381,12 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 		skip, skipStack = skipStack.Unpack()
 		firstLetterStyle = nil
 	}
-	L := len(box.Children[skip:])
-	var i int
-	for i = 0; i < L; i++ {
+	var (
+		i      int
+		child_ Box
+	)
+	for i, child_ = range box.Children[skip:] {
 		index := i + skip
-		child_ := box.Children[skip:][i]
 		child := child_.Box()
 		child.PositionX = positionX
 		child.PositionY = positionY // does not count margins in adjoiningMargins
@@ -457,7 +458,13 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 			} else if _, ok := child_.(*bo.LineBox); ok {
 				origin = "lineBox"
 			}
-			traceLogger.Dump(fmt.Sprintf("in blockContainerLayout child %d (%s) resumeAt %s", i, origin, resumeAt))
+			bilan := "continue"
+			if abort {
+				bilan = "abort"
+			} else if stop {
+				bilan = "stop"
+			}
+			traceLogger.Dump(fmt.Sprintf("in blockContainerLayout child %d (%s) resumeAt %s; %s", index, origin, resumeAt, bilan))
 		}
 
 		if abort {
@@ -477,11 +484,12 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 				}
 			}
 			adjoiningMargins = new([]pr.Float)
+			i = -1 // hasBroken
 			break
 		}
 	}
 
-	if i == L {
+	if i != -1 {
 		resumeAt = nil
 	}
 

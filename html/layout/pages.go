@@ -919,8 +919,7 @@ func (context *layoutContext) makePage(rootBox bo.BlockLevelBoxITF, pageType uti
 	}
 
 	if traceMode {
-		traceLogger.DumpTree(page, "makePage done")
-		traceLogger.Dump(fmt.Sprintf("makePage: resume at %s, nextPage %s", resumeAt, tmp.nextPage))
+		traceLogger.DumpTree(page, fmt.Sprintf("end makePage: resume at %s, nextPage %s", resumeAt, tmp.nextPage))
 	}
 
 	return page, resumeAt, tmp.nextPage
@@ -953,7 +952,7 @@ func updatePageGroups(pageGroups *[]pageGroup, resumeAt tree.ResumeStack, nextPa
 		if includesResumeAt(resumeAt, pageGroup.resumeAt) {
 			(*pageGroups)[i].index += 1
 		} else {
-			*pageGroups = slices.Delete(*pageGroups, i, i)
+			*pageGroups = slices.Delete(*pageGroups, i, i+1)
 		}
 	}
 

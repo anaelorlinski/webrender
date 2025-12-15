@@ -421,7 +421,7 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 	mw := math.MaxInt
 	if textWrap && maxWidth != pr.Inf {
 		// use maxWidth
-		mw = int(max(0, pr.Fl(maxWidth)))
+		mw = int(max(0, math.Ceil(float64(maxWidth))))
 	}
 
 	var lang language.Language

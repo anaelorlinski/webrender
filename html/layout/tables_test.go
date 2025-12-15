@@ -2810,13 +2810,13 @@ func TestTablePageBreakAvoidBeforeTable(t *testing.T) {
 	body := unpack1(html)
 	h1 := unpack1(body)
 
-	tu.AssertEqual(t, h1.Box().ElementTag, "h1")
+	tu.AssertEqual(t, h1.Box().ElementTag(), "h1")
 
 	html = unpack1(page2)
 	body = unpack1(html)
 	p, table_wrapper := unpack2(body)
-	tu.AssertEqual(t, p.Box().ElementTag, "p")
-	tu.AssertEqual(t, table_wrapper.Box().ElementTag, "table")
+	tu.AssertEqual(t, p.Box().ElementTag(), "p")
+	tu.AssertEqual(t, table_wrapper.Box().ElementTag(), "table")
 }
 
 func TestTablePageBreakAvoidBeforeTbody(t *testing.T) {
