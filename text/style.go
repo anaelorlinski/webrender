@@ -112,8 +112,8 @@ func NewTextStyle(style pr.StyleAccessor, ignoreSpacing bool) *TextStyle {
 	var out TextStyle
 
 	out.FontDescription.Family = style.GetFontFamily()
-	out.FontDescription.Style = newFontStyle(style.GetFontStyle())
-	out.FontDescription.Weight = newFontWeight(style.GetFontWeight())
+	out.FontDescription.Style = NewFontStyle(style.GetFontStyle())
+	out.FontDescription.Weight = NewFontWeight(style.GetFontWeight())
 	out.FontDescription.Stretch = newFontStretch(style.GetFontStretch())
 	out.FontDescription.Size = pr.Fl(style.GetFontSize().Value)
 	out.FontDescription.VariationSettings = newFontVariationSettings(style.GetFontVariationSettings())
@@ -146,7 +146,7 @@ func NewTextStyle(style pr.StyleAccessor, ignoreSpacing bool) *TextStyle {
 	return &out
 }
 
-type styleKey struct {
+type StyleKey struct {
 	FontDescription string // serialized
 	FontFeatures    string // serialized
 
@@ -169,10 +169,10 @@ type styleKey struct {
 	TabSize       TabSize
 }
 
-func (ts *TextStyle) Key() styleKey {
-	return styleKey{
+func (ts *TextStyle) Key() StyleKey {
+	return StyleKey{
 		string(ts.FontDescription.binary(nil, true)),
-		string(featuresBinary(ts.FontFeatures)),
+		string(FeaturesBinary(ts.FontFeatures)),
 		ts.TextDecorationLine,
 		ts.FontLanguageOverride,
 		ts.Lang,
@@ -203,7 +203,7 @@ func newTabSize(ts pr.DimOrS) TabSize {
 
 type Feature = pr.FontFeature
 
-func featuresBinary(ls pr.FontFeatures) []byte {
+func FeaturesBinary(ls pr.FontFeatures) []byte {
 	out := make([]byte, len(ls)*8)
 	for i, v := range ls {
 		out[8*i+0] = v.Tag[0]
@@ -378,7 +378,7 @@ func getFontFeatures(style pr.StyleAccessor) []Feature {
 	return features.list()
 }
 
-func getFontFaceFeatures(ruleDescriptors validation.FontFaceDescriptors) []Feature {
+func GetFontFaceFeatures(ruleDescriptors validation.FontFaceDescriptors) []Feature {
 	props := pr.Properties{}
 	// avoid nil values
 	props.SetFontKerning("")
@@ -513,7 +513,7 @@ const (
 	FSyItalic
 )
 
-func newFontStyle(style pr.String) FontStyle {
+func NewFontStyle(style pr.String) FontStyle {
 	switch strings.ToLower(string(style)) {
 	case "", "roman", "normal":
 		return FSyNormal
@@ -526,7 +526,7 @@ func newFontStyle(style pr.String) FontStyle {
 	}
 }
 
-func newFontWeight(weight pr.IntString) uint16 {
+func NewFontWeight(weight pr.IntString) uint16 {
 	if weight.String == "normal" {
 		weight.Int = 400
 	} else if weight.String == "bold" {

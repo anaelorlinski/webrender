@@ -244,7 +244,7 @@ func (f *FontConfigurationPango) loadOneFont(url pr.NamedString, ruleDescriptors
 	}
 
 	featuresString := ""
-	for _, v := range getFontFaceFeatures(ruleDescriptors) {
+	for _, v := range GetFontFaceFeatures(ruleDescriptors) {
 		featuresString += fmt.Sprintf("<string>%s=%d</string>", v.Tag[:], v.Value)
 	}
 	fontconfigStyle, ok := fcStyle[ruleDescriptors.FontStyle]

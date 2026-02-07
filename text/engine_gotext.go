@@ -130,15 +130,15 @@ func (f *FontConfigurationGotext) loadOneFont(url pr.NamedString, ruleDescriptor
 	desc := font.Description{
 		Family: string(ruleDescriptors.FontFamily),
 		Aspect: newAspect(
-			newFontStyle(ruleDescriptors.FontStyle),
-			newFontWeight(ruleDescriptors.FontWeight),
+			NewFontStyle(ruleDescriptors.FontStyle),
+			NewFontWeight(ruleDescriptors.FontWeight),
 			newFontStretch(ruleDescriptors.FontStretch),
 		),
 	}
 	f.fm.AddFace(font.NewFace(ft), fontscan.Location{File: url.String}, desc)
 
 	// track the font features to apply
-	f.fontsFeatures[ft] = getFontFaceFeatures(ruleDescriptors)
+	f.fontsFeatures[ft] = GetFontFaceFeatures(ruleDescriptors)
 
 	return url.String, nil
 }
@@ -367,7 +367,7 @@ func fixedToFloat(v fixed.Int26_6) pr.Float { return pr.Float(v) / 64 }
 
 type textKey struct {
 	text           string
-	style          styleKey
+	style          StyleKey
 	maxWidth       pr.Float
 	allowWordBreak bool
 }
@@ -648,7 +648,7 @@ func (fc *FontConfigurationGotext) SplitFirstLine(hyphenCache map[HyphenDictKey]
 				firstLineText, nextWord = nil, firstLineText
 			}
 		}
-		dictionaryIterations = hyphenDictionaryIterations(nextWord, softHyphen)
+		dictionaryIterations = HyphenDictionaryIterations(nextWord, softHyphen)
 	} else if autoHyphenation {
 		dictionaryKey := NewHyphenDictKey(lang, hyphenLimit)
 		dictionary, ok := hyphenCache[dictionaryKey]

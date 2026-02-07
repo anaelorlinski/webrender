@@ -65,8 +65,8 @@ type FirstLine struct {
 	FirstLineRTL bool // true is the first line direction is RTL
 }
 
-// split word on each hyphen occurence, starting by the end
-func hyphenDictionaryIterations(word []rune, hyphen rune) (out []string) {
+// HyphenDictionaryIterations splits word on each hyphen occurrence, starting by the end.
+func HyphenDictionaryIterations(word []rune, hyphen rune) (out []string) {
 	for i := len(word) - 1; i >= 0; i-- {
 		if word[i] == hyphen {
 			out = append(out, string(word[:i+1]))
@@ -213,7 +213,7 @@ func CharacterRatio(style_ pr.ElementStyle, cache pr.TextRatioCache, isCh bool, 
 }
 
 func (style *TextStyle) cacheKey() string {
-	return string(append(style.FontDescription.binary(nil, false), featuresBinary(style.FontFeatures)...))
+	return string(append(style.FontDescription.binary(nil, false), FeaturesBinary(style.FontFeatures)...))
 }
 
 func indexRune(text []rune, s rune) int {
