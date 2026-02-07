@@ -80,6 +80,11 @@ type HyphenDictKey struct {
 	limit pr.Limits
 }
 
+// NewHyphenDictKey creates a HyphenDictKey from a language and hyphenation limits.
+func NewHyphenDictKey(lang language.Language, limit pr.Limits) HyphenDictKey {
+	return HyphenDictKey{lang, limit}
+}
+
 // returns a prefix of text
 func shortTextHint(text []rune, maxWidth, fontSize pr.Float) []rune {
 	cut := len(text)

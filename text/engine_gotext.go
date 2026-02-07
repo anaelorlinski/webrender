@@ -650,7 +650,7 @@ func (fc *FontConfigurationGotext) splitFirstLine(hyphenCache map[HyphenDictKey]
 		}
 		dictionaryIterations = hyphenDictionaryIterations(nextWord, softHyphen)
 	} else if autoHyphenation {
-		dictionaryKey := HyphenDictKey{lang, hyphenLimit}
+		dictionaryKey := NewHyphenDictKey(lang, hyphenLimit)
 		dictionary, ok := hyphenCache[dictionaryKey]
 		if !ok {
 			dictionary = hyphen.NewHyphener(lang, hyphenLimit.Left, hyphenLimit.Right)

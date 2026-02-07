@@ -787,7 +787,7 @@ func (fc *FontConfigurationPango) splitFirstLine(hyphenCache map[HyphenDictKey]h
 		}
 		dictionaryIterations = hyphenDictionaryIterationsOld(nextWord, softHyphen)
 	} else if autoHyphenation {
-		dictionaryKey := HyphenDictKey{lang, limit}
+		dictionaryKey := NewHyphenDictKey(lang, limit)
 		dictionary, ok := hyphenCache[dictionaryKey]
 		if !ok {
 			dictionary = hyphen.NewHyphener(lang, limit.Left, limit.Right)
