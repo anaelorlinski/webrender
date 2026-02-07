@@ -257,6 +257,8 @@ var (
 		pr.PGridColumnStart:         gridLine,
 		pr.PGridRowEnd:              gridLine,
 		pr.PGridColumnEnd:           gridLine,
+		pr.PBoxShadow:               boxShadow,
+		pr.PTextShadow:              textShadow,
 	}
 	validatorsError = map[pr.KnownProp]validatorError{
 		pr.PBackgroundImage:   backgroundImage,
@@ -3988,4 +3990,115 @@ func appearance(tokens []Token, _ string) pr.CssProperty {
 	default:
 		return nil
 	}
+}
+
+// parseSingleShadow parses one shadow value (shared by box-shadow and text-shadow).
+func parseSingleShadow(tokens []Token, allowSpread, allowInset bool) (pr.Shadow, bool) {
+	var (
+		lengths  []pr.Dimension
+		color    pr.Color
+		colorSet bool
+		inset    bool
+	)
+
+	for _, token := range tokens {
+		if allowInset && getKeyword(token) == "inset" {
+			if inset {
+				return pr.Shadow{}, false
+			}
+			inset = true
+			continue
+		}
+
+		if !colorSet {
+			c := pa.ParseColor(token)
+			if c.Type != 0 {
+				color = pr.Color(c)
+				colorSet = true
+				continue
+			}
+		}
+
+		l := getLength(token, true, false)
+		if l.IsNone() {
+			return pr.Shadow{}, false
+		}
+		lengths = append(lengths, l)
+	}
+
+	if len(lengths) < 2 {
+		return pr.Shadow{}, false
+	}
+
+	maxLengths := 3
+	if allowSpread {
+		maxLengths = 4
+	}
+	if len(lengths) > maxLengths {
+		return pr.Shadow{}, false
+	}
+
+	if !colorSet {
+		color = pr.Color(pa.ParseColorString("currentcolor"))
+	}
+
+	var blur, spread pr.Dimension
+	if len(lengths) >= 3 {
+		blur = lengths[2]
+		if blur.Value < 0 {
+			return pr.Shadow{}, false
+		}
+	}
+	if len(lengths) >= 4 {
+		spread = lengths[3]
+	}
+
+	return pr.Shadow{
+		OffsetX: lengths[0],
+		OffsetY: lengths[1],
+		Blur:    blur,
+		Spread:  spread,
+		Color:   color,
+		Inset:   inset,
+	}, true
+}
+
+func boxShadow(tokens []Token, _ string) pr.CssProperty {
+	if getSingleKeyword(tokens) == "none" {
+		return pr.Shadows{}
+	}
+
+	var shadows pr.Shadows
+	for _, part := range pa.SplitOnComma(tokens) {
+		part = pa.RemoveWhitespace(part)
+		if len(part) == 0 {
+			return nil
+		}
+		shadow, ok := parseSingleShadow(part, true, true)
+		if !ok {
+			return nil
+		}
+		shadows = append(shadows, shadow)
+	}
+	return shadows
+}
+
+func textShadow(tokens []Token, _ string) pr.CssProperty {
+	if getSingleKeyword(tokens) == "none" {
+		return pr.Shadows{}
+	}
+
+	var shadows pr.Shadows
+	for _, part := range pa.SplitOnComma(tokens) {
+		part = pa.RemoveWhitespace(part)
+		if len(part) == 0 {
+			return nil
+		}
+		shadow, ok := parseSingleShadow(part, false, false)
+		if !ok {
+			return nil
+		}
+		shadows = append(shadows, shadow)
+	}
+	return shadows
 }

@@ -1,8 +1,10 @@
 package boxes
 
 import (
+	"fmt"
 	"strings"
 
+	"github.com/benoitkugler/webrender/css/parser"
 	"github.com/benoitkugler/webrender/images"
 	"github.com/benoitkugler/webrender/logger"
 
@@ -147,7 +149,24 @@ func handleCol(_ *utils.HTMLNode, box Box, _ URLResolver, _ string) []Box {
 // handle the inline <svg> elements
 // Return either an image or the fallback content.
 func handleSVG(element *utils.HTMLNode, box Box, resolver URLResolver, baseUrl string) []Box {
-	img, err := images.NewSVGImageFromNode((*html.Node)(element), baseUrl, resolver.Fetch)
+	// Extract the inherited CSS color property so that SVG elements using
+	// fill="currentColor" can resolve it from the HTML context.
+	var inheritedColor string
+	if style := box.Box().Style; style != nil {
+		c := style.GetColor()
+		if c.Type == parser.ColorRGBA {
+			r := int(c.RGBA.R*255 + 0.5)
+			g := int(c.RGBA.G*255 + 0.5)
+			b := int(c.RGBA.B*255 + 0.5)
+			if c.RGBA.A >= 1 {
+				inheritedColor = fmt.Sprintf("rgb(%d, %d, %d)", r, g, b)
+			} else {
+				inheritedColor = fmt.Sprintf("rgba(%d, %d, %d, %g)", r, g, b, c.RGBA.A)
+			}
+		}
+	}
+
+	img, err := images.NewSVGImageFromNode((*html.Node)(element), baseUrl, resolver.Fetch, inheritedColor)
 	if err != nil {
 		logger.WarningLogger.Printf("Failed to load inline SVG: %s", err)
 		return nil

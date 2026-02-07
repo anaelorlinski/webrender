@@ -59,6 +59,19 @@ func (dec Decorations) Union(other Decorations) Decorations { return dec | other
 
 type Transforms []SDimensions
 
+// Shadow represents one box-shadow or text-shadow layer.
+type Shadow struct {
+	OffsetX Dimension
+	OffsetY Dimension
+	Blur    Dimension
+	Spread  Dimension // box-shadow only; zero for text-shadow
+	Color   Color
+	Inset   bool // box-shadow only
+}
+
+// Shadows stores a list of box/text shadows (empty = none).
+type Shadows []Shadow
+
 type Values []DimOrS
 
 type SIntStrings struct {
@@ -243,7 +256,9 @@ func (size GridDims) SizingFunctions() [2]DimOrS {
 		minSizing, maxSizing = size.V, size.v2
 	}
 	if size.tag == 'f' {
-		minSizing, maxSizing = SToV("auto"), SToV("auto")
+		// fit-content(L) ≈ minmax(auto, L) with growth limit clamped at L.
+		// The min is "auto", the max is the fit-content argument.
+		minSizing, maxSizing = SToV("auto"), size.V
 	} else if minSizing.Unit == Fr {
 		minSizing = SToV("auto")
 	}
@@ -652,6 +667,7 @@ func (GridAuto) isCssProperty()          {}
 func (GridLine) isCssProperty()          {}
 func (GridTemplateAreas) isCssProperty() {}
 func (GridTemplate) isCssProperty()      {}
+func (Shadows) isCssProperty()            {}
 
 func (TaggedString) isDeclaredValue()      {}
 func (TaggedInt) isDeclaredValue()         {}
@@ -699,3 +715,4 @@ func (GridAuto) isDeclaredValue()          {}
 func (GridLine) isDeclaredValue()          {}
 func (GridTemplateAreas) isDeclaredValue() {}
 func (GridTemplate) isDeclaredValue()      {}
+func (Shadows) isDeclaredValue()           {}

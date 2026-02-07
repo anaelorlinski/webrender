@@ -238,6 +238,9 @@ const (
 
 	PHyphenateLimitZone
 
+	PBoxShadow
+	PTextShadow
+
 	NbProperties
 )
 
@@ -478,6 +481,10 @@ var InitialValues = Properties{
 	PAnchor: String(""),     // computed value of "none"
 	PLink:   NamedString{},  // computed value of "none"
 	PLang:   TaggedString{}, // computed value of "none"
+
+	// Shadows: CSS Backgrounds 3 / Text Decoration 3
+	PBoxShadow:  Shadows{},
+	PTextShadow: Shadows{},
 }
 
 func (pr KnownProp) IsTextDecoration() bool {
@@ -524,6 +531,7 @@ const (
 	SGridArea
 	SGridTemplate
 	SGrid
+	SGap
 )
 
 // NewShortand return the tag for 's' or 0 if not supported
@@ -597,6 +605,8 @@ func NewShortand(s string) Shortand {
 		return SGridTemplate
 	case "grid":
 		return SGrid
+	case "gap":
+		return SGap
 	default:
 		return 0
 	}
@@ -673,6 +683,8 @@ func (sh Shortand) String() string {
 		return "grid-template"
 	case SGrid:
 		return "grid"
+	case SGap:
+		return "gap"
 	default:
 		return ""
 	}

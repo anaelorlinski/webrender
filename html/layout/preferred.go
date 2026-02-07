@@ -87,23 +87,43 @@ func maxContentWidth(context *layoutContext, box Box, outer bool) pr.Float {
 type fnBlock = func(*layoutContext, Box, bool) pr.Float
 
 // Helper to create “block_*_ContentWidth.“
-func blockContentWidth(context *layoutContext, box Box, function fnBlock, outer bool) pr.Float {
+func blockContentWidth(context *layoutContext, box Box, function fnBlock, outer bool, minimum bool) pr.Float {
 	width := box.Box().Style.GetWidth()
 	var widthValue pr.Float
 	if width.S == "auto" || width.Unit == pr.Perc {
 		// "percentages on the following properties are treated instead as
 		// though they were the following: width: auto"
 		// https://dbaron.org/css/intrinsic/#outer-intrinsic
-		var max pr.Float = 0
+
+		// Check if this block establishes an inline formatting context
+		// (all non-absolutely-positioned children are inline-level).
+		// In that case, use inlineLineWidths for correct measurement.
+		allInline := len(box.Box().Children) > 0
 		for _, child := range box.Box().Children {
-			if !child.Box().IsAbsolutelyPositioned() {
-				v := function(context, child, true)
-				if v > max {
-					max = v
-				}
+			if child.Box().IsAbsolutelyPositioned() {
+				continue
+			}
+			if _, ok := child.(bo.InlineLevelBoxITF); !ok {
+				allInline = false
+				break
 			}
 		}
-		widthValue = max
+
+		if allInline {
+			widths := inlineLineWidths(context, box, false, true, minimum, nil, false)
+			widthValue = pr.Maxs(widths...)
+		} else {
+			var max pr.Float = 0
+			for _, child := range box.Box().Children {
+				if !child.Box().IsAbsolutelyPositioned() {
+					v := function(context, child, true)
+					if v > max {
+						max = v
+					}
+				}
+			}
+			widthValue = max
+		}
 	} else {
 		if width.Unit != pr.Px {
 			panic(fmt.Sprintf("expected Px got %d", width.Unit))
@@ -224,14 +244,14 @@ func adjust(box Box, outer bool, width pr.Float, left, right bool) pr.Float {
 // Return the min-content width for a “BlockBox“.
 // outer=true
 func blockMinContentWidth(context *layoutContext, box Box, outer bool) pr.Float {
-	v := blockContentWidth(context, box, minContentWidth, outer)
+	v := blockContentWidth(context, box, minContentWidth, outer, true)
 	return v
 }
 
 // Return the max-content width for a “BlockBox“.
 // outer=true
 func blockMaxContentWidth(context *layoutContext, box Box, outer bool) pr.Float {
-	return blockContentWidth(context, box, maxContentWidth, outer)
+	return blockContentWidth(context, box, maxContentWidth, outer, false)
 }
 
 // Return the min-content width for an “InlineBox“.

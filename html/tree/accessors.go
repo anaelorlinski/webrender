@@ -648,6 +648,20 @@ func (s *AnonymousStyle) SetBoxDecorationBreak(v pr.String) {
 	s.propsCache.known[pr.PBoxDecorationBreak] = v
 }
 
+func (s *ComputedStyle) GetBoxShadow() pr.Shadows {
+	return s.Get(pr.PBoxShadow.Key()).(pr.Shadows)
+}
+func (s *ComputedStyle) SetBoxShadow(v pr.Shadows) {
+	s.propsCache.known[pr.PBoxShadow] = v
+}
+
+func (s *AnonymousStyle) GetBoxShadow() pr.Shadows {
+	return s.Get(pr.PBoxShadow.Key()).(pr.Shadows)
+}
+func (s *AnonymousStyle) SetBoxShadow(v pr.Shadows) {
+	s.propsCache.known[pr.PBoxShadow] = v
+}
+
 func (s *ComputedStyle) GetBoxSizing() pr.String {
 	return s.Get(pr.PBoxSizing.Key()).(pr.String)
 }
@@ -2298,6 +2312,20 @@ func (s *AnonymousStyle) GetTextOverflow() pr.String {
 }
 func (s *AnonymousStyle) SetTextOverflow(v pr.String) {
 	s.propsCache.known[pr.PTextOverflow] = v
+}
+
+func (s *ComputedStyle) GetTextShadow() pr.Shadows {
+	return s.Get(pr.PTextShadow.Key()).(pr.Shadows)
+}
+func (s *ComputedStyle) SetTextShadow(v pr.Shadows) {
+	s.propsCache.known[pr.PTextShadow] = v
+}
+
+func (s *AnonymousStyle) GetTextShadow() pr.Shadows {
+	return s.Get(pr.PTextShadow.Key()).(pr.Shadows)
+}
+func (s *AnonymousStyle) SetTextShadow(v pr.Shadows) {
+	s.propsCache.known[pr.PTextShadow] = v
 }
 
 func (s *ComputedStyle) GetTextTransform() pr.String {

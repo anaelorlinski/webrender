@@ -130,15 +130,15 @@ func (f *FontConfigurationGotext) loadOneFont(url pr.NamedString, ruleDescriptor
 	desc := font.Description{
 		Family: string(ruleDescriptors.FontFamily),
 		Aspect: newAspect(
-			newFontStyle(ruleDescriptors.FontStyle),
-			newFontWeight(ruleDescriptors.FontWeight),
+			NewFontStyle(ruleDescriptors.FontStyle),
+			NewFontWeight(ruleDescriptors.FontWeight),
 			newFontStretch(ruleDescriptors.FontStretch),
 		),
 	}
 	f.fm.AddFace(font.NewFace(ft), fontscan.Location{File: url.String}, desc)
 
 	// track the font features to apply
-	f.fontsFeatures[ft] = getFontFaceFeatures(ruleDescriptors)
+	f.fontsFeatures[ft] = GetFontFaceFeatures(ruleDescriptors)
 
 	return url.String, nil
 }
@@ -263,7 +263,7 @@ func (fc *FontConfigurationGotext) shapeRune(r rune, desc FontDescription, featu
 	return out.Glyphs, out.LineBounds
 }
 
-func (fc *FontConfigurationGotext) heightx(style *TextStyle) pr.Fl {
+func (fc *FontConfigurationGotext) Heightx(style *TextStyle) pr.Fl {
 	glyphs, _ := fc.shapeRune('x', style.FontDescription, style.FontFeatures)
 
 	if len(glyphs) == 0 { // fontmap is broken, return a 'reasonnable' value
@@ -273,7 +273,7 @@ func (fc *FontConfigurationGotext) heightx(style *TextStyle) pr.Fl {
 	return pr.Fl(fixedToFloat(glyphs[0].YBearing)) / sizeFactor // fixed to float
 }
 
-func (fc *FontConfigurationGotext) width0(style *TextStyle) pr.Fl {
+func (fc *FontConfigurationGotext) Width0(style *TextStyle) pr.Fl {
 	glyphs, _ := fc.shapeRune('0', style.FontDescription, style.FontFeatures)
 
 	if len(glyphs) == 0 { // fontmap is broken, return a 'reasonnable' value
@@ -283,7 +283,7 @@ func (fc *FontConfigurationGotext) width0(style *TextStyle) pr.Fl {
 	return pr.Fl(fixedToFloat(glyphs[0].XAdvance)) / sizeFactor // fixed to float
 }
 
-func (fc *FontConfigurationGotext) spaceHeight(style *TextStyle) (height, baseline pr.Float) {
+func (fc *FontConfigurationGotext) SpaceHeight(style *TextStyle) (height, baseline pr.Float) {
 	_, bounds := fc.shapeRune(' ', style.FontDescription, style.FontFeatures)
 
 	height = fixedToFloat(bounds.Ascent-bounds.Descent) / sizeFactor
@@ -367,7 +367,7 @@ func fixedToFloat(v fixed.Int26_6) pr.Float { return pr.Float(v) / 64 }
 
 type textKey struct {
 	text           string
-	style          styleKey
+	style          StyleKey
 	maxWidth       pr.Float
 	allowWordBreak bool
 }
@@ -384,12 +384,12 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 		}
 	}
 
-	key := textKey{string(text), style.key(), maxWidth, allowWordBreak}
+	key := textKey{string(text), style.Key(), maxWidth, allowWordBreak}
 	if l, ok := fc.textLayoutCache[key]; ok {
 		return l
 	}
 
-	textWrap, spaceCollapse := style.textWrap(), style.spaceCollapse()
+	textWrap, spaceCollapse := style.TextWrap(), style.SpaceCollapse()
 	mw := math.MaxInt
 	if textWrap && maxWidth != pr.Inf {
 		// use maxWidth
@@ -525,12 +525,12 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 
 // splitFirstLineGotext fit as much text from [text_] as possible in the available width given by [maxWidth].
 // minimum should defaults to false
-func (fc *FontConfigurationGotext) splitFirstLine(hyphenCache map[HyphenDictKey]hyphen.Hyphener, text []rune, style *TextStyle,
+func (fc *FontConfigurationGotext) SplitFirstLine(hyphenCache map[HyphenDictKey]hyphen.Hyphener, text []rune, style *TextStyle,
 	maxWidth pr.MaybeFloat, minimum, isLineStart bool,
 ) FirstLine {
 	// See https://www.w3.org/TR/css-text-3/#white-space-property
 	var (
-		textWrap         = style.textWrap()
+		textWrap         = style.TextWrap()
 		originalMaxWidth = maxWidth
 		fontSize         = pr.Float(style.Size)
 		firstLine        FirstLine
@@ -648,9 +648,9 @@ func (fc *FontConfigurationGotext) splitFirstLine(hyphenCache map[HyphenDictKey]
 				firstLineText, nextWord = nil, firstLineText
 			}
 		}
-		dictionaryIterations = hyphenDictionaryIterations(nextWord, softHyphen)
+		dictionaryIterations = HyphenDictionaryIterations(nextWord, softHyphen)
 	} else if autoHyphenation {
-		dictionaryKey := HyphenDictKey{lang, hyphenLimit}
+		dictionaryKey := NewHyphenDictKey(lang, hyphenLimit)
 		dictionary, ok := hyphenCache[dictionaryKey]
 		if !ok {
 			dictionary = hyphen.NewHyphener(lang, hyphenLimit.Left, hyphenLimit.Right)

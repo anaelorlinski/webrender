@@ -119,12 +119,28 @@ type layouter interface {
 	Layout(width, height pr.Float) backend.GradientLayout
 }
 
+// LayoutableGradient is implemented by gradient images that can compute
+// their GradientLayout for direct rendering via Canvas.DrawGradient,
+// bypassing the group/pattern pipeline.
+type LayoutableGradient interface {
+	Image
+	ComputeLayout(width, height pr.Fl) backend.GradientLayout
+}
+
 type gradient struct {
 	layouter
 
 	colors        []Color
 	stopPositions []pr.Dimension
 	repeating     bool
+}
+
+// ComputeLayout returns the GradientLayout for the given concrete dimensions.
+// This satisfies the LayoutableGradient interface.
+func (g gradient) ComputeLayout(concreteWidth, concreteHeight pr.Fl) backend.GradientLayout {
+	layout := g.layouter.Layout(pr.Float(concreteWidth), pr.Float(concreteHeight))
+	layout.Reapeating = g.repeating
+	return layout
 }
 
 func newGradient(colorStops []pr.ColorStop, repeating bool) gradient {

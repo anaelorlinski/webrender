@@ -165,6 +165,7 @@ var (
 		PTextAlignAll,
 		PTextAlignLast,
 		PTextIndent,
+		PTextShadow,
 		PTextTransform,
 		PVisibility,
 		PWhiteSpace,

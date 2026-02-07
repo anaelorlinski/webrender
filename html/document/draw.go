@@ -264,8 +264,12 @@ func (ctx drawContext) drawStackingContext(stackingContext StackingContext) {
 		if bo.BlockT.IsInstance(box_) || bo.MarginT.IsInstance(box_) ||
 			bo.InlineBlockT.IsInstance(box_) || bo.TableCellT.IsInstance(box_) ||
 			bo.FlexContainerT.IsInstance(box_) || bo.ReplacedT.IsInstance(box_) {
+			// Outer box-shadows: drawn behind the background
+			ctx.drawBoxShadow(box_, false)
 			// The canvas background was removed by layoutBackgrounds
 			ctx.drawBackgroundDefaut(box_.Box().Background)
+			// Inset box-shadows: drawn above background, below border
+			ctx.drawBoxShadow(box_, true)
 			ctx.drawBorder(box_)
 		}
 
@@ -289,7 +293,9 @@ func (ctx drawContext) drawStackingContext(stackingContext StackingContext) {
 				if box_, ok := block.(bo.TableBoxITF); ok {
 					ctx.drawTable(box_.Table())
 				} else {
+					ctx.drawBoxShadow(block, false)
 					ctx.drawBackgroundDefaut(block.Box().Background)
+					ctx.drawBoxShadow(block, true)
 					ctx.drawBorder(block)
 				}
 			}
@@ -370,6 +376,48 @@ func roundedBoxPath(context backend.Canvas, radii bo.RoundedBox) {
 	context.LineTo(x, y+pr.Fl(tl[1]))
 	context.CubicTo(
 		x, y+pr.Fl(tl[1])*r, x+pr.Fl(tl[0])*r, y, x+pr.Fl(tl[0]), y)
+}
+
+// roundedBoxPathReverse traces the same rounded-box shape as roundedBoxPath
+// but in counter-clockwise winding order. Used together with a CW outer path
+// and NonZero fill rule to create ring/annular shapes.
+func roundedBoxPathReverse(context backend.Canvas, radii bo.RoundedBox) {
+	x, y, w, h, tl, tr, br, bl := pr.Fl(radii.X), pr.Fl(radii.Y), pr.Fl(radii.Width), pr.Fl(radii.Height), radii.TopLeft, radii.TopRight, radii.BottomRight, radii.BottomLeft
+	if (tl[0] == 0 || tl[1] == 0) && (tr[0] == 0 || tr[1] == 0) &&
+		(br[0] == 0 || br[1] == 0) && (bl[0] == 0 || bl[1] == 0) {
+		// CCW rectangle
+		context.MoveTo(x, y)
+		context.LineTo(x, y+h)
+		context.LineTo(x+w, y+h)
+		context.LineTo(x+w, y)
+		context.LineTo(x, y)
+		return
+	}
+
+	var r pr.Fl = 0.45
+
+	// Same start point as CW path, traced in opposite direction.
+	context.MoveTo(x+pr.Fl(tl[0]), y)
+	// Top-left corner (reversed)
+	context.CubicTo(
+		x+pr.Fl(tl[0])*r, y, x, y+pr.Fl(tl[1])*r, x, y+pr.Fl(tl[1]))
+	// Left edge downward
+	context.LineTo(x, y+h-pr.Fl(bl[1]))
+	// Bottom-left corner (reversed)
+	context.CubicTo(
+		x, y+h-pr.Fl(bl[1])*r, x+pr.Fl(bl[0])*r, y+h, x+pr.Fl(bl[0]), y+h)
+	// Bottom edge rightward
+	context.LineTo(x+w-pr.Fl(br[0]), y+h)
+	// Bottom-right corner (reversed)
+	context.CubicTo(
+		x+w-pr.Fl(br[0])*r, y+h, x+w, y+h-pr.Fl(br[1])*r, x+w, y+h-pr.Fl(br[1]))
+	// Right edge upward
+	context.LineTo(x+w, y+pr.Fl(tr[1]))
+	// Top-right corner (reversed)
+	context.CubicTo(
+		x+w, y+pr.Fl(tr[1])*r, x+w-pr.Fl(tr[0])*r, y, x+w-pr.Fl(tr[0]), y)
+	// Top edge leftward back to start
+	context.LineTo(x+pr.Fl(tl[0]), y)
 }
 
 func formatSVG(svg string, data svgArgs) (string, error) {
@@ -532,6 +580,26 @@ func (ctx drawContext) drawBackgroundImage(layer bo.BackgroundLayer, imageRender
 	X := pr.Fl(positionX.V()) + positioningX
 	Y := pr.Fl(positionY.V()) + positioningY
 
+	// For gradient images, bypass the group/pattern pipeline and draw directly
+	// on the main canvas. This avoids the need for SetColorPattern which may
+	// not be implemented by all backends.
+	if grad, ok := layer.Image.(images.LayoutableGradient); ok {
+		layout := grad.ComputeLayout(imageWidth, imageHeight)
+		ctx.dst.OnNewStack(func() {
+			if layer.Unbounded {
+				x1, y1, x2, y2 := ctx.dst.GetBoundingBox()
+				ctx.dst.Rectangle(x1, y1, x2-x1, y2-y1)
+			} else {
+				ctx.dst.Rectangle(paintingX, paintingY, paintingWidth, paintingHeight)
+			}
+			ctx.dst.State().Clip(false)
+			mat := matrix.New(1, 0, 0, 1, X, Y)
+			ctx.dst.State().Transform(mat)
+			ctx.dst.DrawGradient(layout, imageWidth, imageHeight)
+		})
+		return
+	}
+
 	// draw the image on a pattern
 	patttern := ctx.dst.NewGroup(0, 0, repeatWidth, repeatHeight)
 	layer.Image.Draw(patttern, ctx, imageWidth, imageHeight, string(imageRendering))
@@ -564,6 +632,342 @@ func styledColor(style pr.String, color Color, side pr.KnownProp) [2]Color {
 		}
 	}
 	return [2]Color{color}
+}
+
+// expandRoundedBox returns a copy of rb expanded outward by d on all sides.
+// Negative d shrinks the box. Radii are adjusted per CSS spec: each radius
+// component grows (or shrinks) by the expansion amount, clamped to 0.
+func expandRoundedBox(rb bo.RoundedBox, d pr.Fl) bo.RoundedBox {
+	adj := func(r pr.Float) pr.Float {
+		v := r + pr.Float(d)
+		if v < 0 {
+			return 0
+		}
+		return v
+	}
+	return bo.RoundedBox{
+		X: rb.X - pr.Float(d), Y: rb.Y - pr.Float(d),
+		Width: rb.Width + pr.Float(2*d), Height: rb.Height + pr.Float(2*d),
+		TopLeft:     bo.Point{adj(rb.TopLeft[0]), adj(rb.TopLeft[1])},
+		TopRight:    bo.Point{adj(rb.TopRight[0]), adj(rb.TopRight[1])},
+		BottomRight: bo.Point{adj(rb.BottomRight[0]), adj(rb.BottomRight[1])},
+		BottomLeft:  bo.Point{adj(rb.BottomLeft[0]), adj(rb.BottomLeft[1])},
+	}
+}
+
+// drawBoxShadow draws all box-shadow layers for the given box.
+// insetOnly=false draws outer shadows only; insetOnly=true draws inset shadows only.
+func (ctx drawContext) drawBoxShadow(box_ Box, insetOnly bool) {
+	box := box_.Box()
+	shadows := box.Style.GetBoxShadow()
+	if len(shadows) == 0 {
+		return
+	}
+	if box.Style.GetVisibility() != "visible" {
+		return
+	}
+
+	borderBox := box.RoundedBorderBox()
+
+	// Shadows are painted in reverse order (first declared = topmost).
+	for i := len(shadows) - 1; i >= 0; i-- {
+		s := shadows[i]
+		if s.Inset != insetOnly {
+			continue
+		}
+		color := parser.RGBA(s.Color.RGBA)
+		if color.A == 0 {
+			continue
+		}
+
+		ox, oy := pr.Fl(s.OffsetX.Value), pr.Fl(s.OffsetY.Value)
+		blur := pr.Fl(s.Blur.Value)
+		spread := pr.Fl(s.Spread.Value)
+
+		if s.Inset {
+			ctx.drawInsetBoxShadow(box, borderBox, ox, oy, blur, spread, color)
+		} else {
+			ctx.drawOuterBoxShadow(borderBox, ox, oy, blur, spread, color)
+		}
+	}
+}
+
+// drawOuterBoxShadow draws a single outer box-shadow layer.
+func (ctx drawContext) drawOuterBoxShadow(borderBox bo.RoundedBox, ox, oy, blur, spread pr.Fl, color Color) {
+	ctx.dst.OnNewStack(func() {
+		// The shadow shape is the border box offset by (ox, oy) and expanded by spread.
+		shadowBox := expandRoundedBox(borderBox, spread)
+		shadowBox.X += pr.Float(ox)
+		shadowBox.Y += pr.Float(oy)
+
+		// The shadow is only visible outside the (non-offset) border box.
+		if blur == 0 {
+			// Sharp shadow: fill the ring between shadowBox (CW) and borderBox (CCW).
+			// Using CW/CCW winding + NonZero fill avoids even-odd clip issues.
+			ctx.dst.OnNewStack(func() {
+				ctx.dst.State().SetColorRgba(color, false)
+				roundedBoxPath(ctx.dst, shadowBox)
+				roundedBoxPathReverse(ctx.dst, borderBox)
+				ctx.dst.Paint(backend.FillNonZero)
+			})
+		} else {
+			// Blurred shadow: use 9-patch gradient decomposition.
+			// The blur region extends "blur" pixels beyond the shadow shape.
+			// We clip to exclude the original border box (no shadow under the element).
+			blurBox := expandRoundedBox(shadowBox, blur)
+
+			// clip: show between blurBox and borderBox
+			roundedBoxPath(ctx.dst, blurBox)
+			roundedBoxPath(ctx.dst, borderBox)
+			ctx.dst.State().Clip(true)
+
+			ctx.drawBlurredShadow(shadowBox, blur, color)
+		}
+	})
+}
+
+// drawInsetBoxShadow draws a single inset box-shadow layer.
+//
+// For blurred inset shadows the overlay approach used by outer shadows cannot
+// work: Over compositing accumulates opacity toward the center, but inset
+// shadows need the OPPOSITE profile (darkest at the element edges, fading
+// toward center). Instead we draw non-overlapping annular rings, each with
+// its own direct alpha value derived from the Gaussian CDF. Rings are formed
+// by combining a CW outer rounded-rect subpath with a CCW inner rounded-rect
+// subpath, filled with NonZero rule.
+func (ctx drawContext) drawInsetBoxShadow(box *bo.BoxFields, borderBox bo.RoundedBox, ox, oy, blur, spread pr.Fl, color Color) {
+	ctx.dst.OnNewStack(func() {
+		paddingBox := box.RoundedPaddingBox()
+
+		// Clip to the padding box (inset shadow only visible inside).
+		roundedBoxPath(ctx.dst, paddingBox)
+		ctx.dst.State().Clip(false)
+
+		// The inset shadow shape is the padding box *shrunk* by spread,
+		// then offset.
+		insetShrink := -spread
+		shadowBox := expandRoundedBox(paddingBox, insetShrink)
+		shadowBox.X += pr.Float(ox)
+		shadowBox.Y += pr.Float(oy)
+
+		if blur < 0.5 {
+			// Sharp inset shadow: fill the ring between paddingBox and shadowBox.
+			ctx.dst.OnNewStack(func() {
+				ctx.dst.State().SetColorRgba(color, false)
+				roundedBoxPath(ctx.dst, paddingBox)
+				roundedBoxPathReverse(ctx.dst, shadowBox)
+				ctx.dst.Paint(backend.FillNonZero)
+			})
+		} else {
+			ctx.drawInsetBlurredShadow(paddingBox, shadowBox, blur, color)
+		}
+	})
+}
+
+// drawInsetBlurredShadow renders a Gaussian-blurred inset shadow using
+// non-overlapping annular rings. Each ring's alpha is the Gaussian CDF value
+// at the ring's center distance from the shadowBox edge.
+func (ctx drawContext) drawInsetBlurredShadow(paddingBox, shadowBox bo.RoundedBox, blur pr.Fl, color Color) {
+	// Gaussian CDF for inset shadow:
+	//   target(d) = erfc(-d·√2/blur) / 2 × baseAlpha
+	// where d > 0 = outside shadowBox (toward paddingBox), d < 0 = inside shadowBox.
+	// At d=0 (shadowBox edge): 0.5×α.
+	// d→+∞: α (full shadow at paddingBox edge).
+	// d→-∞: 0 (no shadow deep inside).
+
+	inv := math.Sqrt2 / float64(blur)
+	baseAlpha := float64(color.A)
+
+	// Extend blur distance outward (toward paddingBox) and inward (into shadowBox).
+	outDist := float64(blur)
+	inDist := float64(blur)
+
+	// Cap inward extension at half the shadowBox dimensions.
+	halfW := float64(shadowBox.Width) / 2.0
+	halfH := float64(shadowBox.Height) / 2.0
+	if inDist > halfW {
+		inDist = halfW
+	}
+	if inDist > halfH {
+		inDist = halfH
+	}
+
+	// Opacity at the extremes.
+	opOuter := math.Erfc(-outDist*inv) / 2.0 * baseAlpha // near paddingBox, ≈ α
+	opInner := math.Erfc(inDist*inv) / 2.0 * baseAlpha   // deep inside shadowBox, ≈ 0
+
+	opRange := opOuter - opInner
+	if opRange < 1.0/255.0 {
+		return
+	}
+
+	const targetStep = 2.0 / 255.0
+	const minSteps = 8
+	const maxSteps = 48
+
+	N := int(math.Ceil(opRange / targetStep))
+	if N < minSteps {
+		N = minSteps
+	}
+	if N > maxSteps {
+		N = maxSteps
+	}
+
+	stepOp := opRange / float64(N)
+
+	// Draw N non-overlapping rings from outermost (near paddingBox) to innermost.
+	for k := 0; k < N; k++ {
+		// Opacity at the center of this ring.
+		ringOp := opOuter - (float64(k)+0.5)*stepOp
+		if ringOp < 1.0/255.0 {
+			continue
+		}
+
+		// Invert CDF to find distances for ring boundaries.
+		// target(d) = erfc(-d·inv)/2 × baseAlpha
+		// → erfc(-d·inv) = 2·target/baseAlpha
+		// → -d·inv = erfcinv(2·target/baseAlpha)
+		// → d = -erfcinv(2·target/baseAlpha) / inv
+		outerOp := opOuter - float64(k)*stepOp
+		innerOp := opOuter - float64(k+1)*stepOp
+
+		argOuter := 2.0 * outerOp / baseAlpha
+		argInner := 2.0 * innerOp / baseAlpha
+
+		var dOuter, dInner float64
+		if argOuter >= 2.0 {
+			dOuter = inDist
+		} else if argOuter <= 0 {
+			dOuter = -outDist
+		} else {
+			dOuter = -math.Erfcinv(argOuter) / inv
+		}
+		if argInner >= 2.0 {
+			dInner = inDist
+		} else if argInner <= 0 {
+			dInner = -outDist
+		} else {
+			dInner = -math.Erfcinv(argInner) / inv
+		}
+
+		outerShape := expandRoundedBox(shadowBox, pr.Fl(dOuter))
+		innerShape := expandRoundedBox(shadowBox, pr.Fl(dInner))
+
+		if outerShape.Width <= 0 || outerShape.Height <= 0 {
+			continue
+		}
+
+		ringColor := parser.RGBA{R: color.R, G: color.G, B: color.B, A: pr.Fl(ringOp)}
+
+		ctx.dst.OnNewStack(func() {
+			ctx.dst.State().SetColorRgba(ringColor, false)
+			roundedBoxPath(ctx.dst, outerShape)
+			if innerShape.Width > 0 && innerShape.Height > 0 {
+				roundedBoxPathReverse(ctx.dst, innerShape)
+			}
+			ctx.dst.Paint(backend.FillNonZero)
+		})
+	}
+}
+
+// drawBlurredShadow renders a Gaussian-blurred shadow around shadowBox.
+//
+// The approach draws concentric filled shapes from outermost (faintest) to
+// innermost (darkest). Each shape is the rounded shadow box expanded (or
+// shrunk) by a given distance. Because later (inner) shapes paint OVER
+// earlier (outer) ones via standard alpha compositing, each shape only needs
+// an incremental opacity such that the accumulated result at any point
+// matches the Gaussian CDF profile.
+//
+// Layer boundaries are spaced in **opacity-uniform** steps rather than
+// distance-uniform steps. This avoids uint8 quantization artifacts at the
+// outer fringe: each layer contributes ~2/255 opacity, well above the
+// minimum representable value (1/255). Large distance jumps happen at the
+// outer edge where the Gaussian CDF is nearly flat, while finer distance
+// steps are used near the shadow edge where the CDF changes rapidly.
+func (ctx drawContext) drawBlurredShadow(shadowBox bo.RoundedBox, blur pr.Fl, color Color) {
+	// How far inside the shadow to extend the transition.
+	halfW := float64(shadowBox.Width) / 2.0
+	halfH := float64(shadowBox.Height) / 2.0
+	inDepth := float64(blur)
+	if inDepth > halfW {
+		inDepth = halfW
+	}
+	if inDepth > halfH {
+		inDepth = halfH
+	}
+
+	// CSS box-shadow: σ = blur / 2.
+	// Gaussian CDF at distance d from the shadow edge
+	// (positive = outside, negative = inside):
+	//   target(d) = erfc(d·√2 / blur) / 2 × baseAlpha
+
+	inv := math.Sqrt2 / float64(blur)
+	baseAlpha := float64(color.A)
+
+	// Target opacity at the innermost boundary.
+	opInner := math.Erfc(-inDepth*inv) / 2.0 * baseAlpha
+	if opInner < 1.0/255.0 {
+		return
+	}
+
+	// Choose N so each layer contributes ~2 alpha levels (2/255 ≈ 0.008).
+	const targetStep = 2.0 / 255.0
+	const minSteps = 8
+	const maxSteps = 48
+
+	N := int(math.Ceil(opInner / targetStep))
+	if N < minSteps {
+		N = minSteps
+	}
+	if N > maxSteps {
+		N = maxSteps
+	}
+
+	stepOpacity := opInner / float64(N)
+
+	// Draw from outermost (k=0) to innermost (k=N-1).
+	prevTarget := 0.0
+	for k := 0; k < N; k++ {
+		innerTarget := stepOpacity * float64(k+1)
+		outerTarget := prevTarget
+
+		layerAlpha := 1.0 - (1.0-innerTarget)/(1.0-outerTarget)
+		if layerAlpha < 1.0/512.0 {
+			prevTarget = innerTarget
+			continue
+		}
+		if layerAlpha > 1.0 {
+			layerAlpha = 1.0
+		}
+
+		// Invert CDF to find the distance for this layer's filled shape.
+		arg := 2.0 * innerTarget / baseAlpha
+		var expandDist float64
+		if arg >= 2.0 {
+			expandDist = -inDepth
+		} else if arg <= 0 {
+			expandDist = float64(blur)
+		} else {
+			expandDist = math.Erfcinv(arg) / inv
+		}
+
+		expanded := expandRoundedBox(shadowBox, pr.Fl(expandDist))
+		if expanded.Width <= 0 || expanded.Height <= 0 {
+			prevTarget = innerTarget
+			continue
+		}
+
+		layerColor := parser.RGBA{R: color.R, G: color.G, B: color.B, A: pr.Fl(layerAlpha)}
+
+		ctx.dst.OnNewStack(func() {
+			ctx.dst.State().SetColorRgba(layerColor, false)
+			roundedBoxPath(ctx.dst, expanded)
+			ctx.dst.Paint(backend.FillNonZero)
+		})
+
+		prevTarget = innerTarget
+	}
 }
 
 // Draw the box border
@@ -1516,7 +1920,9 @@ func (ctx drawContext) drawInlineLevel(page *bo.PageBox, box_ Box, offsetX fl, t
 		ctx.drawStackingContext(stackingContext)
 	} else {
 		box := box_.Box()
+		ctx.drawBoxShadow(box_, false)
 		ctx.drawBackgroundDefaut(box.Background)
+		ctx.drawBoxShadow(box_, true)
 		ctx.drawBorder(box_)
 		textBox, isTextBox := box_.(*bo.TextBox)
 		replacedBox, isReplacedBox := box_.(bo.ReplacedBoxITF)
@@ -1574,9 +1980,112 @@ func (ctx drawContext) drawText(textbox *bo.TextBox, offsetX fl, textOverflow st
 	}
 
 	x, y := pr.Fl(textbox.PositionX), pr.Fl(textbox.PositionY+textbox.Baseline.V())
-	ctx.dst.State().SetColorRgba(textbox.Style.GetColor().RGBA, false)
 
+	// Draw text-shadows (painted behind the actual text).
 	textbox.TextLayout.ApplyJustification()
+	shadows := textbox.Style.GetTextShadow()
+	for i := len(shadows) - 1; i >= 0; i-- {
+		s := shadows[i]
+		sc := parser.RGBA(s.Color.RGBA)
+		if sc.A == 0 {
+			continue
+		}
+		sx := x + pr.Fl(s.OffsetX.Value)
+		sy := y + pr.Fl(s.OffsetY.Value)
+		blur := pr.Fl(s.Blur.Value)
+
+		if blur < 0.5 {
+			// Sharp text shadow.
+			ctx.dst.OnNewStack(func() {
+				ctx.dst.State().SetColorRgba(sc, false)
+				ctx.drawFirstLine(textbox, textOverflow, blockEllipsis, sx, sy)
+			})
+		} else {
+			// Blurred text shadow: draw the text at a small grid of offsets
+			// weighted by a 2-D Gaussian kernel.  We keep the grid coarse
+			// (≤ 9×9 = 81 layers) so each sample carries enough alpha for
+			// 8-bit compositing, then apply a Porter-Duff correction boost
+			// so that the over-composited centre matches the target opacity.
+			sigma := float64(blur) / 2.0
+			radius := 2.0 * sigma
+			colorAlpha := float64(sc.A)
+
+			if colorAlpha < 1.0/255.0 {
+				continue
+			}
+
+			// Fixed small grid — 9×9 is a good balance between quality and
+			// per-sample alpha headroom.  For very small blurs use fewer.
+			samplesPerAxis := 9
+			if sigma < 1.5 {
+				samplesPerAxis = 5
+			} else if sigma < 3 {
+				samplesPerAxis = 7
+			}
+			nSamples := samplesPerAxis * samplesPerAxis
+
+			type sample struct {
+				dx, dy, w float64
+			}
+			var samples []sample
+			var totalW float64
+			// Golden-angle spiral: each sample at a unique angle so no two
+			// layers align, eliminating the grid banding artefact.
+			// r = radius * sqrt(i/N), θ = i * goldenAngle
+			const goldenAngle = 2.399963 // π(3−√5)
+			for i := 0; i < nSamples; i++ {
+				// i=0 is the centre sample
+				r := radius * math.Sqrt(float64(i)/float64(nSamples-1))
+				theta := float64(i) * goldenAngle
+				dx := r * math.Cos(theta)
+				dy := r * math.Sin(theta)
+				w := math.Exp(-(dx*dx + dy*dy) / (2.0 * sigma * sigma))
+				samples = append(samples, sample{dx, dy, w})
+				totalW += w
+			}
+
+			// Porter-Duff "over" compositing gives 1-Π(1-aᵢ) instead of
+			// the linear Σaᵢ.  Binary-search for a boost b so the centre
+			// pixel (where all layers overlap) reaches colorAlpha.
+			boost := 1.0
+			lo, hi := 1.0, 8.0
+			for iter := 0; iter < 30; iter++ {
+				b := (lo + hi) / 2
+				prod := 1.0
+				for _, sm := range samples {
+					a := b * colorAlpha * sm.w / totalW
+					if a > 1 {
+						a = 1
+					}
+					prod *= 1 - a
+				}
+				if 1-prod < colorAlpha {
+					lo = b
+				} else {
+					hi = b
+				}
+			}
+			boost = (lo + hi) / 2
+
+			for _, sm := range samples {
+				a := boost * colorAlpha * sm.w / totalW
+				if a < 1.0/255.0 {
+					continue
+				}
+				if a > 1 {
+					a = 1
+				}
+				sampleColor := parser.RGBA{R: sc.R, G: sc.G, B: sc.B, A: pr.Fl(a)}
+				ctx.dst.OnNewStack(func() {
+					ctx.dst.State().SetColorRgba(sampleColor, false)
+					ctx.drawFirstLine(textbox, textOverflow, blockEllipsis,
+						sx+pr.Fl(sm.dx), sy+pr.Fl(sm.dy))
+				})
+			}
+		}
+	}
+
+	ctx.dst.State().SetColorRgba(textbox.Style.GetColor().RGBA, false)
 	ctx.drawFirstLine(textbox, textOverflow, blockEllipsis, x, y)
 
 	if decoration&pr.LineThrough != 0 {

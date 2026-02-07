@@ -9,6 +9,9 @@ import (
 	bo "github.com/benoitkugler/webrender/html/boxes"
 )
 
+
+
+
 // Page breaking and layout for block-level and block-container boxes.
 
 type blockLayout struct {
@@ -109,6 +112,9 @@ func blockLevelLayoutSwitch(context *layoutContext, box_ bo.BlockLevelBoxITF, bo
 	} else if bo.GridT.IsInstance(box_) {
 		box_, layout := gridLayout(context, box_, bottomSpace, skipStack, containingBlock,
 			pageIsEmpty, absoluteBoxes, fixedBoxes)
+		if box_ == nil {
+			return nil, layout, -1
+		}
 		return box_.(bo.BlockLevelBoxITF), layout, -1 // gridLayout is type stable
 	} else {
 		panic(fmt.Sprintf("Layout for %s not handled yet", box_))
@@ -446,6 +452,7 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 			}
 			traceLogger.Dump(fmt.Sprintf("Block container layout child %d (%s) resumeAt %s", i, origin, resumeAt))
 		}
+
 
 		if abort {
 			page_, _ := child.PageValues()

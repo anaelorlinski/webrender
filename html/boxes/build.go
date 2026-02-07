@@ -1549,6 +1549,17 @@ func FlexBoxes(box Box) Box {
 func flexChildren(box Box, children []Box) []Box {
 	if _, isFlexCont := box.(FlexContainerBoxITF); isFlexCont {
 		var flexChildren []Box
+		var inlineGroup []Box
+
+		flushInlineGroup := func() {
+			if len(inlineGroup) > 0 {
+				anonymous := BlockBoxAnonymousFrom(box, inlineGroup)
+				anonymous.IsFlexItem = true
+				flexChildren = append(flexChildren, anonymous)
+				inlineGroup = nil
+			}
+		}
+
 		for _, child := range children {
 			if !child.Box().IsAbsolutelyPositioned() {
 				child.Box().IsFlexItem = true
@@ -1556,19 +1567,43 @@ func flexChildren(box Box, children []Box) []Box {
 
 			if textBox, ok := child.(*TextBox); ok {
 				// https://www.w3.org/TR/css-flexbox-1/#flex-items
+				// Whitespace-only text runs are skipped.
 				if strings.Trim(textBox.TextS(), " ") == "" {
 					continue
 				}
-			}
-
-			if _, ok := child.(InlineLevelBoxITF); ok {
-				anonymous := BlockBoxAnonymousFrom(box, []Box{child})
+				// Per the spec, each contiguous sequence of child text
+				// runs is wrapped in an anonymous block container flex item.
+				inlineGroup = append(inlineGroup, child)
+			} else if irb, ok := child.(*InlineReplacedBox); ok {
+				// Blockify inline replaced elements (e.g. <svg>, <img>)
+				// per the CSS Flexbox spec §4.1: "The display value of a
+				// flex item is blockified". This converts InlineReplacedBox
+				// to BlockReplacedBox so it becomes a proper block-level
+				// flex item, avoiding line-height issues.
+				flushInlineGroup()
+				blockified := BlockReplacedBox{ReplacedBox: irb.ReplacedBox}
+				blockified.IsFlexItem = true
+				flexChildren = append(flexChildren, &blockified)
+			} else if _, ok := child.(InlineLevelBoxITF); ok {
+				// Inline-level elements (e.g. <span>) become individual flex
+				// items per the spec: "Each in-flow child of a flex container
+				// becomes a flex item". They must be wrapped in their own
+				// anonymous block container so they can participate as
+				// block-level boxes in flex layout.
+				// Use the CHILD's own style (not the parent's) so that the
+				// anonymous block inherits the child's font-size/line-height,
+				// giving the correct strut height for line boxes.
+				flushInlineGroup()
+				anonymous := BlockBoxAnonymousFrom(child, []Box{child})
 				anonymous.IsFlexItem = true
 				flexChildren = append(flexChildren, anonymous)
 			} else {
+				// Block-level children become flex items directly.
+				flushInlineGroup()
 				flexChildren = append(flexChildren, child)
 			}
 		}
+		flushInlineGroup()
 		return flexChildren
 	}
 	return children
@@ -1592,6 +1627,21 @@ func GridBoxes(box Box) Box {
 func gridChildren(box Box, children []Box) []Box {
 	if GridContainerT.IsInstance(box) {
 		var gridChildren []Box
+		var inlineGroup []Box
+
+		flushInlineGroup := func() {
+			if len(inlineGroup) > 0 {
+				anonymous := BlockBoxAnonymousFrom(inlineGroup[0], inlineGroup)
+				anonymous.Box().Style = inlineGroup[0].Box().Style
+				for _, ig := range inlineGroup {
+					ig.Box().IsGridItem = false
+				}
+				anonymous.Box().IsGridItem = true
+				gridChildren = append(gridChildren, anonymous)
+				inlineGroup = nil
+			}
+		}
+
 		for _, child := range children {
 			if !child.Box().IsAbsolutelyPositioned() {
 				child.Box().IsGridItem = true
@@ -1602,16 +1652,26 @@ func gridChildren(box Box, children []Box) []Box {
 				// https://drafts.csswg.org/css-grid-2/#grid-item
 				continue
 			}
-			if InlineLevelT.IsInstance(child) {
+			if _, isText := child.(*TextBox); isText {
+				// Contiguous text-run children are wrapped together in a
+				// single anonymous block container grid item, per
+				// https://drafts.csswg.org/css-grid-2/#grid-item
+				inlineGroup = append(inlineGroup, child)
+			} else if InlineLevelT.IsInstance(child) {
+				// Inline-level *elements* must each be blockified into
+				// their own grid item, mirroring the flex container rule.
+				flushInlineGroup()
 				anonymous := BlockBoxAnonymousFrom(child, []Box{child})
 				anonymous.Box().Style = child.Box().Style
 				child.Box().IsGridItem = false
 				anonymous.Box().IsGridItem = true
 				gridChildren = append(gridChildren, anonymous)
 			} else {
+				flushInlineGroup()
 				gridChildren = append(gridChildren, child)
 			}
 		}
+		flushInlineGroup()
 		return gridChildren
 	}
 	return children

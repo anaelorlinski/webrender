@@ -42,7 +42,7 @@ func newSVGContextReader(rootText io.Reader, baseURL string, urlFetcher utils.Ur
 		return nil, err
 	}
 
-	return newSVGContext(root, baseURL, urlFetcher)
+	return newSVGContext(root, baseURL, urlFetcher, "")
 }
 
 // newSVGContext converts from the html representation to an internal,
@@ -52,7 +52,10 @@ func newSVGContextReader(rootText io.Reader, baseURL string, urlFetcher utils.Ur
 // of the CSS properties begin stored as attributes.
 //
 // Inheritable attributes are cascaded and 'inherit' special values are resolved.
-func newSVGContext(root *html.Node, baseURL string, urlFetcher utils.UrlFetcher) (*svgContext, error) {
+// inheritedColor is an optional CSS color string (e.g. "#EB646F") inherited from
+// the HTML parent context. When non-empty, it is used to resolve "currentColor"
+// values in SVG attributes like fill and stroke.
+func newSVGContext(root *html.Node, baseURL string, urlFetcher utils.UrlFetcher, inheritedColor string) (*svgContext, error) {
 	// extract the root svg node, which is not
 	// always the first one
 	iter := utils.NewHtmlIterator(root, atom.Svg)
@@ -137,7 +140,14 @@ func newSVGContext(root *html.Node, baseURL string, urlFetcher utils.UrlFetcher)
 		return nodeSVG
 	}
 
-	out.root = buildTree((*html.Node)(svgRoot), nil)
+	// If an inherited color is provided from the HTML context,
+	// seed the parent attributes so that currentColor can resolve.
+	var initialAttrs nodeAttributes
+	if inheritedColor != "" {
+		initialAttrs = nodeAttributes{"color": inheritedColor}
+	}
+
+	out.root = buildTree((*html.Node)(svgRoot), initialAttrs)
 
 	out.inheritDefs()
 

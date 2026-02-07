@@ -143,6 +143,8 @@ var (
 		pr.PBookmarkLabel: bookmarkLabel,
 		pr.PStringSet:     stringSet,
 		pr.PLink:          link,
+		pr.PBoxShadow:     shadows,
+		pr.PTextShadow:    shadows,
 	}
 
 	keywordsValues []pr.Float
@@ -911,7 +913,32 @@ func tabSize(computer *ComputedStyle, name pr.KnownProp, _value pr.CssProperty) 
 	}
 	return length(computer, name, value)
 }
-
+// Compute the "box-shadow" and "text-shadow" properties.
+func shadows(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) pr.CssProperty {
+	value := _value.(pr.Shadows)
+	if len(value) == 0 {
+		return value
+	}
+	result := make(pr.Shadows, len(value))
+	for i, s := range value {
+		resolveDim := func(d pr.Dimension) pr.Dimension {
+			if d.Value == 0 {
+				return pr.Dimension{Value: 0, Unit: pr.Px}
+			}
+			resolved := length_(computer, d.ToValue(), -1, true)
+			return pr.Dimension{Value: resolved.Value, Unit: pr.Px}
+		}
+		result[i] = pr.Shadow{
+			OffsetX: resolveDim(s.OffsetX),
+			OffsetY: resolveDim(s.OffsetY),
+			Blur:    resolveDim(s.Blur),
+			Spread:  resolveDim(s.Spread),
+			Color:   s.Color,
+			Inset:   s.Inset,
+		}
+	}
+	return result
+}
 // Compute the “transform“ property.
 func transforms(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) pr.CssProperty {
 	value := _value.(pr.Transforms)

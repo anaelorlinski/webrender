@@ -71,12 +71,13 @@ func getImage(_token Token, baseUrl string) (pr.Image, error) {
 	case "linear-gradient", "repeating-linear-gradient":
 		direction, colorStops := parseLinearGradientParameters(arguments)
 		if len(colorStops) > 0 {
-			parsedColorsStop := make([]pr.ColorStop, len(colorStops))
-			for index, stop := range colorStops {
-				parsedColorsStop[index], err = parseColorStop(stop)
+			var parsedColorsStop []pr.ColorStop
+			for _, stop := range colorStops {
+				stops, err := parseColorStops(stop)
 				if err != nil {
 					return nil, err
 				}
+				parsedColorsStop = append(parsedColorsStop, stops...)
 			}
 			return pr.LinearGradient{
 				Direction:  direction,
@@ -93,12 +94,13 @@ func getImage(_token Token, baseUrl string) (pr.Image, error) {
 			result.colorStops = arguments
 		}
 		if len(result.colorStops) > 0 {
-			parsedColorsStop := make([]pr.ColorStop, len(result.colorStops))
-			for index, stop := range result.colorStops {
-				parsedColorsStop[index], err = parseColorStop(stop)
+			var parsedColorsStop []pr.ColorStop
+			for _, stop := range result.colorStops {
+				stops, err := parseColorStops(stop)
 				if err != nil {
 					return nil, err
 				}
+				parsedColorsStop = append(parsedColorsStop, stops...)
 			}
 			return pr.RadialGradient{
 				ColorStops: parsedColorsStop,
@@ -243,6 +245,33 @@ func parseColorStop(tokens []Token) (pr.ColorStop, error) {
 		}
 	}
 	return pr.ColorStop{}, ErrInvalidValue
+}
+
+// parseColorStops parses a color stop token group into one or two ColorStops.
+// Per CSS Images Level 3, a color stop can have two position values (double-position):
+//
+//	<color> <position1> <position2> expands to <color> <position1>, <color> <position2>
+func parseColorStops(tokens []Token) ([]pr.ColorStop, error) {
+	if len(tokens) == 3 {
+		color := pa.ParseColor(tokens[0])
+		position1 := getLength(tokens[1], true, true)
+		position2 := getLength(tokens[2], true, true)
+		if !color.IsNone() && !position1.IsNone() && !position2.IsNone() {
+			c := pr.Color(color)
+			if color.Type == pa.ColorCurrentColor {
+				c = pr.Color(pa.ParseColorString("black"))
+			}
+			return []pr.ColorStop{
+				{Color: c, Position: position1},
+				{Color: c, Position: position2},
+			}, nil
+		}
+	}
+	stop, err := parseColorStop(tokens)
+	if err != nil {
+		return nil, err
+	}
+	return []pr.ColorStop{stop}, nil
 }
 
 func parseURLToken(value, baseURL string) (url pr.NamedString, attr pr.AttrData, err error) {

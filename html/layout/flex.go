@@ -125,6 +125,28 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 		axis, cross = pr.PWidth, pr.PHeight
 	}
 
+	// Read gap properties. For flex, column-gap applies along the main axis
+	// when flex-direction is row/row-reverse, and row-gap applies along the
+	// main axis when flex-direction is column/column-reverse.
+	var mainGap, crossGap pr.Float
+	if axis == pr.PWidth {
+		// row direction: column-gap is main, row-gap is cross
+		if v := box.Style.GetColumnGap(); v.S != "normal" {
+			mainGap = v.Value
+		}
+		if v := box.Style.GetRowGap(); v.S != "normal" {
+			crossGap = v.Value
+		}
+	} else {
+		// column direction: row-gap is main, column-gap is cross
+		if v := box.Style.GetRowGap(); v.S != "normal" {
+			mainGap = v.Value
+		}
+		if v := box.Style.GetColumnGap(); v.S != "normal" {
+			crossGap = v.Value
+		}
+	}
+
 	var marginLeft pr.Float
 	if box.MarginLeft != pr.AutoF {
 		marginLeft = box.MarginLeft.V()
@@ -337,7 +359,13 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 					if bo.ParentT.IsInstance(child_) {
 						newChild = bo.CopyWithChildren(child_, child.Children)
 					}
-					newChild.Box().Width = pr.Inf
+					// Use the parent's width so text wraps correctly when
+					// measuring the content height of column-flex children.
+					if parentBox.Width != pr.AutoF {
+						newChild.Box().Width = parentBox.Width
+					} else {
+						newChild.Box().Width = availableCrossSpace
+					}
 					newChild, _, _ = blockLevelLayout(context, newChild.(bo.BlockLevelBoxITF), -pr.Inf, childSkipStack,
 						parentBox, pageIsEmpty, absoluteBoxes, fixedBoxes, nil, false, -1)
 					child.FlexBaseSize = newChild.Box().MarginHeight()
@@ -384,8 +412,18 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 			} else {
 				box.Height = he.Value
 			}
+			// For border-box/padding-box, the CSS height includes padding+border,
+			// but box.Height should be the content-box height.
+			switch box.Style.GetBoxSizing() {
+			case "border-box":
+				box.Height = box.Height.V() - box.PaddingTop.V() - box.PaddingBottom.V() -
+					box.BorderTopWidth.V() - box.BorderBottomWidth.V()
+			case "padding-box":
+				box.Height = box.Height.V() - box.PaddingTop.V() - box.PaddingBottom.V()
+			}
 		} else {
 			box.Height = pr.Float(0)
+			var flexItemCount int
 			for i, child_ := range children {
 				child := child_.Box()
 				if !child.IsFlexItem {
@@ -393,12 +431,17 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 				}
 				childHeight := child.HypotheticalMainSize + child.BorderTopWidth.V() + child.BorderBottomWidth.V() +
 					child.PaddingTop.V() + child.PaddingBottom.V()
+				// Add main-axis gap between items in column direction
+				if flexItemCount > 0 {
+					childHeight += mainGap
+				}
 				if getAttr(box, axis, "") == pr.AutoF && childHeight+box.Height.V() > availableMainSpace {
 					resumeAt = tree.ResumeStack{i: nil}
 					children = children[:i+1]
 					break
 				}
 				box.Height = box.Height.V() + childHeight
+				flexItemCount++
 			}
 		}
 	}
@@ -414,6 +457,10 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 		child := child_.Box()
 		if !child.IsFlexItem {
 			continue
+		}
+		// Account for gap between items when accumulating line size
+		if len(line.line) > 0 {
+			lineSize += mainGap
 		}
 		lineSize += child.HypotheticalMainSize
 		if box.Style.GetFlexWrap() != "nowrap" && lineSize > axisSize.V() {
@@ -474,7 +521,10 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 		}
 
 		// Step 6 - 9.7.3
-		initialFreeSpace := availableMainSpace
+		// Gaps between items consume space and reduce the free space available
+		// for flex grow/shrink distribution.
+		lineGapSpace := mainGap * pr.Float(len(line.line)-1)
+		initialFreeSpace := availableMainSpace - lineGapSpace
 		for _, v := range line.line {
 			child := v.box.Box()
 			if child.Frozen {
@@ -487,7 +537,7 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 		// Step 6 - 9.7.4
 		for !line.allFrozen() {
 			var unfrozenFactorSum pr.Float
-			remainingFreeSpace := availableMainSpace
+			remainingFreeSpace := availableMainSpace - lineGapSpace
 
 			// Step 6 - 9.7.4.B
 			for _, v := range line.line {
@@ -599,12 +649,12 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 				}
 			} else {
 				child.Height = child.TargetMainSize - child.PaddingTop.V() - child.PaddingBottom.V() -
-					child.BorderTopWidth.V() - child.BorderTopWidth.V()
-				if child.MarginLeft != pr.AutoF {
-					child.Height = child.Height.V() - child.MarginLeft.V()
+					child.BorderTopWidth.V() - child.BorderBottomWidth.V()
+				if child.MarginTop != pr.AutoF {
+					child.Height = child.Height.V() - child.MarginTop.V()
 				}
-				if child.MarginRight != pr.AutoF {
-					child.Height = child.Height.V() - child.MarginRight.V()
+				if child.MarginBottom != pr.AutoF {
+					child.Height = child.Height.V() - child.MarginBottom.V()
 				}
 			}
 		}
@@ -633,7 +683,37 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 				childCopy = bo.CopyWithChildren(child_, child.Children)
 			}
 
-			blockLevelWidth(childCopy, nil, parentBox)
+			// For column flex, determine whether this item will be stretched
+			// along the cross axis (width). If not, use shrink-to-fit width
+			// so that align-items: center can center it properly.
+			useIntrinsicWidth := false
+			if cross == pr.PWidth && getCross(child, cross).S == "auto" {
+				itemAlignSelf := child.Style.GetAlignSelf()
+				if itemAlignSelf.Intersects(kw.Auto) {
+					itemAlignSelf = box.Style.GetAlignItems()
+				}
+				if !itemAlignSelf.Intersects(kw.Stretch, kw.Normal) {
+					useIntrinsicWidth = true
+				}
+			}
+
+			if useIntrinsicWidth {
+				// fit-content: min(max-content, available-width)
+				// Use outer=false to get content-box width for assignment to .Width
+				intrinsic := maxContentWidth(context, childCopy, false)
+				available := parentBox.Width.V() - child.MarginLeft.V() - child.MarginRight.V() -
+					child.PaddingLeft.V() - child.PaddingRight.V() -
+					child.BorderLeftWidth.V() - child.BorderRightWidth.V()
+				if intrinsic > available {
+					intrinsic = available
+				}
+				childCopy.Box().Width = intrinsic
+				// Set definite width in style so blockLevelWidth won't override it
+				childCopy.Box().Style = childCopy.Box().Style.Copy()
+				childCopy.Box().Style.SetWidth(pr.FToPx(intrinsic))
+			} else {
+				blockLevelWidth(childCopy, nil, parentBox)
+			}
 			newChild, tmp, _ := blockLevelLayoutSwitch(context, childCopy.(bo.BlockLevelBoxITF), -pr.Inf, childSkipStack,
 				parentBox, pageIsEmpty, absoluteBoxes, fixedBoxes, new([]pr.Float), false, -1)
 			adjoiningMargins := tmp.adjoiningMargins
@@ -648,7 +728,7 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 				// to the child bottom margin.
 				child.MarginBottom = child.MarginBottom.V() + collapseMargin(adjoiningMargins)
 			} else {
-				child.Width = minContentWidth(context, child_, false)
+				child.Width = newChild.Box().Width
 			}
 
 			newFlexLine.line = append(newFlexLine.line, indexedBox{index: v.index, box: child_})
@@ -737,13 +817,31 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 	if alignContent.Intersects(kw.Stretch) {
 		var definiteCrossSize pr.MaybeFloat
 		if he := box.Style.GetHeight(); cross == pr.PHeight && he.S != "auto" {
-			definiteCrossSize = he.Value
+			h := he.Value
+			// For border-box/padding-box, convert to content-box height.
+			switch box.Style.GetBoxSizing() {
+			case "border-box":
+				h -= box.PaddingTop.V() + box.PaddingBottom.V() +
+					box.BorderTopWidth.V() + box.BorderBottomWidth.V()
+			case "padding-box":
+				h -= box.PaddingTop.V() + box.PaddingBottom.V()
+			}
+			definiteCrossSize = h
 		} else if cross == pr.PWidth {
 			if bo.FlexT.IsInstance(box_) {
 				if box.Style.GetWidth().S == "auto" {
 					definiteCrossSize = availableCrossSpace
 				} else {
-					definiteCrossSize = box.Style.GetWidth().Value
+					w := box.Style.GetWidth().Value
+					// For border-box/padding-box, convert to content-box width.
+					switch box.Style.GetBoxSizing() {
+					case "border-box":
+						w -= box.PaddingLeft.V() + box.PaddingRight.V() +
+							box.BorderLeftWidth.V() + box.BorderRightWidth.V()
+					case "padding-box":
+						w -= box.PaddingLeft.V() + box.PaddingRight.V()
+					}
+					definiteCrossSize = w
 				}
 			}
 		}
@@ -821,8 +919,10 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 	for _, line := range flexLines {
 		positionAxis := originalPositionAxis
 		var freeSpace pr.Float
+		// Gaps between items are not part of free space
+		lineMainGap := mainGap * pr.Float(len(line.line)-1)
 		if axis == pr.PWidth {
-			freeSpace = box.Width.V()
+			freeSpace = box.Width.V() - lineMainGap
 			for _, v := range line.line {
 				child := v.box.Box()
 				freeSpace -= child.BorderWidth()
@@ -834,7 +934,7 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 				}
 			}
 		} else {
-			freeSpace = box.Height.V()
+			freeSpace = box.Height.V() - lineMainGap
 			for _, v := range line.line {
 				child := v.box.Box()
 				freeSpace -= child.BorderHeight()
@@ -890,6 +990,7 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 		}
 
 		if box.Style.GetDirection() == "rtl" && axis == pr.PWidth {
+			positionAxis += box.Width.V()
 			freeSpace = -freeSpace
 		}
 
@@ -907,6 +1008,9 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 			child := v.box.Box()
 			if axis == pr.PWidth {
 				child.PositionX = positionAxis
+				if box.Style.GetDirection() == "rtl" {
+					child.PositionX -= child.MarginWidth()
+				}
 				if justifyContent.Intersects(kw.Stretch) {
 					child.Width = child.Width.V() + freeSpace/pr.Float(len(line.line))
 				}
@@ -924,6 +1028,9 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 			} else {
 				positionAxis += child.MarginHeight()
 			}
+
+			// Add main-axis gap between items
+			positionAxis += mainGap
 
 			if justifyContent.Intersects(kw.SpaceAround) {
 				positionAxis += freeSpace / pr.Float(len(line.line))
@@ -1072,16 +1179,25 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 						}
 						// TODO: don't set style width, find a way to avoid
 						// width re-calculation after Step 16
+						child.Style = child.Style.Copy()
 						child.Style.Set(cross.Key(), pr.Dimension{Value: line.crossSize - margins, Unit: pr.Px}.ToValue())
 					}
 				}
 			}
 		}
 		positionCross += line.crossSize
+		// Add cross-axis gap between flex lines
+		if index < len(flexLines)-1 {
+			positionCross += crossGap
+		}
 		flexLines[index] = line
 	}
 
 	sc := sumCross(flexLines)
+	// Include cross-axis gaps between lines in total cross size
+	if len(flexLines) > 1 {
+		sc += crossGap * pr.Float(len(flexLines)-1)
+	}
 	// Step 15
 	if getCross(box, cross).S == "auto" {
 		// TODO: handle min-max
@@ -1138,13 +1254,71 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 	box_ = box_.Copy()
 	box = box_.Box()
 	box.Children = nil
+
+	// Handle absolutely positioned descendants of the flex container.
+	// Per CSS Flexbox spec §4.1, absolutely positioned children of a flex
+	// container do not participate in flex layout but use the flex container
+	// as their containing block (if it establishes one via position:relative).
+	var localAbsoluteBoxes []*AbsolutePlaceholder
+	localAbsBoxes := absoluteBoxes
+	if box.Style.GetPosition().String == "relative" {
+		localAbsBoxes = &localAbsoluteBoxes
+	}
+
 	childSkipStack = skipStack
 	for _, line := range flexLines {
 		for _, v := range line.line {
 			i, child := v.index, v.box.Box()
 			if child.IsFlexItem {
+				// Make the flex-determined main size definite in the CSS style,
+				// so that inner layout (e.g. nested flex) respects it instead
+				// of recomputing from content via resolvePercentages.
+				if axis == pr.PHeight && child.Height != pr.AutoF {
+					cssHeight := child.Height.V() + child.PaddingTop.V() + child.PaddingBottom.V() +
+						child.BorderTopWidth.V() + child.BorderBottomWidth.V()
+					switch child.Style.GetBoxSizing() {
+					case "content-box":
+						cssHeight = child.Height.V()
+					}
+					child.Style = child.Style.Copy()
+					child.Style.SetHeight(pr.FToPx(cssHeight))
+				} else if axis == pr.PWidth && child.Width != pr.AutoF {
+					cssWidth := child.Width.V() + child.PaddingLeft.V() + child.PaddingRight.V() +
+						child.BorderLeftWidth.V() + child.BorderRightWidth.V()
+					switch child.Style.GetBoxSizing() {
+					case "content-box":
+						cssWidth = child.Width.V()
+					}
+					child.Style = child.Style.Copy()
+					child.Style.SetWidth(pr.FToPx(cssWidth))
+				}
+				// For column flex, if align-self is not stretch, lock the
+				// cross-axis width in the style to prevent re-layout from
+				// expanding it to the containing block width.
+				if cross == pr.PWidth && child.Width != pr.AutoF {
+					itemAlignSelf := child.Style.GetAlignSelf()
+					if itemAlignSelf.Intersects(kw.Auto) {
+						itemAlignSelf = alignItems
+					}
+					if !itemAlignSelf.Intersects(kw.Stretch, kw.Normal) {
+						cssWidth := child.Width.V() + child.PaddingLeft.V() + child.PaddingRight.V() +
+							child.BorderLeftWidth.V() + child.BorderRightWidth.V()
+						switch child.Style.GetBoxSizing() {
+						case "content-box":
+							cssWidth = child.Width.V()
+						}
+						if child.Style.GetWidth().S == "auto" {
+							child.Style = child.Style.Copy()
+							child.Style.SetWidth(pr.FToPx(cssWidth))
+						}
+					}
+				}
+				// Save the flex-determined positions before re-layout,
+				// since blockLevelLayoutSwitch may overwrite them.
+				savedPositionX := child.PositionX
+				savedPositionY := child.PositionY
 				newChild, tmp, _ := blockLevelLayoutSwitch(context, v.box.(bo.BlockLevelBoxITF), bottomSpace, childSkipStack, box,
-					pageIsEmpty, absoluteBoxes, fixedBoxes, new([]pr.Float), false, -1)
+					pageIsEmpty, localAbsBoxes, fixedBoxes, new([]pr.Float), false, -1)
 				childResumeAt := tmp.resumeAt
 				if newChild == nil {
 					if resumeAt != nil {
@@ -1153,6 +1327,14 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 						}
 					}
 				} else {
+					// Restore the flex-determined positions that were
+					// computed in Steps 12-14. Use Translate to move the
+					// entire subtree (including inline content/text).
+					dx := savedPositionX.V() - newChild.Box().PositionX.V()
+					dy := savedPositionY.V() - newChild.Box().PositionY.V()
+					if dx != 0 || dy != 0 {
+						newChild.Translate(newChild, dx, dy, false)
+					}
 					box.Children = append(box.Children, newChild)
 					if childResumeAt != nil {
 						firstLevelSkip := 0
@@ -1183,9 +1365,28 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 	// TODO: this is probably useless because of step #15
 	if axis == pr.PWidth && box.Height == pr.AutoF {
 		if len(flexLines) != 0 {
-			box.Height = sumCross(flexLines)
+			box.Height = sumCross(flexLines) + crossGap*pr.Float(len(flexLines)-1)
 		} else {
 			box.Height = pr.Float(0)
+		}
+	}
+
+	// Enforce min-height/max-height and min-width/max-width on the flex container.
+	// This mirrors what blockBoxLayout does for block boxes (blocks.go).
+	if box.Height != pr.AutoF {
+		if box.MinHeight != pr.AutoF {
+			box.Height = pr.Max(box.Height.V(), box.MinHeight.V())
+		}
+		if box.MaxHeight != pr.AutoF {
+			box.Height = pr.Min(box.Height.V(), box.MaxHeight.V())
+		}
+	}
+	if box.Width != pr.AutoF {
+		if box.MinWidth != pr.AutoF {
+			box.Width = pr.Max(box.Width.V(), box.MinWidth.V())
+		}
+		if box.MaxWidth != pr.AutoF {
+			box.Width = pr.Min(box.Width.V(), box.MaxWidth.V())
 		}
 	}
 
@@ -1213,6 +1414,14 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 	}
 
 	context.finishBlockFormattingContext(box_)
+
+	// Resolve absolutely positioned descendants if this flex container
+	// establishes a containing block (position: relative).
+	if box.Style.GetPosition().String == "relative" {
+		for _, absBox := range localAbsoluteBoxes {
+			absoluteLayout(context, absBox, box_, fixedBoxes, bottomSpace, nil)
+		}
+	}
 
 	// TODO: check these returned values
 	return box_, blockLayout{

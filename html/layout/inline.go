@@ -510,6 +510,7 @@ func inlineBlockBoxLayout(context *layoutContext, box_ Box, positionX pr.Float, 
 
 	inlineBlockWidth(box_, context, containingBlock)
 
+
 	box.PositionX = positionX
 	box.PositionY = 0
 	box_, _, _ = blockContainerLayout(context, box_, -pr.Inf, skipStack,
@@ -894,6 +895,13 @@ func splitInlineBox(context *layoutContext, box_ Box, positionX, maxX, bottomSpa
 				canBreak = pr.True
 			} else if first == letterFalse {
 				canBreak = pr.False
+			} else if lastLetter == '\u2e80' || first == '\u2e80' {
+				// CSS Text Level 3 §5.2: Atomic inlines (inline-block, replaced elements)
+				// should be treated as U+FFFC (Contingent Break class), allowing breaks
+				// on both sides. Using '\u2e80' (Ideographic class) with CanBreakText
+				// incorrectly prevents breaks before punctuation (LB13: ×IS).
+				// Always allow breaks adjacent to atomic inlines.
+				canBreak = pr.True
 			} else {
 				canBreak = context.Fonts().CanBreakText([]rune{lastLetter, first})
 			}

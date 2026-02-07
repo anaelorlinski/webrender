@@ -141,6 +141,7 @@ func resolvePercentages(box_ Box, containingBlock bo.MaybePoint, mainFlexDirecti
 			box.MinWidth = pr.Max(0, box.MinWidth.V()-horizontalDelta)
 		}
 	}
+
 	if verticalDelta > 0 {
 		if box.Height != pr.AutoF {
 			box.Height = pr.Max(0, box.Height.V()-verticalDelta)

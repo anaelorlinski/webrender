@@ -142,6 +142,9 @@ func (s Properties) SetBottom(v DimOrS) { s[PBottom] = v }
 func (s Properties) GetBoxDecorationBreak() String  { return s[PBoxDecorationBreak].(String) }
 func (s Properties) SetBoxDecorationBreak(v String) { s[PBoxDecorationBreak] = v }
 
+func (s Properties) GetBoxShadow() Shadows  { return s[PBoxShadow].(Shadows) }
+func (s Properties) SetBoxShadow(v Shadows) { s[PBoxShadow] = v }
+
 func (s Properties) GetBoxSizing() String  { return s[PBoxSizing].(String) }
 func (s Properties) SetBoxSizing(v String) { s[PBoxSizing] = v }
 
@@ -504,6 +507,9 @@ func (s Properties) SetTextIndent(v DimOrS) { s[PTextIndent] = v }
 func (s Properties) GetTextOverflow() String  { return s[PTextOverflow].(String) }
 func (s Properties) SetTextOverflow(v String) { s[PTextOverflow] = v }
 
+func (s Properties) GetTextShadow() Shadows  { return s[PTextShadow].(Shadows) }
+func (s Properties) SetTextShadow(v Shadows) { s[PTextShadow] = v }
+
 func (s Properties) GetTextTransform() String  { return s[PTextTransform].(String) }
 func (s Properties) SetTextTransform(v String) { s[PTextTransform] = v }
 
@@ -681,6 +687,9 @@ type StyleAccessor interface {
 
 	GetBoxDecorationBreak() String
 	SetBoxDecorationBreak(v String)
+
+	GetBoxShadow() Shadows
+	SetBoxShadow(v Shadows)
 
 	GetBoxSizing() String
 	SetBoxSizing(v String)
@@ -1036,6 +1045,9 @@ type StyleAccessor interface {
 	GetTextOverflow() String
 	SetTextOverflow(v String)
 
+	GetTextShadow() Shadows
+	SetTextShadow(v Shadows)
+
 	GetTextTransform() String
 	SetTextTransform(v String)
 
@@ -1123,6 +1135,7 @@ var propsNames = [...]string{
 	PBorderTopWidth:          "border-top-width",
 	PBottom:                  "bottom",
 	PBoxDecorationBreak:      "box-decoration-break",
+	PBoxShadow:               "box-shadow",
 	PBoxSizing:               "box-sizing",
 	PBreakAfter:              "break-after",
 	PBreakBefore:             "break-before",
@@ -1241,6 +1254,7 @@ var propsNames = [...]string{
 	PTextDecorationStyle:     "text-decoration-style",
 	PTextIndent:              "text-indent",
 	PTextOverflow:            "text-overflow",
+	PTextShadow:              "text-shadow",
 	PTextTransform:           "text-transform",
 	PTop:                     "top",
 	PTransform:               "transform",
@@ -1304,6 +1318,7 @@ var PropsFromNames = map[string]KnownProp{
 	"border-top-width":           PBorderTopWidth,
 	"bottom":                     PBottom,
 	"box-decoration-break":       PBoxDecorationBreak,
+	"box-shadow":                 PBoxShadow,
 	"box-sizing":                 PBoxSizing,
 	"break-after":                PBreakAfter,
 	"break-before":               PBreakBefore,
@@ -1422,6 +1437,7 @@ var PropsFromNames = map[string]KnownProp{
 	"text-decoration-style":      PTextDecorationStyle,
 	"text-indent":                PTextIndent,
 	"text-overflow":              PTextOverflow,
+	"text-shadow":                PTextShadow,
 	"text-transform":             PTextTransform,
 	"top":                        PTop,
 	"transform":                  PTransform,
