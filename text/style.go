@@ -58,13 +58,14 @@ func (fd FontDescription) binary(dst []byte, includeSize bool) []byte {
 	return dst
 }
 
-// textWrap returns true if the "white-space" property allows wrapping
-func (ts *TextStyle) textWrap() bool {
+// TextWrap returns true if the "white-space" property allows wrapping
+func (ts *TextStyle) TextWrap() bool {
 	ws := ts.WhiteSpace
 	return ws == WNormal || ws == WPreWrap || ws == WPreLine
 }
 
-func (ts *TextStyle) spaceCollapse() bool {
+// SpaceCollapse returns true if the "white-space" property collapses spaces
+func (ts *TextStyle) SpaceCollapse() bool {
 	ws := ts.WhiteSpace
 	return ws == WNormal || ws == WNowrap || ws == WPreLine
 }
@@ -168,7 +169,7 @@ type styleKey struct {
 	TabSize       TabSize
 }
 
-func (ts *TextStyle) key() styleKey {
+func (ts *TextStyle) Key() styleKey {
 	return styleKey{
 		string(ts.FontDescription.binary(nil, true)),
 		string(featuresBinary(ts.FontFeatures)),

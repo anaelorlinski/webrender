@@ -159,9 +159,9 @@ type metrics struct {
 
 func newMetrics(fc FontConfiguration, desc FontDescription) metrics {
 	style := &TextStyle{FontDescription: desc}
-	hx := fc.heightx(style)
-	w0 := fc.width0(style)
-	height, baseline := fc.spaceHeight(style)
+	hx := fc.Heightx(style)
+	w0 := fc.Width0(style)
+	height, baseline := fc.SpaceHeight(style)
 	return metrics{
 		utils.RoundPrec(hx, 2),
 		utils.RoundPrec(w0, 2),

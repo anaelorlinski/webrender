@@ -85,6 +85,11 @@ func NewHyphenDictKey(lang language.Language, limit pr.Limits) HyphenDictKey {
 	return HyphenDictKey{lang, limit}
 }
 
+// ShortTextHint returns a prefix of text as a hint for layout.
+func ShortTextHint(text []rune, maxWidth, fontSize pr.Float) []rune {
+	return shortTextHint(text, maxWidth, fontSize)
+}
+
 // returns a prefix of text
 func shortTextHint(text []rune, maxWidth, fontSize pr.Float) []rune {
 	cut := len(text)
@@ -112,7 +117,7 @@ func SplitFirstLine(text []rune, style_ pr.StyleAccessor, context TextLayoutCont
 	maxWidth pr.MaybeFloat, minimum, isLineStart bool,
 ) FirstLine {
 	style := NewTextStyle(style_, false)
-	return context.Fonts().splitFirstLine(context.HyphenCache(), text, style, maxWidth, minimum, isLineStart)
+	return context.Fonts().SplitFirstLine(context.HyphenCache(), text, style, maxWidth, minimum, isLineStart)
 }
 
 type StrutLayoutKey struct {
@@ -155,7 +160,7 @@ func StrutLayout(style_ pr.StyleAccessor, context TextLayoutContext) (result [2]
 		return v
 	}
 
-	height, baseline := context.Fonts().spaceHeight(style)
+	height, baseline := context.Fonts().SpaceHeight(style)
 
 	if lineHeight.S == "normal" {
 		result = [2]pr.Float{height, baseline}
@@ -192,9 +197,9 @@ func CharacterRatio(style_ pr.ElementStyle, cache pr.TextRatioCache, isCh bool, 
 
 	var measure pr.Fl
 	if isCh {
-		measure = fonts.width0(style)
+		measure = fonts.Width0(style)
 	} else {
-		measure = fonts.heightx(style)
+		measure = fonts.Heightx(style)
 	}
 
 	// Zero means some kind of failure, fallback is 0.5.

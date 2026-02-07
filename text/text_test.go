@@ -541,7 +541,7 @@ func wrapPango(fc *FontConfigurationPango, text string, style *TextStyle, maxWid
 	// 		fmt.Println(glyph.Glyph.GID(), glyph.Geometry.Width)
 	// 	}
 	// }
-	return firstLineMetrics(firstLine, []rune(text), layout, resumeIndex, style.spaceCollapse(), style, false, "")
+	return firstLineMetrics(firstLine, []rune(text), layout, resumeIndex, style.SpaceCollapse(), style, false, "")
 }
 
 func assertApprox(t *testing.T, got, exp pr.Float, context string) {

@@ -14,12 +14,21 @@ type Context struct {
 	Fonts  text.FontConfiguration // used to find fonts
 }
 
+// TextDrawingCreator is an optional interface that an EngineLayout can implement
+// to provide its own TextDrawing conversion (e.g. for external text engines).
+type TextDrawingCreator interface {
+	CreateTextDrawing(ctx Context, textOverflow string, blockEllipsis pr.TaggedString, scaleX, x, y, angle pr.Fl) backend.TextDrawing
+}
+
 // CreateFirstLine create the text for the first line of [layout], starting at position `(x,y)`.
 // It also register the fonts used with [backend.Canvas.AddFont].
 func (ctx Context) CreateFirstLine(layout text.EngineLayout, textOverflow string, blockEllipsis pr.TaggedString, scaleX, x, y, angle pr.Fl,
 ) backend.TextDrawing {
 	if layout, ok := layout.(*text.TextLayoutPango); ok {
 		return ctx.createFirstLinePango(layout, textOverflow, blockEllipsis, scaleX, x, y, angle)
+	}
+	if creator, ok := layout.(TextDrawingCreator); ok {
+		return creator.CreateTextDrawing(ctx, textOverflow, blockEllipsis, scaleX, x, y, angle)
 	}
 	return backend.TextDrawing{}
 }

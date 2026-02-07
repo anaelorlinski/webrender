@@ -54,7 +54,7 @@ func (f *FontConfigurationPango) LoadFace(key fonts.FaceID, format fc.FontFormat
 	return fcfonts.DefaultLoadFace(key, format)
 }
 
-func (fc *FontConfigurationPango) spaceHeight(style *TextStyle) (height, baseline pr.Float) {
+func (fc *FontConfigurationPango) SpaceHeight(style *TextStyle) (height, baseline pr.Float) {
 	layout := newTextLayout(fc, style, nil)
 	layout.SetText(" ")
 	line, _ := layout.GetFirstLine()
@@ -62,7 +62,7 @@ func (fc *FontConfigurationPango) spaceHeight(style *TextStyle) (height, baselin
 	return sp.Height, sp.Baseline
 }
 
-func (fc *FontConfigurationPango) width0(style *TextStyle) pr.Fl {
+func (fc *FontConfigurationPango) Width0(style *TextStyle) pr.Fl {
 	p := newTextLayout(fc, style, nil)
 
 	p.Layout.SetText("0") // avoid recursion for letter-spacing and word-spacing properties
@@ -83,7 +83,7 @@ func (fc *FontConfigurationPango) width0(style *TextStyle) pr.Fl {
 // 	f.Close()
 // }
 
-func (fc *FontConfigurationPango) heightx(style *TextStyle) pr.Fl {
+func (fc *FontConfigurationPango) Heightx(style *TextStyle) pr.Fl {
 	p := newTextLayout(fc, style, nil)
 
 	p.Layout.SetText("x") // avoid recursion for letter-spacing and word-spacing properties
@@ -444,7 +444,7 @@ func newTextLayout(fonts FontConfiguration, style *TextStyle, maxWidth pr.MaybeF
 // or `nil` for unlimited width.
 func createLayout(text string, style *TextStyle, fonts FontConfiguration, maxWidth pr.MaybeFloat) *TextLayoutPango {
 	layout := newTextLayout(fonts, style, maxWidth)
-	textWrap := style.textWrap()
+	textWrap := style.TextWrap()
 	if maxWidth, ok := maxWidth.(pr.Float); ok && textWrap && maxWidth < 2<<21 {
 		// Make sure that maxWidth * Pango.SCALE == maxWidth * 1024 fits in a
 		// signed integer. Treat bigger values same as None: unconstrained width.
@@ -621,13 +621,13 @@ func lineSize(line *pango.LayoutLine, letterSpacing pr.Fl) (pr.Fl, pr.Fl) {
 	return width, height
 }
 
-func (fc *FontConfigurationPango) splitFirstLine(hyphenCache map[HyphenDictKey]hyphen.Hyphener, text []rune, style *TextStyle,
+func (fc *FontConfigurationPango) SplitFirstLine(hyphenCache map[HyphenDictKey]hyphen.Hyphener, text []rune, style *TextStyle,
 	maxWidth pr.MaybeFloat, minimum, isLineStart bool,
 ) FirstLine {
 	// See https://www.w3.org/TR/css-text-3/#white-space-property
 	var (
 		ws               = style.WhiteSpace
-		textWrap         = style.textWrap()
+		textWrap         = style.TextWrap()
 		spaceCollapse    = ws == WNormal || ws == WNowrap || ws == WPreLine
 		originalMaxWidth = maxWidth
 		layout           *TextLayoutPango

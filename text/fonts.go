@@ -41,14 +41,14 @@ type FontConfiguration interface {
 	// It should return nil if t has length < 2.
 	CanBreakText(t []rune) pr.MaybeBool
 
-	// returns the advance of the '0' char, using the font described by the given [style]
-	width0(style *TextStyle) pr.Fl
-	// returns the height of the 'x' char, using the font described by the given [style]
-	heightx(style *TextStyle) pr.Fl
-	// returns the height and baseline of a line containing a single space (" ")
-	spaceHeight(style *TextStyle) (height, baseline pr.Float)
+	// Width0 returns the advance of the '0' char, using the font described by the given [style]
+	Width0(style *TextStyle) pr.Fl
+	// Heightx returns the height of the 'x' char, using the font described by the given [style]
+	Heightx(style *TextStyle) pr.Fl
+	// SpaceHeight returns the height and baseline of a line containing a single space (" ")
+	SpaceHeight(style *TextStyle) (height, baseline pr.Float)
 
-	splitFirstLine(hyphenCache map[HyphenDictKey]hyphen.Hyphener, text []rune, style *TextStyle,
+	SplitFirstLine(hyphenCache map[HyphenDictKey]hyphen.Hyphener, text []rune, style *TextStyle,
 		maxWidth pr.MaybeFloat, minimum, isLineStart bool) FirstLine
 
 	// compute the unicode propery of the given runes,
