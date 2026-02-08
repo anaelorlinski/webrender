@@ -532,6 +532,26 @@ func (ctx drawContext) drawBackgroundImage(layer bo.BackgroundLayer, imageRender
 	X := pr.Fl(positionX.V()) + positioningX
 	Y := pr.Fl(positionY.V()) + positioningY
 
+	// For gradient images, bypass the group/pattern pipeline and draw directly
+	// on the main canvas. This avoids the need for SetColorPattern which may
+	// not be implemented by all backends.
+	if grad, ok := layer.Image.(images.LayoutableGradient); ok {
+		layout := grad.ComputeLayout(imageWidth, imageHeight)
+		ctx.dst.OnNewStack(func() {
+			if layer.Unbounded {
+				x1, y1, x2, y2 := ctx.dst.GetBoundingBox()
+				ctx.dst.Rectangle(x1, y1, x2-x1, y2-y1)
+			} else {
+				ctx.dst.Rectangle(paintingX, paintingY, paintingWidth, paintingHeight)
+			}
+			ctx.dst.State().Clip(false)
+			mat := matrix.New(1, 0, 0, 1, X, Y)
+			ctx.dst.State().Transform(mat)
+			ctx.dst.DrawGradient(layout, imageWidth, imageHeight)
+		})
+		return
+	}
+
 	// draw the image on a pattern
 	patttern := ctx.dst.NewGroup(0, 0, repeatWidth, repeatHeight)
 	layer.Image.Draw(patttern, ctx, imageWidth, imageHeight, string(imageRendering))

@@ -36,6 +36,10 @@ var (
 	_ Image = SVGImage{}
 	_ Image = LinearGradient{}
 	_ Image = RadialGradient{}
+
+	// Compile-time check: gradient types implement LayoutableGradient.
+	_ LayoutableGradient = LinearGradient{}
+	_ LayoutableGradient = RadialGradient{}
 )
 
 // An error occured when loading an image.

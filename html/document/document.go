@@ -225,6 +225,31 @@ func newPage(pageBox *bo.PageBox) Page {
 	return d
 }
 
+// BodyExtent returns the bottom Y coordinate (in CSS pixels from the top of
+// the page) of the page's body content. This is the maximum extent of the
+// body's margin box, reflecting the actual content height including margins.
+// Use this to know how tall the content really is, independent of the page size.
+func (d Page) BodyExtent() fl {
+	// PageBox children: typically the page content area (a BlockBox).
+	// Its children include the body block.
+	var maxY fl
+	for _, child := range d.pageBox.Box().Children {
+		bottom := fl(child.Box().PositionY) + fl(child.Box().MarginHeight())
+		if bottom > maxY {
+			maxY = bottom
+		}
+		// Also recurse one level: the page content box may have a single
+		// child (the body) whose children are the actual content blocks.
+		for _, grandchild := range child.Box().Children {
+			gb := fl(grandchild.Box().PositionY) + fl(grandchild.Box().MarginHeight())
+			if gb > maxY {
+				maxY = gb
+			}
+		}
+	}
+	return maxY
+}
+
 // Paint the page on `dst`.
 // leftX is the X coordinate of the left of the page, in user units.
 // topY is the Y coordinate of the top of the page, in user units.
