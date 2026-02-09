@@ -93,7 +93,7 @@ func TestBuildTree(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tree, err := newSVGContext(root, "", nil)
+	tree, err := newSVGContext(root, "", nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -165,7 +165,7 @@ func TestTrefs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	img, err := newSVGContext(root, "", nil)
+	img, err := newSVGContext(root, "", nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}

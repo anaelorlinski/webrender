@@ -192,8 +192,11 @@ func NewSVGImage(svgData io.Reader, baseURL string, urlFetcher utils.UrlFetcher)
 	return SVGImage{icon: icon}, nil
 }
 
-func NewSVGImageFromNode(node *html.Node, baseURL string, urlFetcher utils.UrlFetcher) (SVGImage, error) {
-	// don’t pass data URIs: they are useless for relative URIs anyway.
+// NewSVGImageFromNode creates an SVG image from an already-parsed HTML node.
+// inheritedColor is an optional CSS color string (e.g. "#EB646F") from the HTML
+// parent context, used to resolve "currentColor" values in SVG fill/stroke attributes.
+func NewSVGImageFromNode(node *html.Node, baseURL string, urlFetcher utils.UrlFetcher, inheritedColor string) (SVGImage, error) {
+	// don't pass data URIs: they are useless for relative URIs anyway.
 	if strings.HasPrefix(strings.ToLower(baseURL), "data:") {
 		baseURL = ""
 	}
@@ -203,7 +206,7 @@ func NewSVGImageFromNode(node *html.Node, baseURL string, urlFetcher utils.UrlFe
 	}
 
 	var err error
-	icon, err := svg.ParseNode(node, baseURL, imageLoader, urlFetcher)
+	icon, err := svg.ParseNode(node, baseURL, imageLoader, urlFetcher, inheritedColor)
 	if err != nil {
 		return SVGImage{}, imageLoadingError(err)
 	}

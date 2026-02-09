@@ -479,13 +479,15 @@ func Parse(svg io.Reader, baseURL string, imageLoader ImageLoader, urlFetcher ut
 		return nil, err
 	}
 
-	return ParseNode(root, baseURL, imageLoader, urlFetcher)
+	return ParseNode(root, baseURL, imageLoader, urlFetcher, "")
 }
 
 // ParseNode is the same as Parse but works with an already parsed
 // svg input.
-func ParseNode(root *html.Node, baseURL string, imageLoader ImageLoader, urlFetcher utils.UrlFetcher) (*SVGImage, error) {
-	tree, err := newSVGContext(root, baseURL, urlFetcher)
+// inheritedColor is an optional CSS color string from the HTML parent context,
+// used to resolve "currentColor" SVG attribute values.
+func ParseNode(root *html.Node, baseURL string, imageLoader ImageLoader, urlFetcher utils.UrlFetcher, inheritedColor string) (*SVGImage, error) {
+	tree, err := newSVGContext(root, baseURL, urlFetcher, inheritedColor)
 	if err != nil {
 		return nil, err
 	}
