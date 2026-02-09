@@ -1549,6 +1549,17 @@ func FlexBoxes(box Box) Box {
 func flexChildren(box Box, children []Box) []Box {
 	if _, isFlexCont := box.(FlexContainerBoxITF); isFlexCont {
 		var flexChildren []Box
+		var inlineGroup []Box
+
+		flushInlineGroup := func() {
+			if len(inlineGroup) > 0 {
+				anonymous := BlockBoxAnonymousFrom(box, inlineGroup)
+				anonymous.IsFlexItem = true
+				flexChildren = append(flexChildren, anonymous)
+				inlineGroup = nil
+			}
+		}
+
 		for _, child := range children {
 			if !child.Box().IsAbsolutelyPositioned() {
 				child.Box().IsFlexItem = true
@@ -1562,13 +1573,16 @@ func flexChildren(box Box, children []Box) []Box {
 			}
 
 			if _, ok := child.(InlineLevelBoxITF); ok {
-				anonymous := BlockBoxAnonymousFrom(box, []Box{child})
-				anonymous.IsFlexItem = true
-				flexChildren = append(flexChildren, anonymous)
+				// Group consecutive inline-level children into a single
+				// anonymous block container flex item, per the spec:
+				// https://www.w3.org/TR/css-flexbox-1/#flex-items
+				inlineGroup = append(inlineGroup, child)
 			} else {
+				flushInlineGroup()
 				flexChildren = append(flexChildren, child)
 			}
 		}
+		flushInlineGroup()
 		return flexChildren
 	}
 	return children
@@ -1592,6 +1606,21 @@ func GridBoxes(box Box) Box {
 func gridChildren(box Box, children []Box) []Box {
 	if GridContainerT.IsInstance(box) {
 		var gridChildren []Box
+		var inlineGroup []Box
+
+		flushInlineGroup := func() {
+			if len(inlineGroup) > 0 {
+				anonymous := BlockBoxAnonymousFrom(inlineGroup[0], inlineGroup)
+				anonymous.Box().Style = inlineGroup[0].Box().Style
+				for _, ig := range inlineGroup {
+					ig.Box().IsGridItem = false
+				}
+				anonymous.Box().IsGridItem = true
+				gridChildren = append(gridChildren, anonymous)
+				inlineGroup = nil
+			}
+		}
+
 		for _, child := range children {
 			if !child.Box().IsAbsolutelyPositioned() {
 				child.Box().IsGridItem = true
@@ -1603,15 +1632,16 @@ func gridChildren(box Box, children []Box) []Box {
 				continue
 			}
 			if InlineLevelT.IsInstance(child) {
-				anonymous := BlockBoxAnonymousFrom(child, []Box{child})
-				anonymous.Box().Style = child.Box().Style
-				child.Box().IsGridItem = false
-				anonymous.Box().IsGridItem = true
-				gridChildren = append(gridChildren, anonymous)
+				// Group consecutive inline-level children into a single
+				// anonymous block container grid item, per the spec:
+				// https://drafts.csswg.org/css-grid-2/#grid-item
+				inlineGroup = append(inlineGroup, child)
 			} else {
+				flushInlineGroup()
 				gridChildren = append(gridChildren, child)
 			}
 		}
+		flushInlineGroup()
 		return gridChildren
 	}
 	return children

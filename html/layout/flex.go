@@ -337,7 +337,13 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 					if bo.ParentT.IsInstance(child_) {
 						newChild = bo.CopyWithChildren(child_, child.Children)
 					}
-					newChild.Box().Width = pr.Inf
+					// Use the parent's width so text wraps correctly when
+					// measuring the content height of column-flex children.
+					if parentBox.Width != pr.AutoF {
+						newChild.Box().Width = parentBox.Width
+					} else {
+						newChild.Box().Width = availableCrossSpace
+					}
 					newChild, _, _ = blockLevelLayout(context, newChild.(bo.BlockLevelBoxITF), -pr.Inf, childSkipStack,
 						parentBox, pageIsEmpty, absoluteBoxes, fixedBoxes, nil, false, -1)
 					child.FlexBaseSize = newChild.Box().MarginHeight()
@@ -648,7 +654,7 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 				// to the child bottom margin.
 				child.MarginBottom = child.MarginBottom.V() + collapseMargin(adjoiningMargins)
 			} else {
-				child.Width = minContentWidth(context, child_, false)
+				child.Width = newChild.Box().Width
 			}
 
 			newFlexLine.line = append(newFlexLine.line, indexedBox{index: v.index, box: child_})
