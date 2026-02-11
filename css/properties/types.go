@@ -243,7 +243,9 @@ func (size GridDims) SizingFunctions() [2]DimOrS {
 		minSizing, maxSizing = size.V, size.v2
 	}
 	if size.tag == 'f' {
-		minSizing, maxSizing = SToV("auto"), SToV("auto")
+		// fit-content(L) ≈ minmax(auto, L) with growth limit clamped at L.
+		// The min is "auto", the max is the fit-content argument.
+		minSizing, maxSizing = SToV("auto"), size.V
 	} else if minSizing.Unit == Fr {
 		minSizing = SToV("auto")
 	}

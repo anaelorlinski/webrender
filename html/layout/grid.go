@@ -645,9 +645,7 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 
 	for _, span := range spans {
 		tracksChildren := make([][]Box, len(sizingFunctions))
-		i := -1
 		for child, rect := range childrenPositions {
-			i++
 			x, y, width, height := rect.unpack()
 			coord, size := x, width
 			if direction == 'y' {
@@ -656,15 +654,16 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 			if size != span {
 				continue
 			}
+			trackIdx := coord - implicitStart
 			hasFr := false
-			for _, functions := range sizingFunctions[utils.MinInt(i, len(sizingFunctions)):utils.MinInt(len(sizingFunctions), i+span+1)] {
+			for _, functions := range sizingFunctions[trackIdx:utils.MinInt(len(sizingFunctions), trackIdx+span)] {
 				if isFr(functions[1]) {
 					hasFr = true
 					break
 				}
 			}
 			if !hasFr {
-				tracksChildren[coord-implicitStart] = append(tracksChildren[coord-implicitStart], child)
+				tracksChildren[trackIdx] = append(tracksChildren[trackIdx], child)
 			}
 		}
 		// 1.2.3.1 For intrinsic minimums.
@@ -681,9 +680,7 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 				tracksSizes[j][1] = pr.Max(sizes[0].V(), sizes[1].V())
 			}
 		}
-		i = -1
 		for child, rect := range childrenPositions {
-			i++
 			x, y, width, height := rect.unpack()
 			coord, size := x, width
 			if direction == 'y' {
@@ -693,15 +690,16 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 				continue
 			}
 
+			trackIdx := coord - implicitStart
 			hasFr := false
-			for _, functions := range sizingFunctions[utils.MinInt(i, len(sizingFunctions)):utils.MinInt(len(sizingFunctions), i+span+1)] {
+			for _, functions := range sizingFunctions[trackIdx:utils.MinInt(len(sizingFunctions), trackIdx+span)] {
 				if isFr(functions[1]) {
 					hasFr = true
 					break
 				}
 			}
 			if !hasFr {
-				tracksChildren[coord-implicitStart] = append(tracksChildren[coord-implicitStart], child)
+				tracksChildren[trackIdx] = append(tracksChildren[trackIdx], child)
 			}
 		}
 		// 1.2.3.5 For intrinsic maximums.
@@ -901,10 +899,7 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 		rowGap = v.Value
 	}
 
-	// TODO: Support "column" value in grid-auto-flow.
-	if utils.IsIn(flow, "column") {
-		logger.WarningLogger.Println(`"column" is not supported in grid-auto-flow`)
-	}
+	isColumnFlow := utils.IsIn(flow, "column")
 
 	if gridAreas.IsNone() {
 		gridAreas = pr.GridTemplateAreas{{""}}
@@ -912,6 +907,52 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 
 	rows := getTemplateTracks(style.GetGridTemplateRows())
 	columns := getTemplateTracks(style.GetGridTemplateColumns())
+
+	// For column flow, transpose everything so the row-based algorithm
+	// operates on columns instead. We swap back after placement.
+	if isColumnFlow {
+		rows, columns = columns, rows
+		autoRows, autoColumns = autoColumns, autoRows
+		autoRowsBack, autoColumnsBack = autoColumnsBack, autoRowsBack
+		rowGap, columnGap = columnGap, rowGap
+		// Transpose grid areas
+		if len(gridAreas) > 0 && len(gridAreas[0]) > 0 {
+			newAreas := make(pr.GridTemplateAreas, len(gridAreas[0]))
+			for i := range newAreas {
+				newAreas[i] = make([]string, len(gridAreas))
+				for j := range gridAreas {
+					newAreas[i][j] = gridAreas[j][i]
+				}
+			}
+			gridAreas = newAreas
+		}
+	}
+
+	// Helper closures to swap row/column properties for column flow.
+	getRowStart := func(child Box) pr.GridLine {
+		if isColumnFlow {
+			return child.Box().Style.GetGridColumnStart()
+		}
+		return child.Box().Style.GetGridRowStart()
+	}
+	getRowEnd := func(child Box) pr.GridLine {
+		if isColumnFlow {
+			return child.Box().Style.GetGridColumnEnd()
+		}
+		return child.Box().Style.GetGridRowEnd()
+	}
+	getColumnStart := func(child Box) pr.GridLine {
+		if isColumnFlow {
+			return child.Box().Style.GetGridRowStart()
+		}
+		return child.Box().Style.GetGridColumnStart()
+	}
+	getColumnEnd := func(child Box) pr.GridLine {
+		if isColumnFlow {
+			return child.Box().Style.GetGridRowEnd()
+		}
+		return child.Box().Style.GetGridColumnEnd()
+	}
 
 	// Adjust rows number
 	gridAreasColumns := 0
@@ -995,10 +1036,10 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 	// 1.1 Position anything that’s not auto-positioned.
 	childrenPositions := map[Box]rect{}
 	for _, child := range box.Children {
-		columnStart := child.Box().Style.GetGridColumnStart()
-		columnEnd := child.Box().Style.GetGridColumnEnd()
-		rowStart := child.Box().Style.GetGridRowStart()
-		rowEnd := child.Box().Style.GetGridRowEnd()
+		columnStart := getColumnStart(child)
+		columnEnd := getColumnEnd(child)
+		rowStart := getRowStart(child)
+		rowEnd := getRowEnd(child)
 
 		columnPlacement := getPlacement(columnStart, columnEnd, extractNames(columns))
 		rowPlacement := getPlacement(rowStart, rowEnd, extractNames(rows))
@@ -1017,15 +1058,15 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 		if _, has := childrenPositions[child]; has {
 			continue
 		}
-		rowStart := child.Box().Style.GetGridRowStart()
-		rowEnd := child.Box().Style.GetGridRowEnd()
+		rowStart := getRowStart(child)
+		rowEnd := getRowEnd(child)
 		rowPlacement := getPlacement(rowStart, rowEnd, extractNames(rows))
 		if !rowPlacement.isNotNone() {
 			continue
 		}
 		y, height := rowPlacement[0], rowPlacement[1]
-		columnStart := child.Box().Style.GetGridColumnStart()
-		columnEnd := child.Box().Style.GetGridColumnEnd()
+		columnStart := getColumnStart(child)
+		columnEnd := getColumnEnd(child)
 		x, width := getColumnPlacement(rowPlacement, columnStart, columnEnd, extractNames(columns),
 			childrenPositions, utils.IsIn(flow, "dense")).unpack()
 		childrenPositions[child] = [4]int{x, y, width, height}
@@ -1045,8 +1086,8 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 		if r, has := childrenPositions[child]; has {
 			x, _, width, _ = r.unpack()
 		} else {
-			columnStart := child.Box().Style.GetGridColumnStart()
-			columnEnd := child.Box().Style.GetGridColumnEnd()
+			columnStart := getColumnStart(child)
+			columnEnd := getColumnEnd(child)
 			columnPlacement := getPlacement(columnStart, columnEnd, extractNames(columns))
 			remainingGridItems = append(remainingGridItems, child)
 			if columnPlacement.isNotNone() {
@@ -1060,8 +1101,8 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 	}
 	// 1.3.3 Add columns to accommodate max column span.
 	for _, child := range remainingGridItems {
-		columnStart := child.Box().Style.GetGridColumnStart()
-		columnEnd := child.Box().Style.GetGridColumnEnd()
+		columnStart := getColumnStart(child)
+		columnEnd := getColumnEnd(child)
 		span := 1
 		if columnStart.IsSpan() {
 			span = columnStart.Val
@@ -1085,8 +1126,8 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 	cursorX, cursorY := implicitX1, implicitY1
 	if utils.IsIn(flow, "dense") {
 		for _, child := range remainingGridItems {
-			columnStart := child.Box().Style.GetGridColumnStart()
-			columnEnd := child.Box().Style.GetGridColumnEnd()
+			columnStart := getColumnStart(child)
+			columnEnd := getColumnEnd(child)
 			columnPlacement := getPlacement(columnStart, columnEnd, extractNames(columns))
 			if columnPlacement.isNotNone() {
 				// 1. Set the row position of the cursor.
@@ -1094,8 +1135,8 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 				x, width := columnPlacement[0], columnPlacement[1]
 				cursorX = x
 				// 2. Increment the cursor’s row position.
-				rowStart := child.Box().Style.GetGridRowStart()
-				rowEnd := child.Box().Style.GetGridRowEnd()
+				rowStart := getRowStart(child)
+				rowEnd := getRowEnd(child)
 				var y, height int
 				for y = cursorY; ; y++ {
 					if rowStart.IsAuto() {
@@ -1140,10 +1181,10 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 				for {
 					// 2. Increment the column position of the cursor.
 					y := cursorY
-					rowStart := child.Box().Style.GetGridRowStart()
-					rowEnd := child.Box().Style.GetGridRowEnd()
-					columnStart = child.Box().Style.GetGridColumnStart()
-					columnEnd = child.Box().Style.GetGridColumnEnd()
+					rowStart := getRowStart(child)
+					rowEnd := getRowEnd(child)
+					columnStart = getColumnStart(child)
+					columnEnd = getColumnEnd(child)
 					hasBroken := false
 					for x := cursorX; x < implicitX2; x++ {
 						var width, height int
@@ -1198,8 +1239,8 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 		}
 	} else {
 		for _, child := range remainingGridItems {
-			columnStart := child.Box().Style.GetGridColumnStart()
-			columnEnd := child.Box().Style.GetGridColumnEnd()
+			columnStart := getColumnStart(child)
+			columnEnd := getColumnEnd(child)
 			columnPlacement := getPlacement(columnStart, columnEnd, extractNames(columns))
 			if columnPlacement.isNotNone() {
 				// 1. Set the column position of the cursor.
@@ -1209,8 +1250,8 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 				}
 				cursorX = x
 				// 2. Increment the cursor’s row position.
-				rowStart := child.Box().Style.GetGridRowStart()
-				rowEnd := child.Box().Style.GetGridRowEnd()
+				rowStart := getRowStart(child)
+				rowEnd := getRowEnd(child)
 				var y, height int
 				for ; ; cursorY++ {
 					if rowStart.IsAuto() {
@@ -1252,10 +1293,10 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 				for {
 					// 1. Increment the column position of the cursor.
 					y := cursorY
-					rowStart := child.Box().Style.GetGridRowStart()
-					rowEnd := child.Box().Style.GetGridRowEnd()
-					columnStart = child.Box().Style.GetGridColumnStart()
-					columnEnd = child.Box().Style.GetGridColumnEnd()
+					rowStart := getRowStart(child)
+					rowEnd := getRowEnd(child)
+					columnStart = getColumnStart(child)
+					columnEnd = getColumnEnd(child)
 					hasBroken := false
 					for x := cursorX; x < implicitX2; x++ {
 						var width, height int
@@ -1324,6 +1365,17 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 	}
 	for c := len(gridAreas); c < implicitY2; c++ {
 		rows = append(rows, autoRows.Next(), pr.GridNames{})
+	}
+
+	// For column flow, swap everything back to physical orientation.
+	if isColumnFlow {
+		rows, columns = columns, rows
+		rowGap, columnGap = columnGap, rowGap
+		implicitX1, implicitY1 = implicitY1, implicitX1
+		implicitX2, implicitY2 = implicitY2, implicitX2
+		for child, pos := range childrenPositions {
+			childrenPositions[child] = rect{pos[1], pos[0], pos[3], pos[2]}
+		}
 	}
 
 	// 2. Find the size of the grid container.
