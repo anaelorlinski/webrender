@@ -304,27 +304,35 @@ func getColumnPlacement(rowPlacement [2]int, columnStart, columnEnd pr.GridLine,
 			}
 		}
 	} else {
-		y := 0
-		for k := range occupiedColumns {
-			if k > y {
-				y = k
+		// Per CSS Grid spec §8.5, items locked to a given row should be placed
+		// at the earliest column that doesn't overlap any occupied area,
+		// same as the dense branch.
+		for x := 0; ; x++ {
+			if occupiedColumns[x] {
+				continue
 			}
-		}
-		y += 1
-		if columnStart.IsAuto() {
-			return getPlacement(pr.GridLine{Val: y + 1}, columnEnd, columns)
-		} else {
-			if columnStart.Tag == pr.Span {
-				panic("expected span")
-			}
-			// If the placement contains two spans, remove the one contributed
-			// by the end grid-placement property.
-			// https://drafts.csswg.org/css-grid/#grid-placement-errors
-			for endY := y + 1; ; endY++ {
-				placement := getPlacement(columnStart, pr.GridLine{Val: endY + 1}, columns)
-				if placement[0] >= y {
-					return placement
+			var pl placement
+			if columnStart.IsAuto() {
+				pl = getPlacement(pr.GridLine{Val: x + 1}, columnEnd, columns)
+			} else {
+				if columnStart.Tag == pr.Span {
+					panic("expected span")
 				}
+				// If the placement contains two spans, remove the one
+				// contributed by the end grid-placement property.
+				// https://drafts.csswg.org/css-grid/#grid-placement-errors
+				span := getSpan(columnStart)
+				pl = getPlacement(columnStart, pr.GridLine{Val: x + 1 + span}, columns)
+			}
+			hasIntersection := false
+			for col := pl[0]; col < pl[0]+pl[1]; col++ {
+				if occupiedColumns[col] {
+					hasIntersection = true
+					break
+				}
+			}
+			if !hasIntersection {
+				return pl
 			}
 		}
 	}
@@ -340,7 +348,8 @@ const (
 // sizeContribution : m, c, C ("mininum", "min-content", "max-content")
 // direction : x, y
 func distributeExtraSpace(context *layoutContext, affectedSizes, affectedTracksTypes, sizeContribution byte, tracksChildren [][]Box,
-	sizingFunctions [][2]pr.DimOrS, tracksSizes [][2]pr.MaybeFloat, span int, direction byte, containingBlock *bo.BoxFields,
+	sizingFunctions [][2]pr.DimOrS, tracksSizes [][2]pr.MaybeFloat, span int, direction byte,
+	containingBlock bo.Box, childrenPositions map[Box]rect, orthogonalSizes [][2]pr.Float, orthogonalGap pr.Float,
 ) {
 	// 1. Maintain separately for each affected track a planned increase.
 	plannedIncreases := make([]pr.Float, len(tracksSizes))
@@ -376,12 +385,28 @@ func distributeExtraSpace(context *layoutContext, affectedSizes, affectedTracksT
 					space = maxContentWidth(context, item, true)
 				}
 			} else {
-				item = bo.Deepcopy(item)
-				item.Box().PositionX = 0
-				item.Box().PositionY = 0
-				item, _, _ = blockLevelLayout(context, item.(bo.BlockLevelBoxITF), -pr.Inf, nil,
-					containingBlock, true, nil, nil, nil, false, -1)
-				space = item.Box().MarginHeight()
+				// Look up item's column position before deep copying.
+				pos := childrenPositions[item]
+				colX, _, colW, _ := pos.unpack()
+				var widthF pr.Float
+				if orthogonalSizes != nil && colX+colW <= len(orthogonalSizes) {
+					widthF = sum0(orthogonalSizes[colX:colX+colW]) + pr.Float(colW-1)*orthogonalGap
+				}
+				itemCopy := bo.Deepcopy(item)
+				itemCopy.Box().PositionX = 0
+				itemCopy.Box().PositionY = 0
+				parent := bo.BlockT.AnonymousFrom(containingBlock, nil)
+				cbW, cbH := containingBlock.Box().ContainingBlock()
+				resolvePercentages(parent, bo.MaybePoint{cbW, cbH}, 0)
+				resolvePercentages(itemCopy, bo.MaybePoint{cbW, cbH}, 0)
+				parent.Box().PositionX = itemCopy.Box().PositionX
+				parent.Box().PositionY = itemCopy.Box().PositionY
+				if widthF > 0 {
+					parent.Box().Width = widthF
+				}
+				itemCopy, _, _ = blockLevelLayout(context, itemCopy.(bo.BlockLevelBoxITF), -pr.Inf, nil,
+					parent.Box(), true, nil, nil, nil, false, -1)
+				space = itemCopy.Box().MarginHeight()
 			}
 			for _, sizes := range tracksSizes[utils.MinInt(i, len(tracksSizes)):utils.MinInt(i+span, len(tracksSizes))] {
 				space -= sizes[affectedSizes].V()
@@ -644,12 +669,12 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 		}
 		// 1.2.3.1 For intrinsic minimums.
 		// TODO: Respect min-/max-content constraint.
-		distributeExtraSpace(context, sizeMin, 'i', 'm', tracksChildren, sizingFunctions, tracksSizes, span, direction, containingBlock.Box())
+		distributeExtraSpace(context, sizeMin, 'i', 'm', tracksChildren, sizingFunctions, tracksSizes, span, direction, containingBlock, childrenPositions, orthogonalSizes, gap)
 		// 1.2.3.2 For content-based minimums.
-		distributeExtraSpace(context, sizeMin, 'c', 'c', tracksChildren, sizingFunctions, tracksSizes, span, direction, containingBlock.Box())
+		distributeExtraSpace(context, sizeMin, 'c', 'c', tracksChildren, sizingFunctions, tracksSizes, span, direction, containingBlock, childrenPositions, orthogonalSizes, gap)
 		// 1.2.3.3 For max-content minimums.
 		// TODO: Respect max-content constraint.
-		distributeExtraSpace(context, sizeMin, 'm', 'C', tracksChildren, sizingFunctions, tracksSizes, span, direction, containingBlock.Box())
+		distributeExtraSpace(context, sizeMin, 'm', 'C', tracksChildren, sizingFunctions, tracksSizes, span, direction, containingBlock, childrenPositions, orthogonalSizes, gap)
 		// 1.2.3.4 Increase growth limit.
 		for j, sizes := range tracksSizes {
 			if sizes[0] != nil && sizes[1] != nil {
@@ -680,9 +705,9 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 			}
 		}
 		// 1.2.3.5 For intrinsic maximums.
-		distributeExtraSpace(context, sizeMax, 'i', 'c', tracksChildren, sizingFunctions, tracksSizes, span, direction, containingBlock.Box())
+		distributeExtraSpace(context, sizeMax, 'i', 'c', tracksChildren, sizingFunctions, tracksSizes, span, direction, containingBlock, childrenPositions, orthogonalSizes, gap)
 		// 1.2.3.6 For max-content maximums.
-		distributeExtraSpace(context, sizeMax, 'm', 'C', tracksChildren, sizingFunctions, tracksSizes, span, direction, containingBlock.Box())
+		distributeExtraSpace(context, sizeMax, 'm', 'C', tracksChildren, sizingFunctions, tracksSizes, span, direction, containingBlock, childrenPositions, orthogonalSizes, gap)
 	}
 	// 1.2.4 Increase sizes to accommodate items spanning flexible tracks.
 	// TODO: Support spans for flexible tracks.
