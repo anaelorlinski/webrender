@@ -197,9 +197,11 @@ type UrlFetcher = func(url string) (RemoteRessource, error)
 // Fetch an external resource such as an image or stylesheet.
 func DefaultUrlFetcher(urlTarget string) (RemoteRessource, error) {
 	if strings.HasPrefix(strings.ToLower(urlTarget), "data:") {
-		// data url can't contains spaces and the strings comming from css
-		// may contain tabs when separated on several lines with \
-		urlTarget = htmlSpacesRe.ReplaceAllString(urlTarget, "")
+		// data url strings coming from CSS may contain tabs, newlines, etc.
+		// when separated on several lines with \
+		// Only strip these whitespace characters, NOT regular spaces,
+		// since spaces can be legitimate in data URIs (e.g. SVG attributes).
+		urlTarget = strings.NewReplacer("\t", "", "\n", "", "\f", "", "\r", "").Replace(urlTarget)
 		data, err := parseDataURL([]byte(urlTarget))
 		if err != nil {
 			return RemoteRessource{}, err
