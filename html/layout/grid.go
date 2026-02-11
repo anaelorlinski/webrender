@@ -524,13 +524,14 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 			for _, child := range children {
 				pos := childrenPositions[child]
 				x, _, width, _ := pos.unpack()
-				widthF := sum0(orthogonalSizes[x : x+width])
+				widthF := sum0(orthogonalSizes[x:x+width]) + pr.Float(width-1)*gap
 				child = bo.Deepcopy(child)
 				child.Box().PositionX = 0
 				child.Box().PositionY = 0
 				parent := bo.BlockT.AnonymousFrom(containingBlock, nil)
 				cbW, cbH := containingBlock.Box().ContainingBlock()
 				resolvePercentages(parent, bo.MaybePoint{cbW, cbH}, 0)
+				resolvePercentages(child, bo.MaybePoint{cbW, cbH}, 0)
 				parent.Box().PositionX = child.Box().PositionX
 				parent.Box().PositionY = child.Box().PositionY
 				parent.Box().Width = widthF
@@ -1505,13 +1506,27 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 		childHeight := heightF - (childB.MarginTop.V() + childB.BorderTopWidth + childB.PaddingTop.V() +
 			childB.MarginBottom.V() + childB.BorderBottomWidth + childB.PaddingBottom.V())
 
+		// Compute the CSS width/height values for SetWidth/SetHeight, accounting for box-sizing.
+		// resolvePercentages (called later inside blockLevelLayout) will subtract borders+padding
+		// for border-box, so we must pass the border-box width, not the content-box width.
+		cssChildWidth := childWidth
+		cssChildHeight := childHeight
+		switch childB.Style.GetBoxSizing() {
+		case "border-box":
+			cssChildWidth += childB.BorderLeftWidth + childB.PaddingLeft.V() + childB.BorderRightWidth + childB.PaddingRight.V()
+			cssChildHeight += childB.BorderTopWidth + childB.PaddingTop.V() + childB.BorderBottomWidth + childB.PaddingBottom.V()
+		case "padding-box":
+			cssChildWidth += childB.PaddingLeft.V() + childB.PaddingRight.V()
+			cssChildHeight += childB.PaddingTop.V() + childB.PaddingBottom.V()
+		}
+
 		justifySelf := childB.Style.GetJustifySelf()
 		if justifySelf.Intersects(kw.Auto) {
 			justifySelf = justifyItems
 		}
 		if justifySelf.Intersects(kw.Normal, kw.Stretch) {
 			if childB.Style.GetWidth().S == "auto" {
-				childB.Style.SetWidth(pr.FToPx(childWidth))
+				childB.Style.SetWidth(pr.FToPx(cssChildWidth))
 			}
 		}
 		alignSelf := childB.Style.GetAlignSelf()
@@ -1520,7 +1535,7 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 		}
 		if alignSelf.Intersects(kw.Normal, kw.Stretch) {
 			if childB.Style.GetHeight().S == "auto" {
-				childB.Style.SetHeight(pr.FToPx(childHeight))
+				childB.Style.SetHeight(pr.FToPx(cssChildHeight))
 			}
 		}
 

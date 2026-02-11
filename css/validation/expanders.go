@@ -52,6 +52,7 @@ var expanders = [...]expander{
 	pr.SGridArea:       genericExpander(pr.PGridRowStart, pr.PGridRowEnd, pr.PGridColumnStart, pr.PGridColumnEnd)(_expandGridArea),
 	pr.SGridTemplate:   genericExpander(pr.PGridTemplateColumns, pr.PGridTemplateRows, pr.PGridTemplateAreas)(_expandGridTemplate),
 	pr.SGrid:           genericExpander(pr.PGridTemplateColumns, pr.PGridTemplateRows, pr.PGridTemplateAreas, pr.PGridAutoColumns, pr.PGridAutoRows, pr.PGridAutoFlow)(_expandGrid),
+	pr.SGap:            genericExpander(pr.PRowGap, pr.PColumnGap)(_expandGap),
 }
 
 var borderExpanders = [...]expander{
@@ -863,6 +864,34 @@ var (
 	noneFakeToken   = pa.NewIdent("none", pa.Pos{})
 	normalFakeToken = pa.NewIdent("normal", pa.Pos{})
 )
+
+// Expand the "gap" shorthand property.
+// gap: <row-gap> <column-gap>?
+// If only one value is given, it sets both row-gap and column-gap.
+func _expandGap(_ string, _ pr.Shortand, tokens []Token) (out []namedTokens, err error) {
+	if len(tokens) != 1 && len(tokens) != 2 {
+		return nil, ErrInvalidValue
+	}
+
+	// Validate each token as a gap value
+	for _, token := range tokens {
+		if gap([]Token{token}, "") == nil {
+			return nil, ErrInvalidValue
+		}
+	}
+
+	rowGapTokens := []Token{tokens[0]}
+	var columnGapTokens []Token
+	if len(tokens) == 2 {
+		columnGapTokens = []Token{tokens[1]}
+	} else {
+		columnGapTokens = []Token{tokens[0]}
+	}
+
+	out = append(out, namedTokens{name: pr.PRowGap, tokens: rowGapTokens})
+	out = append(out, namedTokens{name: pr.PColumnGap, tokens: columnGapTokens})
+	return out, nil
+}
 
 // Expand the “font-variant“ shorthand property.
 // https://www.w3.org/TR/css-fonts-3/#font-variant-prop
