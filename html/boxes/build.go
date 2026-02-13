@@ -1567,17 +1567,35 @@ func flexChildren(box Box, children []Box) []Box {
 
 			if textBox, ok := child.(*TextBox); ok {
 				// https://www.w3.org/TR/css-flexbox-1/#flex-items
+				// Whitespace-only text runs are skipped.
 				if strings.Trim(textBox.TextS(), " ") == "" {
 					continue
 				}
-			}
-
-			if _, ok := child.(InlineLevelBoxITF); ok {
-				// Group consecutive inline-level children into a single
-				// anonymous block container flex item, per the spec:
-				// https://www.w3.org/TR/css-flexbox-1/#flex-items
+				// Per the spec, each contiguous sequence of child text
+				// runs is wrapped in an anonymous block container flex item.
 				inlineGroup = append(inlineGroup, child)
+			} else if irb, ok := child.(*InlineReplacedBox); ok {
+				// Blockify inline replaced elements (e.g. <svg>, <img>)
+				// per the CSS Flexbox spec §4.1: "The display value of a
+				// flex item is blockified". This converts InlineReplacedBox
+				// to BlockReplacedBox so it becomes a proper block-level
+				// flex item, avoiding line-height issues.
+				flushInlineGroup()
+				blockified := BlockReplacedBox{ReplacedBox: irb.ReplacedBox}
+				blockified.IsFlexItem = true
+				flexChildren = append(flexChildren, &blockified)
+			} else if _, ok := child.(InlineLevelBoxITF); ok {
+				// Inline-level elements (e.g. <span>) become individual flex
+				// items per the spec: "Each in-flow child of a flex container
+				// becomes a flex item". They must be wrapped in their own
+				// anonymous block container so they can participate as
+				// block-level boxes in flex layout.
+				flushInlineGroup()
+				anonymous := BlockBoxAnonymousFrom(box, []Box{child})
+				anonymous.IsFlexItem = true
+				flexChildren = append(flexChildren, anonymous)
 			} else {
+				// Block-level children become flex items directly.
 				flushInlineGroup()
 				flexChildren = append(flexChildren, child)
 			}

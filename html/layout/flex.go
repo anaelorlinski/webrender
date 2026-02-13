@@ -1246,6 +1246,10 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 					child.Style = child.Style.Copy()
 					child.Style.SetWidth(pr.FToPx(cssWidth))
 				}
+				// Save the flex-determined positions before re-layout,
+				// since blockLevelLayoutSwitch may overwrite them.
+				savedPositionX := child.PositionX
+				savedPositionY := child.PositionY
 				newChild, tmp, _ := blockLevelLayoutSwitch(context, v.box.(bo.BlockLevelBoxITF), bottomSpace, childSkipStack, box,
 					pageIsEmpty, absoluteBoxes, fixedBoxes, new([]pr.Float), false, -1)
 				childResumeAt := tmp.resumeAt
@@ -1256,6 +1260,10 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 						}
 					}
 				} else {
+					// Restore the flex-determined positions that were
+					// computed in Steps 12-14.
+					newChild.Box().PositionX = savedPositionX
+					newChild.Box().PositionY = savedPositionY
 					box.Children = append(box.Children, newChild)
 					if childResumeAt != nil {
 						firstLevelSkip := 0
@@ -1289,6 +1297,25 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 			box.Height = sumCross(flexLines) + crossGap*pr.Float(len(flexLines)-1)
 		} else {
 			box.Height = pr.Float(0)
+		}
+	}
+
+	// Enforce min-height/max-height and min-width/max-width on the flex container.
+	// This mirrors what blockBoxLayout does for block boxes (blocks.go).
+	if box.Height != pr.AutoF {
+		if box.MinHeight != pr.AutoF {
+			box.Height = pr.Max(box.Height.V(), box.MinHeight.V())
+		}
+		if box.MaxHeight != pr.AutoF {
+			box.Height = pr.Min(box.Height.V(), box.MaxHeight.V())
+		}
+	}
+	if box.Width != pr.AutoF {
+		if box.MinWidth != pr.AutoF {
+			box.Width = pr.Max(box.Width.V(), box.MinWidth.V())
+		}
+		if box.MaxWidth != pr.AutoF {
+			box.Width = pr.Min(box.Width.V(), box.MaxWidth.V())
 		}
 	}
 
