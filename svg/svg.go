@@ -783,7 +783,7 @@ func (na nodeAttributes) parseSharedAttributes(out *attributes) error {
 	if err != nil {
 		return err
 	}
-	out.isFillEvenOdd = na["fill-rull"] == "evenodd"
+	out.isFillEvenOdd = na["fill-rule"] == "evenodd"
 
 	out.dashOffset, err = parseValue(na["stroke-dashoffset"])
 	if err != nil {
