@@ -566,11 +566,16 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 					parent.Box(), true, nil, nil, nil, false, -1)
 				height = pr.Max(height, child.Box().MarginHeight())
 			}
-			if minFunction.S == "min-content" || minFunction.S == "maxContent" || minFunction.S == "auto" {
+			if minFunction.S == "min-content" || minFunction.S == "max-content" || minFunction.S == "auto" {
 				sizes[0] = height
 			}
-			if maxFunction.S == "min-content" || maxFunction.S == "maxContent" {
+			if maxFunction.S == "min-content" || maxFunction.S == "max-content" || maxFunction.S == "auto" {
 				sizes[1] = height
+				// When min is a fixed length but max is intrinsic (e.g., minmax(40px, auto)),
+				// grow the base size to fit content, respecting the fixed minimum.
+				if sizes[0] != nil {
+					sizes[0] = pr.Max(sizes[0].V(), height)
+				}
 			}
 			if sizes[0] != nil && sizes[1] != nil {
 				sizes[1] = pr.Max(sizes[0].V(), sizes[1].V())
@@ -1582,7 +1587,6 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 			childB.MarginRight.V() + childB.BorderRightWidth + childB.PaddingRight.V())
 		childHeight := heightF - (childB.MarginTop.V() + childB.BorderTopWidth + childB.PaddingTop.V() +
 			childB.MarginBottom.V() + childB.BorderBottomWidth + childB.PaddingBottom.V())
-
 		// Compute the CSS width/height values for SetWidth/SetHeight, accounting for box-sizing.
 		// resolvePercentages (called later inside blockLevelLayout) will subtract borders+padding
 		// for border-box, so we must pass the border-box width, not the content-box width.
