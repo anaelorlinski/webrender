@@ -21,7 +21,7 @@ const (
 	fontmapCachePango  = "../../text/testdata/cache.fc"
 	fontmapCacheGotext = "../../text/testdata"
 
-	useGoText = true
+	useGoText = false
 )
 
 // FontConfig is loaded with [UAStylesheet]
@@ -30,12 +30,6 @@ var FontConfig text.FontConfiguration
 func init() {
 	var err error
 
-	// this command has to run once
-	// fmt.Println("Scanning fonts...")
-	// _, err = fc.ScanAndCache(fontmapCachePango)
-	// if err != nil {
-	// 	panic(err)
-	// }
 	if useGoText {
 		fontmapGotext := fontscan.NewFontMap(log.Default())
 		err := fontmapGotext.UseSystemFonts(fontmapCacheGotext)
@@ -44,6 +38,12 @@ func init() {
 		}
 		FontConfig = text.NewFontConfigurationGotext(fontmapGotext)
 	} else {
+		// // this command has to run once
+		// fmt.Println("Scanning fonts...")
+		// _, err = fc.ScanAndCache(fontmapCachePango)
+		// if err != nil {
+		// 	panic(err)
+		// }
 		fs, err := fc.LoadFontsetFile(fontmapCachePango)
 		if err != nil {
 			panic(err)

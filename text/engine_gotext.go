@@ -285,7 +285,7 @@ func (fc *FontConfigurationGotext) width0(style *TextStyle) pr.Fl {
 		return style.FontDescription.Size
 	}
 
-	return pr.Fl(fixedToFloat(glyphs[0].XAdvance) / sizeFactor) // fixed to float
+	return pr.Fl(fixedToFloat(glyphs[0].Advance) / sizeFactor) // fixed to float
 }
 
 func (fc *FontConfigurationGotext) spaceHeight(style *TextStyle) (height, baseline pr.Float) {
@@ -304,7 +304,7 @@ func (fc *FontConfigurationGotext) widthSpace(style *TextStyle) pr.Fl {
 		return style.FontDescription.Size
 	}
 
-	return pr.Fl(fixedToFloat(glyphs[0].XAdvance) / sizeFactor) // fixed to float
+	return pr.Fl(fixedToFloat(glyphs[0].Advance) / sizeFactor) // fixed to float
 }
 
 func (fc *FontConfigurationGotext) CanBreakText(t []rune) pr.MaybeBool {
@@ -466,7 +466,7 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 			spaceW := fc.widthSpace(style)
 			tabWidth = floatToFixed(spaceW * pr.Fl(style.TabSize.Width))
 		}
-		outputs.AlignTabs(text, tabWidth)
+		AlignTabs(outputs, text, tabWidth, 0)
 	}
 
 	if style.LetterSpacing != 0 || style.WordSpacing != 0 {
@@ -474,7 +474,7 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 		shaping.AddSpacing(outputs, text, ws, ls)
 		// add letter spacing at the end, like other browers do
 		lastRun := &outputs[len(outputs)-1]
-		lastRun.Glyphs[len(lastRun.Glyphs)-1].XAdvance += ls
+		lastRun.Glyphs[len(lastRun.Glyphs)-1].Advance += ls
 		lastRun.RecomputeAdvance()
 	}
 
@@ -837,4 +837,53 @@ func (fc *FontConfigurationGotext) splitFirstLine(hyphenCache map[HyphenDictKey]
 	}
 
 	return firstLine
+}
+
+// tabs support
+
+func applyTabs(out *shaping.Output, text []rune, columnWidth, runStart fixed.Int26_6) {
+	columnWidthF := float64(columnWidth) / 64
+	var advance fixed.Int26_6
+	for i, g := range out.Glyphs {
+		gAdvance := g.Advance
+		isTab := g.RunesCount() == 1 && g.GlyphsCount() == 1 && text[g.TextIndex()] == '\t'
+		if !isTab {
+			advance += gAdvance
+			continue
+		}
+
+		var updatedTabAdvance fixed.Int26_6
+		if columnWidth == 0 {
+			// simply trim the advance, nothing else to do
+		} else {
+			// update the advance of the glyph so that the next glyph is "tab-aligned" :
+			// we want the "end" of the tab to be a multiple of columnWidth, that is :
+			// (runStart + advance + updatedTabAdvance) % columnWith == 0
+			glyphStartF := float64(runStart+advance) / 64
+			remainder := math.Mod(glyphStartF, columnWidthF)
+			updatedTabAdvance = fixed.Int26_6((columnWidthF - remainder) * 64)
+		}
+
+		out.Glyphs[i].Advance = updatedTabAdvance
+
+		advance += updatedTabAdvance
+	}
+
+	// no need to call RecomputeAdvance
+	out.Advance = advance
+}
+
+// AlignTabs updates the advance of glyphs mapped to '\t' runes,
+// so that tabs are aligned on columns defined by [columnWidth].
+//
+// [lineOffset] may be non zero if the line starts after the first column.
+//
+// As a special case, if [columnWidth] is zero,
+// tabs are trimmed (their advance is set to 0).
+func AlignTabs(l shaping.Line, text []rune, columnWidth, lineOffset fixed.Int26_6) {
+	runsAdvance := lineOffset // the position of the start of the current run
+	for i := range l {
+		applyTabs(&l[i], text, columnWidth, runsAdvance)
+		runsAdvance += l[i].Advance
+	}
 }
