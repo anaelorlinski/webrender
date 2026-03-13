@@ -2,7 +2,6 @@ package parser
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -78,7 +77,7 @@ func runTest(t *testing.T, css, resJson []string, fn func(input string) []TC) {
 		tu.AssertNoErr(t, err)
 
 		if res != resJson[i] {
-			t.Fatalf(fmt.Sprintf("input %d : \n %s \n failed : expected \n %s \n got  \n %s \n", i, input, resJson[i], res))
+			t.Fatalf("input %d : \n %s \n failed : expected \n %s \n got  \n %s \n", i, input, resJson[i], res)
 		}
 	}
 }
@@ -94,7 +93,7 @@ func runTestOne(t *testing.T, css, resJson []string, fn func(input string) TC) {
 		}
 		res := string(b)
 		if res != resJson[i] {
-			t.Fatalf(fmt.Sprintf("input %d : \n %s \n failed : expected \n %s \n got  \n %s \n", i, input, resJson[i], res))
+			t.Fatalf("input %d : \n %s \n failed : expected \n %s \n got  \n %s \n", i, input, resJson[i], res)
 		}
 	}
 }

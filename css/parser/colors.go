@@ -311,7 +311,14 @@ func ParseColor(token Token) Color {
 			}
 		}
 	case FunctionBlock:
-		args := parseCommaSeparated(token.Arguments)
+		args := RemoveWhitespace(token.Arguments)
+		if len(args) == 5 && IsLiteral(args[1], ",") && IsLiteral(args[3], ",") {
+			// comma separated : old syntax
+			args = []Token{args[0], args[2], args[4]}
+		} else if len(args) == 7 && IsLiteral(args[1], ",") && IsLiteral(args[3], ",") && IsLiteral(args[5], ",") {
+			// comma separated : old syntax
+			args = []Token{args[0], args[2], args[4], args[6]}
+		}
 		if len(args) != 0 {
 			switch utils.AsciiLower(token.Name) {
 			case "rgb":
@@ -355,6 +362,10 @@ func ParseColor(token Token) Color {
 // If args is a list of a single  NUMBER token,
 // return its value clipped to the 0..1 range
 func parseAlpha(args []Token) (utils.Fl, bool) {
+	// CSS level 4 and 5 allow missing alpha
+	if len(args) == 0 {
+		return 1, true
+	}
 	if len(args) == 1 {
 		token, ok := args[0].(Number)
 		if ok {
