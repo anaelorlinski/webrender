@@ -74,7 +74,6 @@ func getImage(_token Token, baseUrl string) (pr.Image, error) {
 			parsedColorsStop := make([]pr.ColorStop, len(colorStops))
 			for index, stop := range colorStops {
 				parsedColorsStop[index], err = parseColorStop(stop)
-				fmt.Println(parsedColorsStop[index], err)
 				if err != nil {
 					return nil, err
 				}
