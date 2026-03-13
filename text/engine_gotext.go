@@ -418,10 +418,11 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 	}
 
 	textWrap, spaceCollapse := style.textWrap(), style.spaceCollapse()
-	mw := math.MaxInt
-	if textWrap && maxWidth != pr.Inf {
+	const maxFixed = math.MaxInt32 >> 6 // max value for fixed.Int26_6
+	mw := fixed.I(maxFixed)
+	if textWrap && maxWidth <= maxFixed {
 		// use maxWidth
-		mw = int(max(0, math.Ceil(float64(maxWidth))))
+		mw = floatToFixed(pr.Fl(maxWidth))
 	}
 
 	var lang language.Language
@@ -488,7 +489,7 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 		config.BreakPolicy = shaping.Always
 	}
 	fc.lineWrapper.Prepare(config, text, shaping.NewSliceIterator(outputs))
-	wLine, fitsOnFirstLine := fc.lineWrapper.WrapNextLine(mw)
+	wLine, fitsOnFirstLine := fc.lineWrapper.WrapNextLineF(mw)
 	line := wLine.Line
 
 	if len(line) == 0 {
@@ -573,7 +574,7 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 
 	if fitsOnFirstLine && spaceCollapse {
 		// weasyprint puts the collapsed space on the line...
-		if (width + wLine.TrimmedTrailingWhitespace).Ceil() <= mw {
+		if (width + wLine.TrimmedTrailingWhitespace) <= mw {
 			width += wLine.TrimmedTrailingWhitespace
 		}
 	}
