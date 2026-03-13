@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/benoitkugler/webrender/utils"
-	"github.com/benoitkugler/webrender/utils/testutils"
+	tu "github.com/benoitkugler/webrender/utils/testutils"
 )
 
 // Parse a single `qualified rule` or `at-rule`.
@@ -82,6 +82,12 @@ func TestOneRule(t *testing.T) {
 	})
 }
 
+func TestCurrentColor(t *testing.T) {
+	tu.AssertEqual(t, ParseColorString("currentcolor"), Color{Type: ColorCurrentColor})
+	tu.AssertEqual(t, ParseColorString("currentColor"), Color{Type: ColorCurrentColor})
+	tu.AssertEqual(t, ParseColorString("CURRENTCOLOR"), Color{Type: ColorCurrentColor})
+}
+
 func TestColor3(t *testing.T) {
 	inputs, resJson := loadJson(t, "color3.json")
 	runTestOne(t, inputs, resJson, func(input string) TC {
@@ -136,8 +142,8 @@ func TestColor3Keywords(t *testing.T) {
 
 func TestNilContent(t *testing.T) {
 	rule := parseOneRule(tokenizeString("@font-face{}", true)).(AtRule)
-	testutils.AssertEqual(t, rule.Content != nil, true)
+	tu.AssertEqual(t, rule.Content != nil, true)
 
 	rule = parseOneRule(tokenizeString("@font-face", true)).(AtRule)
-	testutils.AssertEqual(t, rule.Content == nil, true)
+	tu.AssertEqual(t, rule.Content == nil, true)
 }

@@ -311,7 +311,7 @@ func ParseColor(token Token) Color {
 			}
 		}
 	case FunctionBlock:
-		args := RemoveWhitespace(token.Arguments)
+		args := parseCommaSeparated(token.Arguments)
 		if len(args) != 0 {
 			switch utils.AsciiLower(token.Name) {
 			case "rgb":
@@ -355,9 +355,6 @@ func ParseColor(token Token) Color {
 // If args is a list of a single  NUMBER token,
 // return its value clipped to the 0..1 range
 func parseAlpha(args []Token) (utils.Fl, bool) {
-	if len(args) == 0 {
-		return 1, true
-	}
 	if len(args) == 1 {
 		token, ok := args[0].(Number)
 		if ok {
