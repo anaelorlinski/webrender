@@ -21,7 +21,7 @@ const (
 	fontmapCachePango  = "../../text/testdata/cache.fc"
 	fontmapCacheGotext = "../../text/testdata"
 
-	useGoText = false
+	useGoText = true
 )
 
 // FontConfig is loaded with [UAStylesheet]

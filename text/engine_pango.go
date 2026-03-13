@@ -58,7 +58,7 @@ func (fc *FontConfigurationPango) spaceHeight(style *TextStyle) (height, baselin
 	layout := newTextLayout(fc, style, nil)
 	layout.SetText(" ")
 	line, _ := layout.GetFirstLine()
-	fmt.Println(line.Runs.Data.Item.Analysis.Font.FaceID())
+	// fmt.Println(line.Runs.Data.Item.Analysis.Font.FaceID())
 	sp := firstLineMetrics(line, nil, layout, -1, false, style, false, "")
 	return sp.Height, sp.Baseline
 }

@@ -747,8 +747,7 @@ func TestHyphenateManual4(t *testing.T) {
 	html := unpack1(page)
 	body := unpack1(html)
 	line1 := unpack1(body)
-	// TODO: should not end with an hyphen
-	t.Skip()
+	t.Skip("TODO: should not end with an hyphen")
 	assertText(t, unpack1(line1), "test\xad")
 }
 

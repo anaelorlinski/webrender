@@ -182,7 +182,6 @@ func TestMarginBoxes(t *testing.T) {
 }
 
 func TestMarginBoxStringSet1(t *testing.T) {
-	t.Skip("Waiting for floating max width in go-text")
 	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Test that both pages get string in the `bottom-center` margin box
