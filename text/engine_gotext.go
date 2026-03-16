@@ -305,7 +305,6 @@ func (fc *FontConfigurationGotext) width0(style *TextStyle) pr.Fl {
 	if len(glyphs) == 0 { // fontmap is broken, return a 'reasonnable' value
 		return style.FontDescription.Size
 	}
-	fmt.Println(glyphs[0].Advance)
 	return pr.Fl(fixedToFloat(glyphs[0].Advance) / sizeFactor) // fixed to float
 }
 
