@@ -500,7 +500,7 @@ var InitialValues = Properties{
 
 	// Proprietary
 	PAnchor: String(""),     // computed value of "none"
-	PLink:   NamedString{},  // computed value of "none"
+	PLink:   TaggedString{}, // computed value of "none"
 	PLang:   TaggedString{}, // computed value of "none"
 }
 

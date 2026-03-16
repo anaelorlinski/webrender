@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/benoitkugler/webrender/backend"
+	pr "github.com/benoitkugler/webrender/css/properties"
 	"github.com/benoitkugler/webrender/html/tree"
 	"github.com/benoitkugler/webrender/utils"
 	tu "github.com/benoitkugler/webrender/utils/testutils"
@@ -289,54 +290,49 @@ func assertBookmarks(t *testing.T, html string, expectedByPage [][]bookmarkData,
 	}
 }
 
-func TestLinks(t *testing.T) {
-	// capt := testutils.CaptureLogs()
-	// defer capt.AssertNoLogs(t)
+func assertLinks(t *testing.T, html string, expectedLinksByPage [][]Link, expectedAnchorsByPage []anchors,
+	expectedResolvedLinks [][]Link, expectedResolvedAnchors [][]backend.Anchor, baseUrl string, warnings []string, round bool,
+) {
+	t.Helper()
 
-	// baseUrl=resourceFilename("<inline HTML>"),
-	// warnings=(), round=false
-	assertLinks := func(html string, expectedLinksByPage [][]Link, expectedAnchorsByPage []anchors,
-		expectedResolvedLinks [][]Link, expectedResolvedAnchors [][]backend.Anchor, baseUrl string, warnings []string, round bool,
-	) {
-		t.Helper()
+	capt := tu.CaptureLogs()
 
-		capt := tu.CaptureLogs()
+	document := renderHTML(t, html, baseUrl, round)
+	resolvedLinks, resolvedAnchors := document.resolveLinks()
 
-		document := renderHTML(t, html, baseUrl, round)
-		resolvedLinks, resolvedAnchors := document.resolveLinks()
-
-		logs := capt.Logs()
-		if len(logs) != len(warnings) {
-			t.Fatalf("unexpected number of logs: %d", len(logs))
-		}
-		for i, expected := range warnings {
-			if !strings.Contains(logs[i], expected) {
-				t.Fatalf("invalid log: %s", logs[i])
-			}
-		}
-		var (
-			gotLinksByPage   [][]Link
-			gotAnchorsByPage []map[string][4]fl
-		)
-		for _, p := range document.Pages {
-			gotLinksByPage = append(gotLinksByPage, p.links)
-			gotAnchorsByPage = append(gotAnchorsByPage, p.anchors)
-		}
-		if !reflect.DeepEqual(gotLinksByPage, expectedLinksByPage) {
-			t.Fatalf("unexpected gotLinksByPage: %v", gotLinksByPage)
-		}
-		if !reflect.DeepEqual(gotAnchorsByPage, expectedAnchorsByPage) {
-			t.Fatalf("unexpected gotAnchorsByPage: %v", gotAnchorsByPage)
-		}
-		if !reflect.DeepEqual(resolvedLinks, expectedResolvedLinks) {
-			t.Fatalf("unexpected resolvedLinks: %v", resolvedLinks)
-		}
-		if !reflect.DeepEqual(resolvedAnchors, expectedResolvedAnchors) {
-			t.Fatalf("unexpected resolvedAnchors: %v", resolvedAnchors)
+	logs := capt.Logs()
+	if len(logs) != len(warnings) {
+		t.Fatalf("unexpected number of logs: %d", len(logs))
+	}
+	for i, expected := range warnings {
+		if !strings.Contains(logs[i], expected) {
+			t.Fatalf("invalid log: %s", logs[i])
 		}
 	}
+	var (
+		gotLinksByPage   [][]Link
+		gotAnchorsByPage []map[string][4]fl
+	)
+	for _, p := range document.Pages {
+		gotLinksByPage = append(gotLinksByPage, p.links)
+		gotAnchorsByPage = append(gotAnchorsByPage, p.anchors)
+	}
+	if !reflect.DeepEqual(gotLinksByPage, expectedLinksByPage) {
+		t.Fatalf("unexpected gotLinksByPage: %v", gotLinksByPage)
+	}
+	if !reflect.DeepEqual(gotAnchorsByPage, expectedAnchorsByPage) {
+		t.Fatalf("unexpected gotAnchorsByPage: %v", gotAnchorsByPage)
+	}
+	if !reflect.DeepEqual(resolvedLinks, expectedResolvedLinks) {
+		t.Fatalf("unexpected resolvedLinks: %v", resolvedLinks)
+	}
+	if !reflect.DeepEqual(resolvedAnchors, expectedResolvedAnchors) {
+		t.Fatalf("unexpected resolvedAnchors: %v", resolvedAnchors)
+	}
+}
 
-	assertLinks(`
+func TestLinks1(t *testing.T) {
+	assertLinks(t, `
 	    <style>
 	        body { font-size: 10px; line-height: 2; width: 200px }
 	        p { height: 90px; margin: 0 0 10px 0 }
@@ -353,28 +349,28 @@ func TestLinks(t *testing.T) {
 	    </p>
 	`, [][]Link{
 		{
-			{Type: "external", Target: "http://weasyprint.org", Rectangle: [4]fl{0, 0, 30, 20}},
-			{Type: "external", Target: "http://weasyprint.org", Rectangle: [4]fl{0, 0, 30, 30}},
-			{Type: "internal", Target: "lipsum", Rectangle: [4]fl{10, 100, 42, 120}},
-			{Type: "internal", Target: "lipsum", Rectangle: [4]fl{10, 100, 42, 132}},
+			{Type: pr.External, Target: "http://weasyprint.org", Rectangle: [4]fl{0, 0, 30, 20}},
+			{Type: pr.External, Target: "http://weasyprint.org", Rectangle: [4]fl{0, 0, 30, 30}},
+			{Type: pr.Internal, Target: "lipsum", Rectangle: [4]fl{10, 100, 42, 120}},
+			{Type: pr.Internal, Target: "lipsum", Rectangle: [4]fl{10, 100, 42, 132}},
 		},
 		{
-			{Type: "internal", Target: "hello", Rectangle: [4]fl{0, 0, 200, 30}},
+			{Type: pr.Internal, Target: "hello", Rectangle: [4]fl{0, 0, 200, 30}},
 		},
 	},
 		[]anchors{
-			{"hello": [4]fl{0, 0, 200, 30}},
+			{"hello": [4]fl{0, 200, 200, 290}},
 			{"lipsum": [4]fl{0, 0, 200, 90}},
 		},
 		[][]Link{
 			{
-				{Type: "external", Target: "http://weasyprint.org", Rectangle: [4]fl{0, 0, 30, 20}},
-				{Type: "external", Target: "http://weasyprint.org", Rectangle: [4]fl{0, 0, 30, 30}},
-				{Type: "internal", Target: "lipsum", Rectangle: [4]fl{10, 100, 42, 120}},
-				{Type: "internal", Target: "lipsum", Rectangle: [4]fl{10, 100, 42, 132}},
+				{Type: pr.External, Target: "http://weasyprint.org", Rectangle: [4]fl{0, 0, 30, 20}},
+				{Type: pr.External, Target: "http://weasyprint.org", Rectangle: [4]fl{0, 0, 30, 30}},
+				{Type: pr.Internal, Target: "lipsum", Rectangle: [4]fl{10, 100, 42, 120}},
+				{Type: pr.Internal, Target: "lipsum", Rectangle: [4]fl{10, 100, 42, 132}},
 			},
 			{
-				{Type: "internal", Target: "hello", Rectangle: [4]fl{0, 0, 200, 30}},
+				{Type: pr.Internal, Target: "hello", Rectangle: [4]fl{0, 0, 200, 30}},
 			},
 		},
 		[][]backend.Anchor{
@@ -386,55 +382,62 @@ func TestLinks(t *testing.T) {
 			},
 		},
 		baseUrl, nil, false)
-
-	assertLinks(
+}
+func TestLinks2(t *testing.T) {
+	assertLinks(t,
 		`
 		        <body style="width: 200px">
 		        <a href="../lipsum/é%E9" style="display: block; margin: 10px 5px">
 		    `, [][]Link{{
-			{Type: "external", Target: "http://weasyprint.org/foo/lipsum/%C3%A9%E9", Rectangle: [4]fl{5, 10, 195, 10}},
+			{Type: pr.External, Target: "http://weasyprint.org/foo/lipsum/%C3%A9%E9", Rectangle: [4]fl{5, 10, 195, 10}},
 		}},
 		[]anchors{{}},
 		[][]Link{{
-			{Type: "external", Target: "http://weasyprint.org/foo/lipsum/%C3%A9%E9", Rectangle: [4]fl{5, 10, 195, 10}},
+			{Type: pr.External, Target: "http://weasyprint.org/foo/lipsum/%C3%A9%E9", Rectangle: [4]fl{5, 10, 195, 10}},
 		}},
 		[][]backend.Anchor{nil},
 		"http://weasyprint.org/foo/bar/", nil, false)
+}
 
-	assertLinks(
+func TestLinks3(t *testing.T) {
+	assertLinks(t,
 		`
 		        <body style="width: 200px">
 		        <div style="display: block; margin: 10px 5px;
 		                    -weasy-link: url(../lipsum/é%E9)">
 		    `,
 		[][]Link{{
-			{Type: "external", Target: "http://weasyprint.org/foo/lipsum/%C3%A9%E9", Rectangle: [4]fl{5, 10, 195, 10}},
+			{Type: pr.External, Target: "http://weasyprint.org/foo/lipsum/%C3%A9%E9", Rectangle: [4]fl{5, 10, 195, 10}},
 		}},
 		[]anchors{{}},
 		[][]Link{{
-			{Type: "external", Target: "http://weasyprint.org/foo/lipsum/%C3%A9%E9", Rectangle: [4]fl{5, 10, 195, 10}},
+			{Type: pr.External, Target: "http://weasyprint.org/foo/lipsum/%C3%A9%E9", Rectangle: [4]fl{5, 10, 195, 10}},
 		}},
 		[][]backend.Anchor{nil},
 		"http://weasyprint.org/foo/bar/", nil, false)
+}
 
+func TestLinks4(t *testing.T) {
 	// Relative URI reference without a base URI: allowed for links
-	assertLinks(
+	assertLinks(t,
 		`
 		        <body style="width: 200px">
 		        <a href="../lipsum" style="display: block; margin: 10px 5px">
 		    `,
 		[][]Link{{
-			{Type: "external", Target: "../lipsum", Rectangle: [4]fl{5, 10, 195, 10}},
+			{Type: pr.External, Target: "../lipsum", Rectangle: [4]fl{5, 10, 195, 10}},
 		}},
 		[]anchors{{}},
 		[][]Link{{
-			{Type: "external", Target: "../lipsum", Rectangle: [4]fl{5, 10, 195, 10}},
+			{Type: pr.External, Target: "../lipsum", Rectangle: [4]fl{5, 10, 195, 10}},
 		}},
 		[][]backend.Anchor{nil},
 		"", nil, false)
+}
 
+func TestLinks5(t *testing.T) {
 	// Relative URI reference without a base URI: not supported for -weasy-link
-	assertLinks(
+	assertLinks(t,
 		`
 		        <body style="width: 200px">
 		        <div style="-weasy-link: url(../lipsum);
@@ -443,47 +446,53 @@ func TestLinks(t *testing.T) {
 		"", []string{
 			"Ignored `-weasy-link: url(../lipsum)` , Relative URI reference without a base URI",
 		}, false)
+}
 
+func TestLinks6(t *testing.T) {
 	// Internal or absolute URI reference without a base URI: OK
-	assertLinks(
+	assertLinks(t,
 		`
 		        <body style="width: 200px">
 		        <a href="#lipsum" id="lipsum"
 		            style="display: block; margin: 10px 5px"></a>
 		        <a href="http://weasyprint.org/" style="display: block"></a>
 		    `, [][]Link{{
-			{Type: "internal", Target: "lipsum", Rectangle: [4]fl{5, 10, 195, 10}},
-			{Type: "external", Target: "http://weasyprint.org/", Rectangle: [4]fl{0, 10, 200, 10}},
+			{Type: pr.Internal, Target: "lipsum", Rectangle: [4]fl{5, 10, 195, 10}},
+			{Type: pr.External, Target: "http://weasyprint.org/", Rectangle: [4]fl{0, 10, 200, 10}},
 		}},
 		[]anchors{{"lipsum": [4]fl{5, 10, 195, 10}}},
 		[][]Link{{
-			{Type: "internal", Target: "lipsum", Rectangle: [4]fl{5, 10, 195, 10}},
-			{Type: "external", Target: "http://weasyprint.org/", Rectangle: [4]fl{0, 10, 200, 10}},
+			{Type: pr.Internal, Target: "lipsum", Rectangle: [4]fl{5, 10, 195, 10}},
+			{Type: pr.External, Target: "http://weasyprint.org/", Rectangle: [4]fl{0, 10, 200, 10}},
 		}},
 		[][]backend.Anchor{{
 			{Name: "lipsum", X: 5, Y: 10},
 		}},
 		"", nil, false)
+}
 
-	assertLinks(
+func TestLinks7(t *testing.T) {
+	assertLinks(t,
 		`
 		        <body style="width: 200px">
 		        <div style="-weasy-link: url(#lipsum);
 		                    margin: 10px 5px" id="lipsum">
 		    `,
 		[][]Link{{
-			{Type: "internal", Target: "lipsum", Rectangle: [4]fl{5, 10, 195, 10}},
+			{Type: pr.Internal, Target: "lipsum", Rectangle: [4]fl{5, 10, 195, 10}},
 		}},
 		[]anchors{{"lipsum": [4]fl{5, 10, 195, 10}}},
 		[][]Link{{
-			{Type: "internal", Target: "lipsum", Rectangle: [4]fl{5, 10, 195, 10}},
+			{Type: pr.Internal, Target: "lipsum", Rectangle: [4]fl{5, 10, 195, 10}},
 		}},
 		[][]backend.Anchor{{
 			{Name: "lipsum", X: 5, Y: 10},
 		}},
 		"", nil, false)
+}
 
-	assertLinks(
+func TestLinks8(t *testing.T) {
+	assertLinks(t,
 		`
 		        <style> a { display: block; height: 15px } </style>
 		        <body style="width: 200px">
@@ -491,49 +500,53 @@ func TestLinks(t *testing.T) {
 		            <a href="#missing" id="lipsum"></a>
 		    `,
 		[][]Link{{
-			{Type: "internal", Target: "lipsum", Rectangle: [4]fl{0, 0, 200, 15}},
-			{Type: "internal", Target: "missing", Rectangle: [4]fl{0, 15, 200, 30}},
+			{Type: pr.Internal, Target: "lipsum", Rectangle: [4]fl{0, 0, 200, 15}},
+			{Type: pr.Internal, Target: "missing", Rectangle: [4]fl{0, 15, 200, 30}},
 		}},
 		[]anchors{{"lipsum": [4]fl{0, 15, 200, 30}}},
 		[][]Link{{
-			{Type: "internal", Target: "lipsum", Rectangle: [4]fl{0, 0, 200, 15}},
+			{Type: pr.Internal, Target: "lipsum", Rectangle: [4]fl{0, 0, 200, 15}},
 		}},
 		[][]backend.Anchor{{
 			{Name: "lipsum", X: 0, Y: 15},
 		}},
 		"", []string{"No anchor #missing for internal URI reference"}, false)
+}
 
-	assertLinks(
+func TestLinks9(t *testing.T) {
+	assertLinks(t,
 		`
 	        <body style="width: 100px; transform: translateY(100px)">
 	        <a href="#lipsum" id="lipsum" style="display: block; height: 20px;
 	            transform: rotate(90deg) scale(2)">
 	    `,
 		[][]Link{{
-			{Type: "internal", Target: "lipsum", Rectangle: [4]fl{30, 10, 70, 210}},
+			{Type: pr.Internal, Target: "lipsum", Rectangle: [4]fl{30, 10, 70, 210}},
 		}},
 		[]anchors{{"lipsum": [4]fl{70, 10, 30, 210}}},
 		[][]Link{{
-			{Type: "internal", Target: "lipsum", Rectangle: [4]fl{30, 10, 70, 210}},
+			{Type: pr.Internal, Target: "lipsum", Rectangle: [4]fl{30, 10, 70, 210}},
 		}},
 		[][]backend.Anchor{{
 			{Name: "lipsum", X: 70, Y: 10},
 		}},
 		"", nil, true)
+}
 
+func TestLinks10(t *testing.T) {
 	// Download for attachment
-	assertLinks(
+	assertLinks(t,
 		`
 	        <body style="width: 200px">
 	        <a rel=attachment href="pattern.png" download="wow.png"
 	            style="display: block; margin: 10px 5px">
 	    `,
 		[][]Link{{
-			{Type: "attachment", Target: "pattern.png", Rectangle: [4]fl{5, 10, 195, 10}},
+			{Type: pr.Attachment, Target: "pattern.png", Rectangle: [4]fl{5, 10, 195, 10}},
 		}},
 		[]anchors{{}},
 		[][]Link{{
-			{Type: "attachment", Target: "pattern.png", Rectangle: [4]fl{5, 10, 195, 10}},
+			{Type: pr.Attachment, Target: "pattern.png", Rectangle: [4]fl{5, 10, 195, 10}},
 		}},
 		[][]backend.Anchor{nil},
 		"", nil, false)

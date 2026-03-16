@@ -104,39 +104,6 @@ func (u Url) IsNone() bool {
 	return u == Url{}
 }
 
-// Return ('external', absolute_uri) or
-// ('internal', unquoted_fragment_id) or false
-func GetLinkAttribute(element *HTMLNode, attrName string, baseUrl string) ([2]string, bool) {
-	attrValue := strings.TrimSpace(element.Get(attrName))
-	if strings.HasPrefix(attrValue, "#") && len(attrValue) > 1 {
-		// Do not require a baseUrl when the value is just a fragment.
-		unescaped := Unquote(attrValue[1:])
-		return [2]string{"internal", unescaped}, true
-	}
-
-	uri := element.GetUrlAttribute(attrName, baseUrl, true)
-	if uri == "" {
-		return [2]string{}, false
-	}
-	if baseUrl != "" {
-		parsed, err := url.Parse(uri)
-		if err != nil {
-			logger.WarningLogger.Println(err)
-			return [2]string{}, false
-		}
-		baseParsed, err := url.Parse(baseUrl)
-		if err != nil {
-			logger.WarningLogger.Println(err)
-			return [2]string{}, false
-		}
-		if parsed.Scheme == baseParsed.Scheme && parsed.Host == baseParsed.Host && parsed.Path == baseParsed.Path && parsed.RawQuery == baseParsed.RawQuery {
-			// Compare with fragments removed
-			return [2]string{"internal", parsed.Fragment}, true
-		}
-	}
-	return [2]string{"external", uri}, true
-}
-
 // Return a file URL for the given `file` path.
 func PathToURL(file string) (out string, err error) {
 	file, err = filepath.Abs(file)

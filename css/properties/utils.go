@@ -25,6 +25,7 @@ const (
 	Internal
 	External
 	Local
+	Attachment
 )
 
 // --------------- Values  -----------------------------------------------

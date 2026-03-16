@@ -369,8 +369,8 @@ func (s Properties) SetLetterSpacing(v DimOrS) { s[PLetterSpacing] = v }
 func (s Properties) GetLineHeight() DimOrS  { return s[PLineHeight].(DimOrS) }
 func (s Properties) SetLineHeight(v DimOrS) { s[PLineHeight] = v }
 
-func (s Properties) GetLink() NamedString  { return s[PLink].(NamedString) }
-func (s Properties) SetLink(v NamedString) { s[PLink] = v }
+func (s Properties) GetLink() TaggedString  { return s[PLink].(TaggedString) }
+func (s Properties) SetLink(v TaggedString) { s[PLink] = v }
 
 func (s Properties) GetListStyleImage() Image  { return s[PListStyleImage].(Image) }
 func (s Properties) SetListStyleImage(v Image) { s[PListStyleImage] = v }
@@ -925,8 +925,8 @@ type StyleAccessor interface {
 	GetLineHeight() DimOrS
 	SetLineHeight(v DimOrS)
 
-	GetLink() NamedString
-	SetLink(v NamedString)
+	GetLink() TaggedString
+	SetLink(v TaggedString)
 
 	GetListStyleImage() Image
 	SetListStyleImage(v Image)

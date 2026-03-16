@@ -1670,17 +1670,17 @@ func (s *AnonymousStyle) SetLineHeight(v pr.DimOrS) {
 	s.propsCache.known[pr.PLineHeight] = v
 }
 
-func (s *ComputedStyle) GetLink() pr.NamedString {
-	return s.Get(pr.PLink.Key()).(pr.NamedString)
+func (s *ComputedStyle) GetLink() pr.TaggedString {
+	return s.Get(pr.PLink.Key()).(pr.TaggedString)
 }
-func (s *ComputedStyle) SetLink(v pr.NamedString) {
+func (s *ComputedStyle) SetLink(v pr.TaggedString) {
 	s.propsCache.known[pr.PLink] = v
 }
 
-func (s *AnonymousStyle) GetLink() pr.NamedString {
-	return s.Get(pr.PLink.Key()).(pr.NamedString)
+func (s *AnonymousStyle) GetLink() pr.TaggedString {
+	return s.Get(pr.PLink.Key()).(pr.TaggedString)
 }
-func (s *AnonymousStyle) SetLink(v pr.NamedString) {
+func (s *AnonymousStyle) SetLink(v pr.TaggedString) {
 	s.propsCache.known[pr.PLink] = v
 }
 

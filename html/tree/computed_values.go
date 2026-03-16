@@ -3,6 +3,7 @@ package tree
 import (
 	"fmt"
 	"math"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -878,24 +879,52 @@ func anchor(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) pr.C
 
 // Compute the “link“ property.
 func link(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) pr.CssProperty {
-	switch value := _value.(type) {
-	case pr.NamedString:
-		if value.String == "none" {
-			return pr.NamedString{}
-		} else {
-			return value
-		}
-
-	case pr.AttrData:
+	value := _value.(pr.TaggedString)
+	if value.S == "none" {
+		return pr.TaggedString{}
+	} else if value.Tag == pr.Attr {
 		if node, ok := computer.element.(*utils.HTMLNode); ok {
-			typeAttr, ok := utils.GetLinkAttribute(node, value.Name, computer.baseUrl)
+			typeAttr, ok := getLinkAttribute(node, value.S, computer.baseUrl)
 			if !ok {
-				return pr.NamedString{}
+				return pr.TaggedString{}
 			}
-			return pr.NamedString{Name: typeAttr[0], String: typeAttr[1]}
+			return typeAttr
 		}
 	}
-	return pr.NamedString{}
+	return pr.TaggedString{}
+}
+
+// Return ('external', absolute_uri) or
+// ('internal', unquoted_fragment_id) or false
+func getLinkAttribute(element *utils.HTMLNode, attrName string, baseUrl string) (pr.TaggedString, bool) {
+	attrValue := strings.TrimSpace(element.Get(attrName))
+	if strings.HasPrefix(attrValue, "#") && len(attrValue) > 1 {
+		// Do not require a baseUrl when the value is just a fragment.
+		unescaped := utils.Unquote(attrValue[1:])
+		return pr.TaggedString{Tag: pr.Internal, S: unescaped}, true
+	}
+
+	uri := element.GetUrlAttribute(attrName, baseUrl, true)
+	if uri == "" {
+		return pr.TaggedString{}, false
+	}
+	if baseUrl != "" {
+		parsed, err := url.Parse(uri)
+		if err != nil {
+			logger.WarningLogger.Println(err)
+			return pr.TaggedString{}, false
+		}
+		baseParsed, err := url.Parse(baseUrl)
+		if err != nil {
+			logger.WarningLogger.Println(err)
+			return pr.TaggedString{}, false
+		}
+		if parsed.Scheme == baseParsed.Scheme && parsed.Host == baseParsed.Host && parsed.Path == baseParsed.Path && parsed.RawQuery == baseParsed.RawQuery {
+			// Compare with fragments removed
+			return pr.TaggedString{Tag: pr.Internal, S: parsed.Fragment}, true
+		}
+	}
+	return pr.TaggedString{Tag: pr.External, S: uri}, true
 }
 
 // Compute the “lang“ property.

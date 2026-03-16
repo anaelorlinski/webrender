@@ -107,7 +107,7 @@ type Link struct {
 	//   or not at all.
 	// - "attachment": `target` is an absolute URL and points
 	//   to a resource to attach to the document.
-	Type string
+	Type pr.Tag
 
 	Target string
 
@@ -143,6 +143,7 @@ func gatherAnchors(box_ bo.Box, anchors anchors, links *[]Link, bookmarks *[]boo
 	anchorName := string(box.Style.GetAnchor())
 	hasBookmark := bookmarkLabel != "" && bookmarkLevel != 0
 	// "link" is inherited but redundant on text boxes
+	fmt.Println(link, link.IsNone())
 	hasLink := !link.IsNone() && !(bo.TextT.IsInstance(box_) || bo.LineT.IsInstance(box_))
 	// In case of duplicate IDs, only the first is an anchor.
 	_, inAnchors := anchors[anchorName]
@@ -152,9 +153,9 @@ func gatherAnchors(box_ bo.Box, anchors anchors, links *[]Link, bookmarks *[]boo
 	if hasBookmark || hasLink || hasAnchor {
 		posX, posY, width, height := bo.HitArea(box_).Unpack()
 		if hasLink {
-			linkType, target := link.Name, link.String
-			if linkType == "external" && isAttachment {
-				linkType = "attachment"
+			linkType, target := link.Tag, link.S
+			if linkType == pr.External && isAttachment {
+				linkType = pr.Attachment
 			}
 			linkS := Link{Type: linkType, Target: target}
 			if matrix != nil {
@@ -333,7 +334,7 @@ func (d *Document) resolveLinks() ([][]Link, [][]backend.Anchor) {
 		var pageLinks []Link
 		for _, link := range page.links {
 			// linkType, anchorName, rectangle = link
-			if link.Type == "internal" {
+			if link.Type == pr.Internal {
 				if !anchors.Has(link.Target) {
 					logger.WarningLogger.Printf("No anchor #%s for internal URI reference\n", link.Target)
 				} else {
@@ -406,11 +407,11 @@ func (d Document) addHyperlinks(links []Link, context backend.Page, scale mt.Tra
 		linkType, linkTarget, rectangle := link.Type, link.Target, link.Rectangle
 		xMin, yMin := scale.Apply(rectangle[0], rectangle[1])
 		xMax, yMax := scale.Apply(rectangle[2], rectangle[3])
-		if linkType == "external" {
+		if linkType == pr.External {
 			context.AddExternalLink(xMin, yMin, xMax, yMax, linkTarget)
-		} else if linkType == "internal" {
+		} else if linkType == pr.Internal {
 			context.AddInternalLink(xMin, yMin, xMax, yMax, linkTarget)
-		} else if linkType == "attachment" {
+		} else if linkType == pr.Attachment {
 			// actual embedding has be done previously
 			context.AddFileAnnotation(xMin, yMin, xMax, yMax, linkTarget)
 		}
@@ -539,7 +540,7 @@ func (d *Document) embedFileAnnotations(pagedLinks [][]Link, context backend.Doc
 	// A single link can be split in multiple regions.
 	for _, rl := range pagedLinks {
 		for _, link := range rl {
-			if link.Type == "attachment" {
+			if link.Type == pr.Attachment {
 				a := d.fetchAttachment(link.Target)
 				if len(a.Content) != 0 {
 					context.EmbedFile(link.Target, a)

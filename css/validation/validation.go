@@ -3626,10 +3626,10 @@ func link(tokens []Token, baseUrl string) (out pr.CssProperty, err error) {
 	}
 	token := tokens[0]
 	if getKeyword(token) == "none" {
-		return pr.NamedString{Name: "none"}, nil
+		return pr.TaggedString{Tag: pr.None}, nil
 	}
 
-	parsedUrl, attr, err := getUrl(token, baseUrl)
+	parsedUrl, _, err := getUrl(token, baseUrl)
 	if err != nil {
 		return
 	}
@@ -3637,15 +3637,10 @@ func link(tokens []Token, baseUrl string) (out pr.CssProperty, err error) {
 		return parsedUrl, nil
 	}
 	name, args := pa.ParseFunction(token)
-	if name != "" {
-		if len(args) == 1 {
-			if ident, ok := args[0].(pa.Ident); ok && name == "attr" {
-				attr = pr.AttrData{Name: string(ident.Value)}
-			}
+	if name == "attr" && len(args) == 1 {
+		if ident, ok := args[0].(pa.Ident); ok {
+			return pr.TaggedString{Tag: pr.Attr, S: string(ident.Value)}, nil
 		}
-	}
-	if !attr.IsNone() {
-		out = attr
 	}
 	return
 }
