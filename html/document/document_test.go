@@ -383,6 +383,7 @@ func TestLinks1(t *testing.T) {
 		},
 		baseUrl, nil, false)
 }
+
 func TestLinks2(t *testing.T) {
 	assertLinks(t,
 		`

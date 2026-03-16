@@ -70,6 +70,7 @@ func (fc *FontConfigurationPango) width0(style *TextStyle) pr.Fl {
 	line, _ := p.GetFirstLine()
 	var logicalExtents pango.Rectangle
 	line.GetExtents(nil, &logicalExtents)
+	fmt.Println(PangoUnitsToFloat(logicalExtents.Width))
 	return PangoUnitsToFloat(logicalExtents.Width)
 }
 

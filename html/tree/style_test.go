@@ -488,9 +488,9 @@ func TestWarnings(t *testing.T) {
 			sel: `@import "invalid-protocol://absolute-URL"`,
 			out: []string{"Failed to load stylesheet at"},
 		},
-		{sel: "test", out: []string{"WARNING: Parse error"}},
-		{sel: "@test", out: []string{"WARNING: Unknown empty rule"}},
-		{sel: "@test {}", out: []string{"WARNING: Unknown rule"}},
+		{sel: "test", out: []string{"warning: Parse error"}},
+		{sel: "@test", out: []string{"warning: Unknown empty rule"}},
+		{sel: "@test {}", out: []string{"warning: Unknown rule"}},
 	} {
 		capt := tu.CaptureLogs()
 		_, err := NewCSSDefault(utils.InputString(te.sel))
@@ -498,9 +498,7 @@ func TestWarnings(t *testing.T) {
 			t.Fatal(err)
 		}
 		logs := capt.Logs()
-		if len(logs) != 1 {
-			t.Fatalf("%s : expected exactly 1 log, got %d", te.sel, len(logs))
-		}
+		tu.AssertEqual(t, len(logs), 1)
 		for _, message := range te.out {
 			if !strings.Contains(logs[0], message) {
 				t.Fatalf("log should contain %s, got %s", message, logs[0])

@@ -143,7 +143,6 @@ func gatherAnchors(box_ bo.Box, anchors anchors, links *[]Link, bookmarks *[]boo
 	anchorName := string(box.Style.GetAnchor())
 	hasBookmark := bookmarkLabel != "" && bookmarkLevel != 0
 	// "link" is inherited but redundant on text boxes
-	fmt.Println(link, link.IsNone())
 	hasLink := !link.IsNone() && !(bo.TextT.IsInstance(box_) || bo.LineT.IsInstance(box_))
 	// In case of duplicate IDs, only the first is an anchor.
 	_, inAnchors := anchors[anchorName]

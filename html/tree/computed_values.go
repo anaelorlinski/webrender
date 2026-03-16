@@ -891,7 +891,7 @@ func link(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) pr.Css
 			return typeAttr
 		}
 	}
-	return pr.TaggedString{}
+	return value
 }
 
 // Return ('external', absolute_uri) or

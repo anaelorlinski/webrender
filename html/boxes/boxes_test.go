@@ -608,21 +608,30 @@ func TestTables1(t *testing.T) {
 	// Rule 1.3
 	// Also table model: http://www.w3.org/TR/CSS21/tables.html#model
 	assertTree(t, parseAndBuild(t, `
-      <x-table>
-        <x-tr>
-          <x-th>foo</x-th>
-          <x-th>bar</x-th>
-        </x-tr>
-        <x-tfoot></x-tfoot>
-        <x-thead><x-th></x-th></x-thead>
-        <x-caption style="caption-side: bottom"></x-caption>
-        <x-thead></x-thead>
-        <x-col></x-col>
-        <x-caption>top caption</x-caption>
-        <x-tr>
-          <x-td>baz</x-td>
-        </x-tr>
-      </x-table>
+	<style>
+        x-table { display: table }
+        x-tr { display: table-row }
+        x-td, x-th { display: table-cell }
+        x-thead { display: table-header-group }
+        x-tfoot { display: table-footer-group }
+        x-col { display: table-column }
+        x-caption { display: table-caption }
+	</style>
+	<x-table>
+		<x-tr>
+			<x-th>foo</x-th>
+			<x-th>bar</x-th>
+		</x-tr>
+		<x-tfoot></x-tfoot>
+		<x-thead><x-th></x-th></x-thead>
+		<x-caption style="caption-side: bottom"></x-caption>
+		<x-thead></x-thead>
+		<x-col></x-col>
+		<x-caption>top caption</x-caption>
+		<x-tr>
+			<x-td>baz</x-td>
+		</x-tr>
+	</x-table>
     `), []SerBox{
 		{"x-table", BlockT, BC{C: []SerBox{
 			{"x-caption", TableCaptionT, BC{C: []SerBox{{"x-caption", LineT, BC{C: []SerBox{{"x-caption", TextT, BC{Text: "top caption"}}}}}}}},
@@ -699,7 +708,7 @@ func TestTables4(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Rules 2.1 then 2.3
-	assertTree(t, parseAndBuild(t, "<x-table>foo <div></div></x-table>"), []SerBox{
+	assertTree(t, parseAndBuild(t, `<x-table style="display:table">foo <div></div></x-table>`), []SerBox{
 		{"x-table", BlockT, BC{C: []SerBox{
 			{"x-table", TableT, BC{C: []SerBox{
 				{"x-table", TableRowGroupT, BC{C: []SerBox{
@@ -719,7 +728,8 @@ func TestTables5(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Rule 2.2
-	assertTree(t, parseAndBuild(t, `<x-thead style="display: table-header-group"><div></div><x-td></x-td></x-thead>`),
+	assertTree(t, parseAndBuild(t, `<x-thead style="display: table-header-group"><div></div>
+                          <x-td style="display: table-cell"></x-td></x-thead>`),
 		[]SerBox{
 			{"body", BlockT, BC{C: []SerBox{
 				{"body", TableT, BC{C: []SerBox{
@@ -738,7 +748,7 @@ func TestTables6(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Rule 3.2
-	assertTree(t, parseAndBuild(t, "<span><x-tr></x-tr></span>"), []SerBox{
+	assertTree(t, parseAndBuild(t, `<span><x-tr style="display: table-row"></x-tr></span>`), []SerBox{
 		{"body", LineT, BC{C: []SerBox{
 			{"span", InlineT, BC{C: []SerBox{
 				{"span", InlineBlockT, BC{C: []SerBox{
@@ -782,7 +792,7 @@ func TestTables7(t *testing.T) {
 func TestTables8(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 	// Rule 3.2
-	assertTree(t, parseAndBuild(t, "<x-tr></x-tr>\t<x-tr></x-tr>"), []SerBox{
+	assertTree(t, parseAndBuild(t, "<x-tr style='display: table-row'></x-tr>\t<x-tr style='display: table-row'></x-tr>"), []SerBox{
 		{"body", BlockT, BC{C: []SerBox{
 			{"body", TableT, BC{C: []SerBox{
 				{"body", TableRowGroupT, BC{C: []SerBox{
@@ -797,7 +807,7 @@ func TestTables8(t *testing.T) {
 func TestTables9(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 
-	assertTree(t, parseAndBuild(t, "<x-col></x-col>\n<x-colgroup></x-colgroup>"), []SerBox{
+	assertTree(t, parseAndBuild(t, "<x-col style='display: table-column'></x-col>\n<x-colgroup style='display: table-column-group'></x-colgroup>"), []SerBox{
 		{"body", BlockT, BC{C: []SerBox{
 			{"body", TableT, BC{C: []SerBox{
 				{"body", TableColumnGroupT, BC{C: []SerBox{{"x-col", TableColumnT, BC{C: []SerBox{}}}}}},

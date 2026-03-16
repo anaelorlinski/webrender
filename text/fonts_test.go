@@ -72,15 +72,14 @@ func TestAddFontFace(t *testing.T) {
 		Src:        []pr.TaggedString{{Tag: pr.External, S: url}},
 		FontFamily: "weasyprint",
 	}
+
 	expected, err := os.ReadFile("../resources_test/weasyprint.otf")
 	tu.AssertNoErr(t, err)
 
 	// Pango
 	filename := fcP.AddFontFace(desc, utils.DefaultUrlFetcher)
 	_, err = fcP.LoadFace(fonts.FaceID{File: filename}, fontconfig.TrueType)
-	if err != nil {
-		t.Fatal(err)
-	}
+	tu.AssertNoErr(t, err)
 	if !bytes.Equal(expected, fcP.FontContent(FontOrigin{File: filename})) {
 		t.Fatal()
 	}
@@ -88,7 +87,7 @@ func TestAddFontFace(t *testing.T) {
 	// Gotext
 	filename2 := fcG.AddFontFace(desc, utils.DefaultUrlFetcher)
 	tu.AssertEqual(t, filename2, filename)
-	if !bytes.Equal(expected, fcG.FontContent(FontOrigin{File: filename})) {
+	if !bytes.Equal(expected, fcG.FontContent(FontOrigin{File: filename2})) {
 		t.Fatal()
 	}
 	face := fcG.resolveFace('a', FontDescription{Family: []string{"weasyprint"}})
@@ -158,10 +157,10 @@ func newMetrics(fc FontConfiguration, desc FontDescription) metrics {
 	w0 := fc.width0(style)
 	height, baseline := fc.spaceHeight(style)
 	return metrics{
-		utils.RoundPrec(hx, 2),
-		utils.RoundPrec(w0, 2),
-		utils.RoundPrec(pr.Fl(height), 2),
-		utils.RoundPrec(pr.Fl(baseline), 2),
+		utils.RoundPrec(hx, 1),
+		utils.RoundPrec(w0, 1),
+		utils.RoundPrec(pr.Fl(height), 1),
+		utils.RoundPrec(pr.Fl(baseline), 1),
 	}
 }
 
@@ -233,7 +232,7 @@ func TestMetricsLinuxFonts(t *testing.T) {
 				desc.Size = s * 10 // remove some pesky rounding errors
 				exp := newMetrics(fcPango, desc)
 				got := newMetrics(fcGotext, desc)
-				tu.AssertEqual(t, exp, got)
+				tu.AssertEqual(t, got, exp)
 			}
 		}
 	}

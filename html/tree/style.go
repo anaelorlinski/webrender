@@ -1437,6 +1437,8 @@ func preprocessStylesheet(deviceMediaType, baseUrl string, stylesheetRules []pa.
 				}
 
 				counterStyle[name] = ruleDescriptors
+			default:
+				logger.WarningLogger.Printf("Unknown rule %s at %d:%d\n", pa.Serialize(atRule.Content), atRule.Pos().Line, atRule.Pos().Column)
 			}
 		default:
 			logger.WarningLogger.Printf("Unknown rule %s at %d:%d\n", pa.Serialize(atRule.Content), atRule.Pos().Line, atRule.Pos().Column)

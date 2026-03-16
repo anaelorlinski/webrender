@@ -669,11 +669,9 @@ func TestSplit(t *testing.T) {
 	for maxWidth := pr.Float(60); maxWidth < 100; maxWidth += 10 {
 		lineP := SplitFirstLine([]rune("Une jolie phrase - hahaha"), style, pango, maxWidth, false, true)
 		lineG := SplitFirstLine([]rune("Une jolie phrase - hahaha"), style, gotext, maxWidth, false, true)
-
 		tu.AssertEqual(t, lineG.ResumeAt, lineP.ResumeAt)
 		tu.AssertEqual(t, lineG.FirstLineRTL, lineP.FirstLineRTL)
 		tu.AssertEqual(t, lineG.Length, lineP.Length)
-
 	}
 }
 

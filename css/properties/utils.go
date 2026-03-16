@@ -28,6 +28,33 @@ const (
 	Attachment
 )
 
+func (t Tag) String() string {
+	switch t {
+	case 0:
+		return "<0>"
+	case Auto:
+		return "Auto"
+	case None:
+		return "None"
+	case Span:
+		return "Span"
+	case Subgrid:
+		return "Subgrid"
+	case Attr:
+		return "Attr"
+	case Internal:
+		return "Internal"
+	case External:
+		return "External"
+	case Local:
+		return "Local"
+	case Attachment:
+		return "Attachment"
+	default:
+		return fmt.Sprintf("unknown Tag %d", t)
+	}
+}
+
 // --------------- Values  -----------------------------------------------
 
 func (d Dimension) ToPixels() Dimension {

@@ -137,7 +137,7 @@ func (f *FontConfigurationGotext) loadOneFont(url pr.TaggedString, ruleDescripto
 	f.fm.AddFace(font.NewFace(ft), fontscan.Location{File: key}, desc)
 
 	if url.Tag == pr.External {
-		f.fontsContent[key] = content
+		f.fontsContent[url.S] = content
 	}
 
 	// track the font features to apply
@@ -267,8 +267,12 @@ func (fc *FontConfigurationGotext) shapeRune(r rune, desc FontDescription, featu
 
 	// sizeFactor is used to get a better precision
 	sizeFactor := fixed.Int26_6(1000)
-	if desc.Size >= 100 { // avoid overflowing go-text Int26_6 upper limit
+	if desc.Size >= 400 { // avoid overflowing go-text Int26_6 upper limit
 		sizeFactor = 1
+	} else if desc.Size >= 200 {
+		sizeFactor = 5
+	} else if desc.Size >= 100 {
+		sizeFactor = 10
 	}
 
 	out := fc.shaper.Shape(shaping.Input{
@@ -301,7 +305,7 @@ func (fc *FontConfigurationGotext) width0(style *TextStyle) pr.Fl {
 	if len(glyphs) == 0 { // fontmap is broken, return a 'reasonnable' value
 		return style.FontDescription.Size
 	}
-
+	fmt.Println(glyphs[0].Advance)
 	return pr.Fl(fixedToFloat(glyphs[0].Advance) / sizeFactor) // fixed to float
 }
 
@@ -852,6 +856,10 @@ func (fc *FontConfigurationGotext) splitFirstLine(hyphenCache map[HyphenDictKey]
 		// Is it really OK to remove hyphenation for word-break ?
 		hyphenated = false
 		firstLine = fc.wrapWordBreak(text, style, maxWidthV, true)
+	}
+
+	if hyphenated {
+		firstLine.Length -= len(hyphenateCharacter)
 	}
 
 	return firstLine
