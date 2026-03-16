@@ -421,7 +421,7 @@ func firstLineMetrics(firstLine *pango.LayoutLine, text []rune, layout *TextLayo
 // TextLayoutPango wraps a pango.Layout object
 type TextLayoutPango struct {
 	Style   *TextStyle
-	metrics *LineMetrics // optional
+	metrics LineMetrics // optional
 
 	MaxWidth pr.MaybeFloat
 
@@ -460,7 +460,7 @@ func createLayout(text string, style *TextStyle, fonts FontConfiguration, maxWid
 // Text returns a readonly slice of the text used in the layout.
 func (p *TextLayoutPango) Text() []rune { return p.Layout.Text }
 
-func (p *TextLayoutPango) Metrics() *LineMetrics { return p.metrics }
+func (p *TextLayoutPango) Metrics() LineMetrics { return p.metrics }
 
 func (p *TextLayoutPango) Justification() pr.Float           { return pr.Float(p.justificationSpacing) }
 func (p *TextLayoutPango) SetJustification(spacing pr.Float) { p.justificationSpacing = pr.Fl(spacing) }
@@ -488,7 +488,7 @@ func (p *TextLayoutPango) setup(fonts FontConfiguration, style *TextStyle) {
 
 	if style.TextDecorationLine != 0 {
 		metrics := pc.GetMetrics(&fontDesc, lang)
-		p.metrics = &LineMetrics{
+		p.metrics = LineMetrics{
 			Ascent:                 PangoUnitsToFloat(metrics.Ascent),
 			UnderlinePosition:      PangoUnitsToFloat(metrics.UnderlinePosition),
 			UnderlineThickness:     PangoUnitsToFloat(metrics.UnderlineThickness),
@@ -496,7 +496,7 @@ func (p *TextLayoutPango) setup(fonts FontConfiguration, style *TextStyle) {
 			StrikethroughThickness: PangoUnitsToFloat(metrics.StrikethroughThickness),
 		}
 	} else {
-		p.metrics = nil
+		p.metrics = LineMetrics{}
 	}
 
 	if len(style.FontFeatures) != 0 {

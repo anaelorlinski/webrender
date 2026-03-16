@@ -23,8 +23,8 @@ type EngineLayout interface {
 	// Text returns a readonly slice of the text in the layout
 	Text() []rune
 
-	// Metrics may return nil when [TextDecorationLine] is empty
-	Metrics() *LineMetrics
+	// Metrics may return zero when [TextDecorationLine] is empty
+	Metrics() LineMetrics
 
 	// Justification returns the current justification
 	Justification() pr.Float

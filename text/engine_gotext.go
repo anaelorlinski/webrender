@@ -166,15 +166,32 @@ func (f *FontConfigurationGotext) FontContent(font FontOrigin) []byte {
 }
 
 type layoutGotext struct {
-	text []rune
-	line shaping.Line
+	text  []rune
+	style *TextStyle
+	line  shaping.Line
 }
 
 // Text returns a readonly slice of the text in the layout
 func (l layoutGotext) Text() []rune { return l.text }
 
 // Metrics may return nil when [TextDecorationLine] is empty
-func (layoutGotext) Metrics() *LineMetrics { return nil }
+func (l layoutGotext) Metrics() LineMetrics {
+	if l.style.TextDecorationLine == 0 {
+		return LineMetrics{}
+	}
+
+	face := l.line[0].Face
+	factor := pr.Fl(l.style.FontDescription.Size) / pr.Fl(face.Upem())
+
+	extents, _ := face.FontHExtents()
+	return LineMetrics{
+		Ascent:                 pr.Fl(extents.Ascender) * factor,
+		UnderlinePosition:      face.LineMetric(font.UnderlinePosition) * factor,
+		UnderlineThickness:     face.LineMetric(font.UnderlineThickness) * factor,
+		StrikethroughPosition:  face.LineMetric(font.StrikethroughPosition) * factor,
+		StrikethroughThickness: face.LineMetric(font.StrikethroughThickness) * factor,
+	}
+}
 
 // Justification returns the current justification
 func (layoutGotext) Justification() pr.Float { return 0 }
@@ -404,7 +421,7 @@ type textKey struct {
 func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, maxWidth pr.Float, allowWordBreak bool) FirstLine {
 	if len(text) == 0 {
 		return FirstLine{
-			Layout:   layoutGotext{},
+			Layout:   layoutGotext{style: style},
 			Length:   0,
 			ResumeAt: -1,
 			Width:    0, Height: 0, Baseline: 0,
@@ -494,7 +511,7 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 
 	if len(line) == 0 {
 		return FirstLine{
-			Layout:   layoutGotext{},
+			Layout:   layoutGotext{style: style},
 			Length:   0,
 			ResumeAt: -1,
 			Width:    0, Height: 0, Baseline: 0,
@@ -580,7 +597,7 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 	}
 
 	out := FirstLine{
-		Layout:       layoutGotext{text: text[:firstLineLength], line: outLine},
+		Layout:       layoutGotext{text: text[:firstLineLength], style: style, line: outLine},
 		Length:       firstLineLength,
 		ResumeAt:     resumeAt,
 		FirstLineRTL: firstLineRTL,
