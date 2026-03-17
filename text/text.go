@@ -121,7 +121,7 @@ func SplitFirstLine(text []rune, style_ pr.StyleAccessor, context TextLayoutCont
 type StrutLayoutKey struct {
 	lang                 string
 	fontFamily           string // joined
-	lineHeight           pr.DimOrS
+	lineHeight           pr.TaggedDim
 	fontWeight           uint16
 	fontSize             pr.Fl
 	fontLanguageOverride fontLanguageOverride
@@ -160,7 +160,7 @@ func StrutLayout(style_ pr.StyleAccessor, context TextLayoutContext) (lineHeight
 
 	height, baseline := context.Fonts().spaceHeight(style)
 
-	if lineHeightV.S == "normal" {
+	if lineHeightV.Tag == pr.Normal {
 		lineHeight = height
 	} else {
 		lineHeight = lineHeightV.Value

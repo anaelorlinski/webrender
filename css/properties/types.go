@@ -59,7 +59,7 @@ func (dec Decorations) Union(other Decorations) Decorations { return dec | other
 
 type Transforms []SDimensions
 
-type Values []DimOrS
+type Values []TaggedDim
 
 type SIntStrings struct {
 	String string
@@ -83,11 +83,6 @@ type SDimensions struct {
 }
 
 type IntStrings []IntString
-
-type (
-	DimOrS4 [4]DimOrS
-	DimOrS5 [5]DimOrS
-)
 
 type Quotes struct {
 	Open  Strings
@@ -143,9 +138,9 @@ type Page string
 
 // Dimension or "auto" or "cover" or "contain"
 type Size struct {
-	String string
-	Width  DimOrS
-	Height DimOrS
+	Tag    Tag
+	Width  TaggedDim
+	Height TaggedDim
 }
 
 type Center struct {
@@ -226,37 +221,37 @@ type OptionalRanges struct {
 //   - minmax(V, V2)
 //   - fit-content(V)
 type GridDims struct {
-	V, v2 DimOrS
+	V, v2 TaggedDim
 	tag   byte // 0, 'm' for minmax()' or 'f' for fit-content()
 }
 
 // NewGridDimsValue returns a non tagged value.
-func NewGridDimsValue(v DimOrS) GridDims { return GridDims{V: v} }
+func NewGridDimsValue(v TaggedDim) GridDims { return GridDims{V: v} }
 
 // NewGridDimsMinmax returns minmax(...)
-func NewGridDimsMinmax(v1, v2 DimOrS) GridDims { return GridDims{tag: 'm', V: v1, v2: v2} }
+func NewGridDimsMinmax(v1, v2 TaggedDim) GridDims { return GridDims{tag: 'm', V: v1, v2: v2} }
 
 // NewGridDimsFitcontent returns fit-content(...)
-func NewGridDimsFitcontent(v Dimension) GridDims { return GridDims{tag: 'f', V: v.ToValue()} }
+func NewGridDimsFitcontent(v Dimension) GridDims { return GridDims{tag: 'f', V: v.Tagged()} }
 
-func (size GridDims) SizingFunctions() [2]DimOrS {
+func (size GridDims) SizingFunctions() [2]TaggedDim {
 	minSizing, maxSizing := size.V, size.V
 	if size.tag == 'm' {
 		minSizing, maxSizing = size.V, size.v2
 	}
 	if size.tag == 'f' {
-		minSizing, maxSizing = SToV("auto"), SToV("auto")
+		minSizing, maxSizing = TagToV(Auto), TagToV(Auto)
 	} else if minSizing.Unit == Fr {
-		minSizing = SToV("auto")
+		minSizing = TagToV(Auto)
 	}
-	return [2]DimOrS{minSizing, maxSizing}
+	return [2]TaggedDim{minSizing, maxSizing}
 }
 
-func (size GridDims) IsMinmax() (min, max DimOrS, ok bool) {
+func (size GridDims) IsMinmax() (min, max TaggedDim, ok bool) {
 	return size.V, size.v2, size.tag == 'm'
 }
 
-func (size GridDims) IsFitcontent() (v DimOrS, ok bool) {
+func (size GridDims) IsFitcontent() (v TaggedDim, ok bool) {
 	return size.V, size.tag == 'f'
 }
 
@@ -420,6 +415,13 @@ func (d Dimension) String() string {
 	return fmt.Sprintf("<%g %s>", d.Value, d.Unit)
 }
 
+func (d Dimension) Tagged() TaggedDim { return TaggedDim{Dimension: d} }
+
+type TaggedDim struct {
+	Dimension
+	Tag Tag
+}
+
 type BoolString struct {
 	String string
 	Bool   bool
@@ -543,8 +545,8 @@ func (v StringSet) IsNone() bool {
 	return v.String == ""
 }
 
-func (v DimOrS) IsNone() bool {
-	return v == DimOrS{}
+func (v TaggedDim) IsNone() bool {
+	return v == TaggedDim{}
 }
 
 func (v AttrData) IsNone() bool {
@@ -615,6 +617,7 @@ func (v GridDims) IsNone() bool {
 
 func (TaggedString) isCssProperty()      {}
 func (TaggedInt) isCssProperty()         {}
+func (TaggedDim) isCssProperty()         {}
 func (Display) isCssProperty()           {}
 func (BoolString) isCssProperty()        {}
 func (SFloatStrings) isCssProperty()     {}
@@ -647,8 +650,6 @@ func (Strings) isCssProperty()           {}
 func (Transforms) isCssProperty()        {}
 func (DimOrS) isCssProperty()            {}
 func (Values) isCssProperty()            {}
-func (DimOrS4) isCssProperty()           {}
-func (DimOrS5) isCssProperty()           {}
 func (AttrData) isCssProperty()          {}
 func (NoneImage) isCssProperty()         {}
 func (UrlImage) isCssProperty()          {}
@@ -661,6 +662,7 @@ func (GridTemplate) isCssProperty()      {}
 
 func (TaggedString) isDeclaredValue()      {}
 func (TaggedInt) isDeclaredValue()         {}
+func (TaggedDim) isDeclaredValue()         {}
 func (Display) isDeclaredValue()           {}
 func (BoolString) isDeclaredValue()        {}
 func (SFloatStrings) isDeclaredValue()     {}
@@ -694,8 +696,6 @@ func (Strings) isDeclaredValue()           {}
 func (Transforms) isDeclaredValue()        {}
 func (DimOrS) isDeclaredValue()            {}
 func (Values) isDeclaredValue()            {}
-func (DimOrS4) isDeclaredValue()           {}
-func (DimOrS5) isDeclaredValue()           {}
 func (AttrData) isDeclaredValue()          {}
 func (NoneImage) isDeclaredValue()         {}
 func (UrlImage) isDeclaredValue()          {}

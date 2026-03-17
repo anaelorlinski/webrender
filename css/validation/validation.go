@@ -157,15 +157,15 @@ var (
 		pr.PCaptionSide:             captionSide,
 		pr.PClear:                   clear,
 		pr.PClip:                    clip,
-		pr.PTop:                     lengthPercOrAuto,
-		pr.PRight:                   lengthPercOrAuto,
-		pr.PLeft:                    lengthPercOrAuto,
-		pr.PBottom:                  lengthPercOrAuto,
-		pr.PMarginTop:               lengthPercOrAuto,
-		pr.PMarginRight:             lengthPercOrAuto,
-		pr.PMarginBottom:            lengthPercOrAuto,
-		pr.PMarginLeft:              lengthPercOrAuto,
-		pr.PTextUnderlineOffset:     lengthPercOrAuto,
+		pr.PTop:                     lengthOrAuto,
+		pr.PRight:                   lengthOrAuto,
+		pr.PLeft:                    lengthOrAuto,
+		pr.PBottom:                  lengthOrAuto,
+		pr.PMarginTop:               lengthOrAuto,
+		pr.PMarginRight:             lengthOrAuto,
+		pr.PMarginBottom:            lengthOrAuto,
+		pr.PMarginLeft:              lengthOrAuto,
+		pr.PTextUnderlineOffset:     lengthOrAuto,
 		pr.PHeight:                  widthHeight,
 		pr.PWidth:                   widthHeight,
 		pr.PColumnFill:              columnFill,
@@ -1067,30 +1067,32 @@ func _backgroundSize(tokens []Token) pr.Size {
 		token := tokens[0]
 		keyword := getKeyword(token)
 		switch keyword {
-		case "contain", "cover":
-			return pr.Size{String: keyword}
+		case "contain":
+			return pr.Size{Tag: pr.Contain}
+		case "cover":
+			return pr.Size{Tag: pr.Cover}
 		case "auto":
-			return pr.Size{Width: pr.SToV("auto"), Height: pr.SToV("auto")}
+			return pr.Size{Width: pr.TagToV(pr.Auto), Height: pr.TagToV(pr.Auto)}
 		}
 		length := getLength(token, false, true)
 		if !length.IsNone() {
-			return pr.Size{Width: length.ToValue(), Height: pr.SToV("auto")}
+			return pr.Size{Width: length.Tagged(), Height: pr.TagToV(pr.Auto)}
 		}
 	case 2:
 		var out pr.Size
 		lengthW := getLength(tokens[0], false, true)
 		lengthH := getLength(tokens[1], false, true)
 		if !lengthW.IsNone() {
-			out.Width = lengthW.ToValue()
+			out.Width = lengthW.Tagged()
 		} else if getKeyword(tokens[0]) == "auto" {
-			out.Width = pr.SToV("auto")
+			out.Width = pr.TagToV(pr.Auto)
 		} else {
 			return pr.Size{}
 		}
 		if !lengthH.IsNone() {
-			out.Height = lengthH.ToValue()
+			out.Height = lengthH.Tagged()
 		} else if getKeyword(tokens[1]) == "auto" {
-			out.Height = pr.SToV("auto")
+			out.Height = pr.TagToV(pr.Auto)
 		} else {
 			return pr.Size{}
 		}
@@ -1274,9 +1276,9 @@ func bleed(tokens []Token, _ string) pr.CssProperty {
 	token := tokens[0]
 	keyword := getKeyword(token)
 	if keyword == "auto" {
-		return pr.DimOrS{S: "auto"}
+		return pr.TaggedDim{Tag: pr.Auto}
 	} else {
-		return getLength(token, true, false).ToValue()
+		return getLength(token, true, false).Tagged()
 	}
 }
 
@@ -1331,11 +1333,11 @@ func borderWidth(tokens []Token, _ string) pr.CssProperty {
 	token := tokens[0]
 	length := getLength(token, false, false)
 	if !length.IsNone() {
-		return length.ToValue()
+		return length.Tagged()
 	}
-	keyword := getKeyword(token)
-	if keyword == "thin" || keyword == "medium" || keyword == "thick" {
-		return pr.DimOrS{S: keyword}
+	tag := pr.NewTag(getKeyword(token))
+	if tag == pr.Thin || tag == pr.Medium || tag == pr.Thick {
+		return pr.TaggedDim{Tag: tag}
 	}
 	return nil
 }
@@ -1365,7 +1367,7 @@ func borderImageSlice(tokens []Token, _ string) pr.CssProperty {
 			values = append(values, pr.FToV(v.ValueF))
 		} else if getKeyword(token) == "fill" && !fill && (i == 0 || i == len(tokens)-1) {
 			fill = true
-			values = append(values, pr.SToV("fill"))
+			values = append(values, pr.TagToV(pr.Fill))
 		} else {
 			return nil
 		}
@@ -1380,12 +1382,12 @@ func borderImageWidth(tokens []Token, _ string) pr.CssProperty {
 	var values pr.Values
 	for _, token := range tokens {
 		if getKeyword(token) == "auto" {
-			values = append(values, pr.SToV("auto"))
+			values = append(values, pr.TagToV(pr.Auto))
 		} else if v, ok := token.(pa.Number); ok && v.ValueF >= 0 {
 			values = append(values, pr.FToV(v.ValueF))
 		} else {
 			if length := getLength(token, false, true); !length.IsNone() {
-				values = append(values, length.ToValue())
+				values = append(values, length.Tagged())
 			} else {
 				return nil
 			}
@@ -1405,7 +1407,7 @@ func borderImageOutset(tokens []Token, _ string) pr.CssProperty {
 			values = append(values, pr.FToV(v.ValueF))
 		} else {
 			if length := getLength(token, false, false); !length.IsNone() {
-				values = append(values, length.ToValue())
+				values = append(values, length.Tagged())
 			} else {
 				return nil
 			}
@@ -1455,11 +1457,11 @@ func columnWidth(tokens []Token, _ string) pr.CssProperty {
 	token := tokens[0]
 	length := getLength(token, false, false)
 	if !length.IsNone() {
-		return length.ToValue()
+		return length.Tagged()
 	}
 	keyword := getKeyword(token)
 	if keyword == "auto" {
-		return pr.DimOrS{S: keyword}
+		return pr.TagToV(pr.Auto)
 	}
 	return nil
 }
@@ -1530,11 +1532,11 @@ func clip(tokens []Token, _ string) pr.CssProperty {
 			var values pr.Values
 			for _, arg := range args {
 				if getKeyword(arg) == "auto" {
-					values = append(values, pr.DimOrS{S: "auto"})
+					values = append(values, pr.TagToV(pr.Auto))
 				} else {
 					length := getLength(arg, true, false)
 					if !length.IsNone() {
-						values = append(values, length.ToValue())
+						values = append(values, length.Tagged())
 					}
 				}
 			}
@@ -1665,17 +1667,17 @@ func counter(tokens []Token, defaultInteger int) ([]pr.IntString, error) {
 // @validator("margin-left")
 // @singleToken
 // “margin-*“ properties validation.
-func lengthPercOrAuto(tokens []Token, _ string) pr.CssProperty {
+func lengthOrAuto(tokens []Token, _ string) pr.CssProperty {
 	if len(tokens) != 1 {
 		return nil
 	}
 	token := tokens[0]
 	length := getLength(token, true, true)
 	if !length.IsNone() {
-		return length.ToValue()
+		return pr.TaggedDim{Dimension: length}
 	}
 	if getKeyword(token) == "auto" {
-		return pr.DimOrS{S: "auto"}
+		return pr.TaggedDim{Tag: pr.Auto}
 	}
 	return nil
 }
@@ -1691,10 +1693,10 @@ func widthHeight(tokens []Token, _ string) pr.CssProperty {
 	token := tokens[0]
 	length := getLength(token, false, true)
 	if !length.IsNone() {
-		return length.ToValue()
+		return length.Tagged()
 	}
 	if getKeyword(token) == "auto" {
-		return pr.DimOrS{S: "auto"}
+		return pr.TagToV(pr.Auto)
 	}
 	return nil
 }
@@ -1707,10 +1709,10 @@ func gap(tokens []Token, _ string) pr.CssProperty {
 	token := tokens[0]
 	length := getLength(token, false, false)
 	if !length.IsNone() {
-		return length.ToValue()
+		return length.Tagged()
 	}
 	if getKeyword(token) == "normal" {
-		return pr.DimOrS{S: "normal"}
+		return pr.TagToV(pr.Normal)
 	}
 	return nil
 }
@@ -2105,11 +2107,12 @@ func fontSize(tokens []Token, _ string) (pr.CssProperty, error) {
 	token := tokens[0]
 	length := getLength(token, false, true)
 	if !length.IsNone() {
-		return length.ToValue(), nil
+		return length.Tagged(), nil
 	}
 	fontSizeKeyword := getKeyword(token)
-	if _, isIn := pr.FontSizeKeywords[fontSizeKeyword]; isIn || fontSizeKeyword == "smaller" || fontSizeKeyword == "larger" {
-		return pr.DimOrS{S: fontSizeKeyword}, nil
+	tag := pr.NewTag(fontSizeKeyword)
+	if isIn := pr.XxSmall <= tag && tag <= pr.XxLarge; isIn || tag == pr.Smaller || tag == pr.Larger {
+		return pr.TaggedDim{Tag: tag}, nil
 	}
 	return nil, nil
 }
@@ -2202,11 +2205,11 @@ func spacing(tokens []Token, _ string) pr.CssProperty {
 	}
 	token := tokens[0]
 	if getKeyword(token) == "normal" {
-		return pr.DimOrS{S: "normal"}
+		return pr.TaggedDim{Tag: pr.Normal}
 	}
 	length := getLength(token, true, false)
 	if !length.IsNone() {
-		return length.ToValue()
+		return length.Tagged()
 	}
 	return nil
 }
@@ -2220,13 +2223,13 @@ func lineHeight(tokens []Token, _ string) pr.CssProperty {
 	}
 	token := tokens[0]
 	if getKeyword(token) == "normal" {
-		return pr.DimOrS{S: "normal"}
+		return pr.TagToV(pr.Normal)
 	}
 
 	switch tt := token.(type) {
 	case pa.Number:
 		if tt.ValueF >= 0 {
-			return pr.NewDim(pr.Float(tt.ValueF), pr.Scalar).ToValue()
+			return pr.NewDim(pr.Float(tt.ValueF), pr.Scalar).Tagged()
 		}
 	case pa.Percentage:
 		if tt.ValueF >= 0 {
@@ -2238,7 +2241,7 @@ func lineHeight(tokens []Token, _ string) pr.CssProperty {
 			if l.IsNone() {
 				return nil
 			}
-			return l.ToValue()
+			return l.Tagged()
 		}
 	}
 	return nil
@@ -2331,10 +2334,15 @@ func minWidthHeight(tokens []Token, _ string) pr.CssProperty {
 	token := tokens[0]
 	keyword := getKeyword(token)
 	if keyword == "auto" {
-		return pr.SToV(keyword)
-	} else {
-		return lengthOrPercentage([]Token{token}, "")
+		return pr.TaggedDim{Tag: pr.Auto}
 	}
+
+	dim, ok := dimension(tokens)
+	if ok {
+		return pr.TaggedDim{Dimension: dim}
+	}
+
+	return nil
 }
 
 // @validator("padding-top")
@@ -2344,15 +2352,23 @@ func minWidthHeight(tokens []Token, _ string) pr.CssProperty {
 // @singleToken
 // “padding-*“ properties validation.
 func lengthOrPercentage(tokens []Token, _ string) pr.CssProperty {
+	dim, ok := dimension(tokens)
+	if ok {
+		return dim.Tagged()
+	}
+	return nil
+}
+
+func dimension(tokens []Token) (pr.Dimension, bool) {
 	if len(tokens) != 1 {
-		return nil
+		return pr.Dimension{}, false
 	}
 	token := tokens[0]
 	l := getLength(token, false, true)
 	if l.IsNone() {
-		return nil
+		return pr.Dimension{}, false
 	}
-	return l.ToValue()
+	return l, true
 }
 
 // @validator("max-width")
@@ -2366,10 +2382,10 @@ func maxWidthHeight(tokens []Token, _ string) pr.CssProperty {
 	token := tokens[0]
 	length := getLength(token, false, true)
 	if !length.IsNone() {
-		return length.ToValue()
+		return length.Tagged()
 	}
 	if getKeyword(token) == "none" {
-		return pr.NewDim(pr.Inf, pr.Px).ToValue()
+		return pr.NewDim(pr.Inf, pr.Px).Tagged()
 	}
 	return nil
 }
@@ -2631,11 +2647,13 @@ func textDecorationThickness(tokens []Token, _ string) pr.CssProperty {
 
 	length := getLength(token, true, true)
 	if !length.IsNone() {
-		return length.ToValue()
+		return length.Tagged()
 	}
 	switch keyword := getKeyword(token); keyword {
-	case "auto", "from-font":
-		return pr.DimOrS{S: keyword}
+	case "auto":
+		return pr.TaggedDim{Tag: pr.Auto}
+	case "from-font":
+		return pr.TaggedDim{Tag: pr.FromFont}
 	}
 	return nil
 }
@@ -2652,7 +2670,7 @@ func textIndent(tokens []Token, _ string) pr.CssProperty {
 	if l.IsNone() {
 		return nil
 	}
-	return l.ToValue()
+	return l.Tagged()
 }
 
 // @validator()
@@ -2678,13 +2696,14 @@ func verticalAlign(tokens []Token, _ string) pr.CssProperty {
 	token := tokens[0]
 	length := getLength(token, true, true)
 	if !length.IsNone() {
-		return length.ToValue()
+		return length.Tagged()
 	}
-	keyword := getKeyword(token)
-	if keyword == "baseline" || keyword == "middle" || keyword == "sub" || keyword == "super" || keyword == "text-top" || keyword == "text-bottom" || keyword == "top" || keyword == "bottom" {
-		return pr.DimOrS{S: keyword}
+	switch tag := pr.NewTag(getKeyword(token)); tag {
+	case pr.Baseline, pr.Middle, pr.Sub, pr.Super, pr.TextTop, pr.TextBottom, pr.Top, pr.Bottom:
+		return pr.TaggedDim{Tag: tag}
+	default:
+		return nil
 	}
-	return nil
 }
 
 // @validator()
@@ -2761,7 +2780,7 @@ func flexBasis(tokens []Token, _ string) pr.CssProperty {
 		return basis
 	}
 	if getKeyword(token) == "content" {
-		return pr.SToV("content")
+		return pr.TagToV(pr.Content)
 	}
 	return nil
 }
@@ -2801,25 +2820,29 @@ func _flexGrowShrink(tokens []Token) (pr.Fl, bool) {
 }
 
 // Parse “inflexible-breadth“.
-func parseInflexibleBreadth(token Token) pr.DimOrS {
+func parseInflexibleBreadth(token Token) pr.TaggedDim {
 	keyword := getKeyword(token)
 	switch keyword {
-	case "auto", "min-content", "max-content":
-		return pr.DimOrS{S: keyword}
+	case "auto":
+		return pr.TagToV(pr.Auto)
+	case "min-content":
+		return pr.TagToV(pr.MinContent)
+	case "max-content":
+		return pr.TagToV(pr.MaxContent)
 	case "":
 		length := getLength(token, false, true)
 		if !length.IsNone() {
-			return length.ToValue()
+			return length.Tagged()
 		}
 	}
 
-	return pr.DimOrS{}
+	return pr.TaggedDim{}
 }
 
 // Parse “track-breadth“.
-func parseTrackBreadth(token Token) pr.DimOrS {
+func parseTrackBreadth(token Token) pr.TaggedDim {
 	if dim, ok := token.(pa.Dimension); ok && dim.ValueF >= 0 && dim.Unit == "fr" {
-		return pr.NewDim(pr.Float(dim.ValueF), pr.Fr).ToValue()
+		return pr.NewDim(pr.Float(dim.ValueF), pr.Fr).Tagged()
 	}
 	return parseInflexibleBreadth(token)
 }
@@ -2855,7 +2878,7 @@ func parseTrackSize(token Token) pr.GridDims {
 func parseFixedSize(token Token) pr.GridDims {
 	length := getLength(token, false, true)
 	if !length.IsNone() {
-		return pr.NewGridDimsValue(length.ToValue())
+		return pr.NewGridDimsValue(length.Tagged())
 	}
 	name, args := pa.ParseFunction(token)
 	if name == "minmax" && len(args) == 2 {
@@ -2863,18 +2886,18 @@ func parseFixedSize(token Token) pr.GridDims {
 		if !length.IsNone() {
 			trackBreadth := parseTrackBreadth(args[1])
 			if !trackBreadth.IsNone() {
-				return pr.NewGridDimsMinmax(length.ToValue(), trackBreadth)
+				return pr.NewGridDimsMinmax(length.Tagged(), trackBreadth)
 			}
 		}
 		keyword := getKeyword(args[0])
 		if keyword == "min-content" || keyword == "max-content" || keyword == "auto" || !length.IsNone() {
 			fixedBreadth := getLength(args[1], false, true)
 			if !fixedBreadth.IsNone() {
-				v1 := length.ToValue()
+				v1 := length.Tagged()
 				if v1.IsNone() {
-					v1 = pr.SToV(keyword)
+					v1 = pr.TagToV(pr.NewTag(keyword))
 				}
-				return pr.NewGridDimsMinmax(v1, fixedBreadth.ToValue())
+				return pr.NewGridDimsMinmax(v1, fixedBreadth.Tagged())
 			}
 		}
 	}
@@ -3656,10 +3679,10 @@ func tabSize(tokens []Token, _ string) pr.CssProperty {
 	token := tokens[0]
 	if number, ok := token.(pa.Number); ok {
 		if number.IsInt() && number.ValueF >= 0 { // no unit means multiple of space width
-			return pr.NewDim(pr.Float(number.ValueF), 0).ToValue()
+			return pr.NewDim(pr.Float(number.ValueF), 0).Tagged()
 		}
 	}
-	return getLength(token, false, false).ToValue()
+	return getLength(token, false, false).Tagged()
 }
 
 // @validator(unstable=true)
@@ -3708,7 +3731,7 @@ func hyphenateLimitZone(tokens []Token, _ string) pr.CssProperty {
 	if d.IsNone() {
 		return nil
 	}
-	return d.ToValue()
+	return d.Tagged()
 }
 
 // @validator(unstable=true)

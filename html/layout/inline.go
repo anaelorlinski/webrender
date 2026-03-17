@@ -1260,9 +1260,9 @@ func lineBoxVerticality(context *layoutContext, box Box) (pr.Float, pr.Float) {
 		var dy pr.Float
 		if v.box.Box().IsFloated() {
 			dy = minY - v.box.Box().PositionY
-		} else if va.S == "top" {
+		} else if va.Tag == pr.Top {
 			dy = minY - v.min.V()
-		} else if va.S == "bottom" {
+		} else if va.Tag == pr.Bottom {
 			dy = maxY - v.max.V()
 		} else {
 			panic(fmt.Sprintf("expected top or bottom, got %v", va))
@@ -1275,7 +1275,7 @@ func lineBoxVerticality(context *layoutContext, box Box) (pr.Float, pr.Float) {
 func translateSubtree(box Box, dy pr.Float) {
 	if bo.InlineT.IsInstance(box) {
 		box.Box().PositionY += dy
-		if va := box.Box().Style.GetVerticalAlign().S; va == "top" || va == "bottom" {
+		if va := box.Box().Style.GetVerticalAlign().Tag; va == pr.Top || va == pr.Bottom {
 			for _, child := range box.Box().Children {
 				translateSubtree(child, dy)
 			}
@@ -1322,24 +1322,24 @@ func inlineBoxVerticality(context *layoutContext, box_ Box, topBottomSubtrees *[
 		}
 		var childBaselineY pr.Float
 		verticalAlign := child.Style.GetVerticalAlign()
-		switch verticalAlign.S {
-		case "baseline":
+		switch verticalAlign.Tag {
+		case pr.Baseline:
 			childBaselineY = baselineY
-		case "middle":
+		case pr.Middle:
 			oneEx := box.Style.GetFontSize().Value * text.CharacterRatio(box.Style, box.Style.Cache(), false, context.fontConfig)
 			top := baselineY - (oneEx+child.MarginHeight())/2.
 			childBaselineY = top + child.Baseline.V()
-		case "text-top":
+		case pr.TextTop:
 			// align top with the top of the parent’s content area
 			top := baselineY - box.Baseline.V() + box.MarginTop.V() +
 				box.BorderTopWidth.V() + box.PaddingTop.V()
 			childBaselineY = top + child.Baseline.V()
-		case "text-bottom":
+		case pr.TextBottom:
 			// align bottom with the bottom of the parent’s content area
 			bottom := baselineY - box.Baseline.V() + box.MarginTop.V() +
 				box.BorderTopWidth.V() + box.PaddingTop.V() + box.Height.V()
 			childBaselineY = bottom - child.MarginHeight() + child.Baseline.V()
-		case "top", "bottom":
+		case pr.Top, pr.Bottom:
 			// TODO: actually implement vertical-align: top and bottom
 			// Later, we will assume for this subtree that its baseline
 			// is at y=0.
@@ -1360,7 +1360,7 @@ func inlineBoxVerticality(context *layoutContext, box_ Box, topBottomSubtrees *[
 			// grand-children for inline boxes are handled below
 		}
 
-		if verticalAlign.S == "top" || verticalAlign.S == "bottom" {
+		if verticalAlign.Tag == pr.Top || verticalAlign.Tag == pr.Bottom {
 			// top or bottom are special, they need to be handled in
 			// a later pass.
 			*topBottomSubtrees = append(*topBottomSubtrees, child_)
@@ -1506,9 +1506,9 @@ func isPhantomLinebox(linebox *bo.BoxFields) bool {
 				return false
 			}
 			for side := pr.KnownProp(0); side < 4; side++ {
-				m := child.Style.Get((pr.PMarginBottom + side*5).Key()).(pr.DimOrS).Value
-				b := child.Style.Get((pr.PBorderBottomWidth + side*5).Key()).(pr.DimOrS).Value
-				p := child.Style.Get((pr.PPaddingBottom + side*5).Key()).(pr.DimOrS).Value
+				m := getDimOrS(child, pr.PMarginBottom+side*5).Value
+				b := getDimOrS(child, pr.PBorderBottomWidth+side*5).Value
+				p := getDimOrS(child, pr.PPaddingBottom+side*5).Value
 				if m != 0 || b != 0 || p != 0 {
 					return false
 				}

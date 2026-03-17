@@ -188,18 +188,18 @@ func (s StyleFor) Get(element Element, pseudoType string) pr.ElementStyle {
 		display := style.GetDisplay()
 		if display.Has("table") && style.GetBorderCollapse() == "collapse" {
 			// Padding do not apply
-			style.SetPaddingTop(pr.ZeroPixels.ToValue())
-			style.SetPaddingBottom(pr.ZeroPixels.ToValue())
-			style.SetPaddingLeft(pr.ZeroPixels.ToValue())
-			style.SetPaddingRight(pr.ZeroPixels.ToValue())
+			style.SetPaddingTop(pr.ZeroPixels.Tagged())
+			style.SetPaddingBottom(pr.ZeroPixels.Tagged())
+			style.SetPaddingLeft(pr.ZeroPixels.Tagged())
+			style.SetPaddingRight(pr.ZeroPixels.Tagged())
 		}
 
 		if d := display[0]; display[1] == "" && display[2] == "" && strings.HasPrefix(d, "table-") && d != "table-caption" {
 			// Margins do not apply
-			style.SetMarginTop(pr.ZeroPixels.ToValue())
-			style.SetMarginBottom(pr.ZeroPixels.ToValue())
-			style.SetMarginLeft(pr.ZeroPixels.ToValue())
-			style.SetMarginRight(pr.ZeroPixels.ToValue())
+			style.SetMarginTop(pr.ZeroPixels.Tagged())
+			style.SetMarginBottom(pr.ZeroPixels.Tagged())
+			style.SetMarginLeft(pr.ZeroPixels.Tagged())
+			style.SetMarginRight(pr.ZeroPixels.Tagged())
 		}
 	}
 	return style
@@ -549,11 +549,11 @@ func newAnonymousStyle(parentStyle pr.ElementStyle) *AnonymousStyle {
 	// border-*-style is none, so border-width computes to zero.
 	// Other than that, properties that would need computing are
 	// border-*-color, but they do not apply.
-	out.propsCache.Set(pr.PBorderTopWidth.Key(), pr.DimOrS{})
-	out.propsCache.Set(pr.PBorderBottomWidth.Key(), pr.DimOrS{})
-	out.propsCache.Set(pr.PBorderLeftWidth.Key(), pr.DimOrS{})
-	out.propsCache.Set(pr.PBorderRightWidth.Key(), pr.DimOrS{})
-	out.propsCache.Set(pr.POutlineWidth.Key(), pr.DimOrS{})
+	out.propsCache.Set(pr.PBorderTopWidth.Key(), pr.TaggedDim{})
+	out.propsCache.Set(pr.PBorderBottomWidth.Key(), pr.TaggedDim{})
+	out.propsCache.Set(pr.PBorderLeftWidth.Key(), pr.TaggedDim{})
+	out.propsCache.Set(pr.PBorderRightWidth.Key(), pr.TaggedDim{})
+	out.propsCache.Set(pr.POutlineWidth.Key(), pr.TaggedDim{})
 
 	out.specified.Display = out.GetDisplay()
 	out.specified.Float = out.GetFloat()

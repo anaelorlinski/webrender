@@ -13,7 +13,7 @@ import (
 // Compute a used length value from a computed length value.
 //
 // the return value should be set on the box
-func resolveOnePercentage(value pr.DimOrS, propertyName pr.KnownProp, referTo pr.Float) pr.MaybeFloat {
+func resolveOnePercentage(value pr.TaggedDim, propertyName pr.KnownProp, referTo pr.Float) pr.MaybeFloat {
 	// box attributes are used values
 	percent := pr.ResolvePercentage(value, referTo)
 
@@ -75,7 +75,7 @@ func resolvePercentages(box_ Box, containingBlock bo.MaybePoint) {
 		// Special handling when the height of the containing block
 		// depends on its content.
 		height := box.Style.GetHeight()
-		if height.S == "auto" || height.Unit == pr.Perc {
+		if height.Tag == pr.Auto || height.Unit == pr.Perc {
 			box.Height = pr.AutoF
 		} else {
 			if height.Unit != pr.Px {
@@ -123,8 +123,8 @@ func resoudRadius(box *bo.BoxFields, v pr.Point, side1, side2 bo.Side) bo.MaybeP
 	if box.RemoveDecorationSides[side1] || box.RemoveDecorationSides[side2] {
 		return bo.MaybePoint{pr.Float(0), pr.Float(0)}
 	}
-	rx := pr.ResolvePercentage(v[0].ToValue(), box.BorderWidth())
-	ry := pr.ResolvePercentage(v[1].ToValue(), box.BorderHeight())
+	rx := pr.ResolvePercentage(v[0].Tagged(), box.BorderWidth())
+	ry := pr.ResolvePercentage(v[1].Tagged(), box.BorderHeight())
 	return bo.MaybePoint{rx, ry}
 }
 

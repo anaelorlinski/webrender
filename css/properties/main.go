@@ -32,7 +32,7 @@ func (rt RawTokens) String() string {
 }
 
 // CssProperty is the final form of a css input, a.k.a. the computed value.
-// Default values and "var()" have been resolved, and the raw steam ok tokens has been
+// Default values and "var()" have been resolved, and the raw stream of tokens has been
 // validated.
 type CssProperty interface {
 	DeclaredValue

@@ -30,8 +30,7 @@ const ( // zero field corresponds to null content
 )
 
 var (
-	ZeroPixels      = Dimension{Unit: Px}
-	zeroPixelsValue = ZeroPixels.ToValue()
+	ZeroPixels = Dimension{Unit: Px}
 
 	CurrentColor = Color{Type: parser.ColorCurrentColor}
 	// How many CSS pixels is one <unit>?
@@ -49,16 +48,17 @@ var (
 	// Value in pixels of font-size for <absolute-size> keywords: 12pt (16px) for
 	// medium, and scaling factors given in CSS3 for others:
 	// http://www.w3.org/TR/css3-fonts/#font-size-prop
-	FontSizeKeywords = map[string]Float{ // medium is 16px, others are a ratio of medium
-		"xx-small": InitialValues.GetFontSize().Value * 3 / 5,
-		"x-small":  InitialValues.GetFontSize().Value * 3 / 4,
-		"small":    InitialValues.GetFontSize().Value * 8 / 9,
-		"medium":   InitialValues.GetFontSize().Value * 1 / 1,
-		"large":    InitialValues.GetFontSize().Value * 6 / 5,
-		"x-large":  InitialValues.GetFontSize().Value * 3 / 2,
-		"xx-large": InitialValues.GetFontSize().Value * 2 / 1,
+	//
+	// The value for tag t is at t - XxSmall
+	FontSizeKeywords = [...]Float{ // medium is 16px, others are a ratio of medium
+		InitialValues.GetFontSize().Value * 3 / 5,
+		InitialValues.GetFontSize().Value * 3 / 4,
+		InitialValues.GetFontSize().Value * 8 / 9,
+		InitialValues.GetFontSize().Value * 1 / 1,
+		InitialValues.GetFontSize().Value * 6 / 5,
+		InitialValues.GetFontSize().Value * 3 / 2,
+		InitialValues.GetFontSize().Value * 2 / 1,
 	}
-	FontSizeKeywordsOrder = []string{"xx-small", "x-small", "small", "medium", "large", "x-large", "xx-large"}
 
 	// http://www.w3.org/TR/css3-page/#size
 	PageSizes = map[string]Point{

@@ -162,37 +162,37 @@ func TestExpandShorthands(t *testing.T) {
 	if m[0].Name != pr.PMarginBottom.Key() {
 		t.Errorf("expected margin_bottom got %s", m[0].Name)
 	}
-	if (m[0].Value.(pr.DimOrS) != pr.Dimension{Value: 3, Unit: pr.Em}.ToValue()) {
+	if (m[0].Value.(pr.TaggedDim) != pr.Dimension{Value: 3, Unit: pr.Em}.Tagged()) {
 		t.Errorf("expected got %v", m[0].Value)
 	}
 	if m[1].Name != pr.PMarginTop.Key() {
 		t.Errorf("expected margin_top got %s", m[1].Name)
 	}
-	if (m[1].Value.(pr.DimOrS) != pr.Dimension{Value: 2, Unit: pr.Em}.ToValue()) {
+	if (m[1].Value.(pr.TaggedDim) != pr.Dimension{Value: 2, Unit: pr.Em}.Tagged()) {
 		t.Errorf("expected got %v", m[1].Value)
 	}
 	if m[2].Name != pr.PMarginRight.Key() {
 		t.Errorf("expected margin_right got %s", m[2].Name)
 	}
-	if (m[2].Value.(pr.DimOrS) != pr.Dimension{Value: 0, Unit: pr.Scalar}.ToValue()) {
+	if (m[2].Value.(pr.TaggedDim) != pr.Dimension{Value: 0, Unit: pr.Scalar}.Tagged()) {
 		t.Errorf("expected got %v", m[2].Value)
 	}
 	if m[3].Name != pr.PMarginBottom.Key() {
 		t.Errorf("expected margin_bottom got %s", m[3].Name)
 	}
-	if (m[3].Value.(pr.DimOrS) != pr.Dimension{Value: 2, Unit: pr.Em}.ToValue()) {
+	if (m[3].Value.(pr.TaggedDim) != pr.Dimension{Value: 2, Unit: pr.Em}.Tagged()) {
 		t.Errorf("expected got %v", m[3].Value)
 	}
 	if m[4].Name != pr.PMarginLeft.Key() {
 		t.Errorf("expected margin_left got %s", m[4].Name)
 	}
-	if (m[4].Value.(pr.DimOrS) != pr.Dimension{Value: 0, Unit: pr.Scalar}.ToValue()) {
+	if (m[4].Value.(pr.TaggedDim) != pr.Dimension{Value: 0, Unit: pr.Scalar}.Tagged()) {
 		t.Errorf("expected got %v", m[4].Value)
 	}
 	if m[5].Name != pr.PMarginLeft.Key() {
 		t.Errorf("expected margin_left got %s", m[5].Name)
 	}
-	if (m[5].Value.(pr.DimOrS) != pr.Dimension{Value: 4, Unit: pr.Em}.ToValue()) {
+	if (m[5].Value.(pr.TaggedDim) != pr.Dimension{Value: 4, Unit: pr.Em}.Tagged()) {
 		t.Errorf("expected got %v", m[5].Value)
 	}
 	capt.AssertNoLogs(t)
@@ -255,19 +255,19 @@ func TestAnnotateDocument(t *testing.T) {
 	assertProp(t, h1, pr.PFontSize, pr.FToV(40)) // 2em
 
 	// x-large * initial = 3/2 * 16 = 24
-	assertProp(t, p, pr.PMarginTop, pr.Dimension{Value: 24, Unit: pr.Px}.ToValue())
-	assertProp(t, p, pr.PMarginRight, pr.Dimension{Value: 0, Unit: pr.Px}.ToValue())
-	assertProp(t, p, pr.PMarginBottom, pr.Dimension{Value: 24, Unit: pr.Px}.ToValue())
-	assertProp(t, p, pr.PMarginLeft, pr.Dimension{Value: 0, Unit: pr.Px}.ToValue())
+	assertProp(t, p, pr.PMarginTop, pr.Dimension{Value: 24, Unit: pr.Px}.Tagged())
+	assertProp(t, p, pr.PMarginRight, pr.Dimension{Value: 0, Unit: pr.Px}.Tagged())
+	assertProp(t, p, pr.PMarginBottom, pr.Dimension{Value: 24, Unit: pr.Px}.Tagged())
+	assertProp(t, p, pr.PMarginLeft, pr.Dimension{Value: 0, Unit: pr.Px}.Tagged())
 	assertProp(t, p, pr.PBackgroundColor, pr.CurrentColor)
 
 	// 2em * 1.25ex = 2 * 20 * 1.25 * 0.8 = 40
 	// 2.5ex * 1.25ex = 2.5 * 0.8 * 20 * 1.25 * 0.8 = 40
 	// TODO: ex unit doesn"t work with @font-face fonts, see computedValues.py
 	// assert ul["marginTop"] , pr.Dimension {Value:40,Unit: pr.Px}
-	// .ToValue()assert ul["marginRight"] , pr.Dimension {Value:40,Unit: pr.Px}
-	// .ToValue()assert ul["marginBottom"] , pr.Dimension {Value:40,Unit: pr.Px}
-	// .ToValue()assert ul["marginLeft"] , pr.Dimension {Value:40,Unit: pr.Px}
+	// .Tagged()assert ul["marginRight"] , pr.Dimension {Value:40,Unit: pr.Px}
+	// .Tagged()assert ul["marginBottom"] , pr.Dimension {Value:40,Unit: pr.Px}
+	// .Tagged()assert ul["marginLeft"] , pr.Dimension {Value:40,Unit: pr.Px}
 
 	assertProp(t, ul, pr.PFontWeight, pr.IntString{Int: 400})
 	// thick = 5px, 0.25 inches = 96*.25 = 24px
@@ -277,28 +277,28 @@ func TestAnnotateDocument(t *testing.T) {
 	assertProp(t, ul, pr.PBorderLeftWidth, pr.FToV(24))
 
 	assertProp(t, li0, pr.PFontWeight, pr.IntString{Int: 700})
-	assertProp(t, li0, pr.PFontSize, pr.FToV(8))                                      // 6pt)
-	assertProp(t, li0, pr.PMarginTop, pr.Dimension{Value: 16, Unit: pr.Px}.ToValue()) // 2em)
-	assertProp(t, li0, pr.PMarginRight, pr.Dimension{Value: 0, Unit: pr.Px}.ToValue())
-	assertProp(t, li0, pr.PMarginBottom, pr.Dimension{Value: 16, Unit: pr.Px}.ToValue())
-	assertProp(t, li0, pr.PMarginLeft, pr.Dimension{Value: 32, Unit: pr.Px}.ToValue()) // 4em)
+	assertProp(t, li0, pr.PFontSize, pr.FToV(8))                                     // 6pt)
+	assertProp(t, li0, pr.PMarginTop, pr.Dimension{Value: 16, Unit: pr.Px}.Tagged()) // 2em)
+	assertProp(t, li0, pr.PMarginRight, pr.Dimension{Value: 0, Unit: pr.Px}.Tagged())
+	assertProp(t, li0, pr.PMarginBottom, pr.Dimension{Value: 16, Unit: pr.Px}.Tagged())
+	assertProp(t, li0, pr.PMarginLeft, pr.Dimension{Value: 32, Unit: pr.Px}.Tagged()) // 4em)
 
 	assertProp(t, a, pr.PTextDecorationLine, pr.Underline)
 	assertProp(t, a, pr.PFontWeight, pr.IntString{Int: 900})
 	assertProp(t, a, pr.PFontSize, pr.FToV(24)) // 300% of 8px)
-	assertProp(t, a, pr.PPaddingTop, pr.Dimension{Value: 1, Unit: pr.Px}.ToValue())
-	assertProp(t, a, pr.PPaddingRight, pr.Dimension{Value: 2, Unit: pr.Px}.ToValue())
-	assertProp(t, a, pr.PPaddingBottom, pr.Dimension{Value: 3, Unit: pr.Px}.ToValue())
-	assertProp(t, a, pr.PPaddingLeft, pr.Dimension{Value: 4, Unit: pr.Px}.ToValue())
+	assertProp(t, a, pr.PPaddingTop, pr.Dimension{Value: 1, Unit: pr.Px}.Tagged())
+	assertProp(t, a, pr.PPaddingRight, pr.Dimension{Value: 2, Unit: pr.Px}.Tagged())
+	assertProp(t, a, pr.PPaddingBottom, pr.Dimension{Value: 3, Unit: pr.Px}.Tagged())
+	assertProp(t, a, pr.PPaddingLeft, pr.Dimension{Value: 4, Unit: pr.Px}.Tagged())
 	assertProp(t, a, pr.PBorderTopWidth, pr.FToV(42))
 	assertProp(t, a, pr.PBorderBottomWidth, pr.FToV(42))
 
 	assertProp(t, a, pr.PColor, pr.NewColor(1, 0, 0, 1))
 	assertProp(t, a, pr.PBorderTopColor, pr.CurrentColor)
 
-	assertProp(t, div, pr.PFontSize, pr.FToV(40))                                     // 2 * 20px)
-	assertProp(t, span1, pr.PWidth, pr.Dimension{Value: 160, Unit: pr.Px}.ToValue())  // 10 * 16px (Root default is 16px))
-	assertProp(t, span1, pr.PHeight, pr.Dimension{Value: 400, Unit: pr.Px}.ToValue()) // 10 * (2 * 20px))
+	assertProp(t, div, pr.PFontSize, pr.FToV(40))                                    // 2 * 20px)
+	assertProp(t, span1, pr.PWidth, pr.Dimension{Value: 160, Unit: pr.Px}.Tagged())  // 10 * 16px (Root default is 16px))
+	assertProp(t, span1, pr.PHeight, pr.Dimension{Value: 400, Unit: pr.Px}.Tagged()) // 10 * (2 * 20px))
 	assertProp(t, span2, pr.PFontSize, pr.FToV(32))
 
 	// The href attr should be as in the source, not made absolute.
@@ -337,33 +337,33 @@ func TestPage(t *testing.T) {
 	pageType := utils.PageElement{Side: "left", Blank: false, Index: 0, Name: ""}
 	styleFor.SetPageComputedStylesT(pageType, document)
 	style := styleFor.Get(pageType, "")
-	assertProp(t, style, pr.PMarginTop, pr.Dimension{Value: 5, Unit: pr.Px}.ToValue())
-	assertProp(t, style, pr.PMarginLeft, pr.Dimension{Value: 10, Unit: pr.Px}.ToValue())
-	assertProp(t, style, pr.PMarginBottom, pr.Dimension{Value: 10, Unit: pr.Px}.ToValue())
+	assertProp(t, style, pr.PMarginTop, pr.Dimension{Value: 5, Unit: pr.Px}.Tagged())
+	assertProp(t, style, pr.PMarginLeft, pr.Dimension{Value: 10, Unit: pr.Px}.Tagged())
+	assertProp(t, style, pr.PMarginBottom, pr.Dimension{Value: 10, Unit: pr.Px}.Tagged())
 	assertProp(t, style, pr.PColor, pr.NewColor(1, 0, 0, 1)) // red, inherited from html
 
 	pageType = utils.PageElement{Side: "right", Blank: false, Index: 0, Name: ""}
 	styleFor.SetPageComputedStylesT(pageType, document)
 	style = styleFor.Get(pageType, "")
-	assertProp(t, style, pr.PMarginTop, pr.Dimension{Value: 5, Unit: pr.Px}.ToValue())
-	assertProp(t, style, pr.PMarginLeft, pr.Dimension{Value: 10, Unit: pr.Px}.ToValue())
-	assertProp(t, style, pr.PMarginBottom, pr.Dimension{Value: 16, Unit: pr.Px}.ToValue())
+	assertProp(t, style, pr.PMarginTop, pr.Dimension{Value: 5, Unit: pr.Px}.Tagged())
+	assertProp(t, style, pr.PMarginLeft, pr.Dimension{Value: 10, Unit: pr.Px}.Tagged())
+	assertProp(t, style, pr.PMarginBottom, pr.Dimension{Value: 16, Unit: pr.Px}.Tagged())
 	assertProp(t, style, pr.PColor, pr.NewColor(0, 0, 1, 1)) // blue
 
 	pageType = utils.PageElement{Side: "left", Blank: false, Index: 1, Name: ""}
 	styleFor.SetPageComputedStylesT(pageType, document)
 	style = styleFor.Get(pageType, "")
-	assertProp(t, style, pr.PMarginTop, pr.Dimension{Value: 10, Unit: pr.Px}.ToValue())
-	assertProp(t, style, pr.PMarginLeft, pr.Dimension{Value: 10, Unit: pr.Px}.ToValue())
-	assertProp(t, style, pr.PMarginBottom, pr.Dimension{Value: 10, Unit: pr.Px}.ToValue())
+	assertProp(t, style, pr.PMarginTop, pr.Dimension{Value: 10, Unit: pr.Px}.Tagged())
+	assertProp(t, style, pr.PMarginLeft, pr.Dimension{Value: 10, Unit: pr.Px}.Tagged())
+	assertProp(t, style, pr.PMarginBottom, pr.Dimension{Value: 10, Unit: pr.Px}.Tagged())
 	assertProp(t, style, pr.PColor, pr.NewColor(1, 0, 0, 1)) // red, inherited from html
 
 	pageType = utils.PageElement{Side: "right", Blank: false, Index: 1, Name: ""}
 	styleFor.SetPageComputedStylesT(pageType, document)
 	style = styleFor.Get(pageType, "")
-	assertProp(t, style, pr.PMarginTop, pr.Dimension{Value: 10, Unit: pr.Px}.ToValue())
-	assertProp(t, style, pr.PMarginLeft, pr.Dimension{Value: 10, Unit: pr.Px}.ToValue())
-	assertProp(t, style, pr.PMarginBottom, pr.Dimension{Value: 16, Unit: pr.Px}.ToValue())
+	assertProp(t, style, pr.PMarginTop, pr.Dimension{Value: 10, Unit: pr.Px}.Tagged())
+	assertProp(t, style, pr.PMarginLeft, pr.Dimension{Value: 10, Unit: pr.Px}.Tagged())
+	assertProp(t, style, pr.PMarginBottom, pr.Dimension{Value: 16, Unit: pr.Px}.Tagged())
 	assertProp(t, style, pr.PColor, pr.NewColor(0, 0, 1, 1)) // blue
 
 	pageType = utils.PageElement{Side: "left", Blank: false, Index: 0, Name: ""}
@@ -377,7 +377,7 @@ func TestPage(t *testing.T) {
 	styleFor.SetPageComputedStylesT(pageType, document)
 	style = styleFor.Get(pageType, "@top-left")
 	assertProp(t, style, pr.PFontSize, pr.FToV(20)) // inherited from @page
-	assertProp(t, style, pr.PWidth, pr.Dimension{Value: 200, Unit: pr.Px}.ToValue())
+	assertProp(t, style, pr.PWidth, pr.Dimension{Value: 200, Unit: pr.Px}.Tagged())
 
 	pageType = utils.PageElement{Side: "right", Blank: false, Index: 0, Name: ""}
 	styleFor.SetPageComputedStylesT(pageType, document)

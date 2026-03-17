@@ -89,7 +89,7 @@ type fnBlock = func(*layoutContext, Box, bool) pr.Float
 func blockContentWidth(context *layoutContext, box Box, function fnBlock, outer bool) pr.Float {
 	width := box.Box().Style.GetWidth()
 	var widthValue pr.Float
-	if width.S == "auto" || width.Unit == pr.Perc {
+	if width.Tag == pr.Auto || width.Unit == pr.Perc {
 		// "percentages on the following properties are treated instead as
 		// though they were the following: width: auto"
 		// https://dbaron.org/css/intrinsic/#outer-intrinsic
@@ -118,12 +118,12 @@ func minMax(box Box, width pr.Float) pr.Float {
 	minWidth := box.Box().Style.GetMinWidth()
 	maxWidth := box.Box().Style.GetMaxWidth()
 	var resMin, resMax pr.Float
-	if minWidth.S == "auto" || minWidth.Unit == pr.Perc {
+	if minWidth.Tag == pr.Auto || minWidth.Unit == pr.Perc {
 		resMin = 0
 	} else {
 		resMin = minWidth.Value
 	}
-	if maxWidth.S == "auto" || maxWidth.Unit == pr.Perc {
+	if maxWidth.Tag == pr.Auto || maxWidth.Unit == pr.Perc {
 		resMax = pr.Inf
 	} else {
 		resMax = maxWidth.Value
@@ -133,11 +133,11 @@ func minMax(box Box, width pr.Float) pr.Float {
 		_, _, ratio := replaced.Replaced().Replacement.GetIntrinsicSize(1, box.Box().Style.GetFontSize().Value)
 		if ratio != nil {
 			minHeight := box.Box().Style.GetMinHeight()
-			if minHeight.S != "auto" && minHeight.Unit != pr.Perc {
+			if minHeight.Tag != pr.Auto && minHeight.Unit != pr.Perc {
 				resMin = max(resMin, minHeight.Value*ratio.V())
 			}
 			maxHeight := box.Box().Style.GetMaxHeight()
-			if maxHeight.S != "auto" && maxHeight.Unit != pr.Perc {
+			if maxHeight.Tag != pr.Auto && maxHeight.Unit != pr.Perc {
 				resMax = min(resMax, maxHeight.Value*ratio.V())
 			}
 		}
@@ -163,8 +163,8 @@ func marginWidth(box *bo.BoxFields, width pr.Float, left, right bool) pr.Float {
 		cases = append(cases, pr.PMarginRight, pr.PPaddingRight)
 	}
 	for _, value := range cases {
-		styleValue := box.Style.Get(value.Key()).(pr.DimOrS)
-		if styleValue.S != "auto" {
+		styleValue := box.Style.Get(value.Key()).(pr.TaggedDim)
+		if styleValue.Tag != pr.Auto {
 			switch styleValue.Unit {
 			case pr.Px:
 				width += styleValue.Value
@@ -265,7 +265,7 @@ func inlineMaxContentWidth(context *layoutContext, box_ Box, outer, isLineStart 
 func columnGroupContentWidth(box Box) pr.Float {
 	width := box.Box().Style.GetWidth()
 	var width_ pr.Float
-	if width.S == "auto" || width.Unit == pr.Perc {
+	if width.Tag == pr.Auto || width.Unit == pr.Perc {
 		width_ = 0
 	} else if width.Unit == pr.Px {
 		width_ = width.Value
@@ -450,13 +450,13 @@ func percentageContribution(box bo.BoxFields) pr.Float {
 	var minWidth, width pr.Float
 	maxWidth := pr.Inf
 	miw, maw, w := box.Style.GetMinWidth(), box.Style.GetMaxWidth(), box.Style.GetWidth()
-	if miw.S != "auto" && miw.Unit == pr.Perc {
+	if miw.Tag != pr.Auto && miw.Unit == pr.Perc {
 		minWidth = miw.Value
 	}
-	if maw.S != "auto" && maw.Unit == pr.Perc {
+	if maw.Tag != pr.Auto && maw.Unit == pr.Perc {
 		maxWidth = maw.Value
 	}
-	if w.S != "auto" && w.Unit == pr.Perc {
+	if w.Tag != pr.Auto && w.Unit == pr.Perc {
 		width = w.Value
 	}
 	return max(minWidth, min(width, maxWidth))
@@ -667,20 +667,20 @@ outerLoop:
 	constrainedness := make([]bool, gridWidth)
 	for i := range constrainedness {
 		if columnGroups[i] != nil {
-			if wid := columnGroups[i].Box().Style.GetWidth(); wid.S != "auto" && wid.Unit != pr.Perc {
+			if wid := columnGroups[i].Box().Style.GetWidth(); wid.Tag != pr.Auto && wid.Unit != pr.Perc {
 				constrainedness[i] = true
 				continue
 			}
 		}
 		if columns[i] != nil {
-			if wid := columns[i].Box().Style.GetWidth(); wid.S != "auto" && wid.Unit != pr.Perc {
+			if wid := columns[i].Box().Style.GetWidth(); wid.Tag != pr.Auto && wid.Unit != pr.Perc {
 				constrainedness[i] = true
 				continue
 			}
 		}
 		for _, cell := range zippedGrid[i] {
 			if cell != nil {
-				if wid := cell.Box().Style.GetWidth(); cell.Box().Colspan == 1 && wid.S != "auto" && wid.Unit != pr.Perc {
+				if wid := cell.Box().Style.GetWidth(); cell.Box().Colspan == 1 && wid.Tag != pr.Auto && wid.Unit != pr.Perc {
 					constrainedness[i] = true
 					break
 				}
@@ -769,7 +769,7 @@ outerLoop:
 
 	tableMinWidth := tableMinContentWidth
 	tableMaxWidth := tableMaxContentWidth
-	if wid := table.Style.GetWidth(); wid.S != "auto" && wid.Unit == pr.Px {
+	if wid := table.Style.GetWidth(); wid.Tag != pr.Auto && wid.Unit == pr.Px {
 		// "percentages on the following properties are treated instead as
 		// though they were the following: width: auto"
 		// https://dbaron.org/css/intrinsic/#outer-intrinsic
@@ -812,16 +812,16 @@ func replacedMinContentWidth(box *bo.ReplacedBox, outer bool) pr.Float {
 		h pr.MaybeFloat
 		w pr.Float
 	)
-	if width.S == "auto" {
+	if width.Tag == pr.Auto {
 		height := box.Style.GetHeight()
-		if height.S == "auto" || height.Unit == pr.Perc {
+		if height.Tag == pr.Auto || height.Unit == pr.Perc {
 			h = pr.AutoF
 		} else if height.Unit == pr.Px {
 			h = height.Value
 		} else {
 			panic(fmt.Sprintf("expected Px got %d", height.Unit))
 		}
-		if mw := box.Style.GetMaxWidth(); mw.S != "auto" && mw.Unit == pr.Perc {
+		if mw := box.Style.GetMaxWidth(); mw.Tag != pr.Auto && mw.Unit == pr.Perc {
 			// See https://drafts.csswg.org/css-sizing/#intrinsic-contribution
 			w = pr.Float(0)
 		} else {
@@ -851,9 +851,9 @@ func replacedMaxContentWidth(box *bo.ReplacedBox, outer bool) pr.Float {
 		h pr.MaybeFloat
 		w pr.Float
 	)
-	if width.S == "auto" {
+	if width.Tag == pr.Auto {
 		height := box.Style.GetHeight()
-		if height.S == "auto" || height.Unit == pr.Perc {
+		if height.Tag == pr.Auto || height.Unit == pr.Perc {
 			h = pr.AutoF
 		} else if height.Unit == pr.Px {
 			h = height.Value

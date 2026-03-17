@@ -1383,7 +1383,7 @@ func collapseTableBorders(table TableBoxITF, gridWidth, gridHeight int) BorderGr
 	)
 	setOneBorder := func(borderGrid [][]Border, boxStyle pr.ElementStyle, side pr.KnownProp, gridX, gridY int) {
 		style := boxStyle.Get((pr.PBorderBottomStyle + side*5).Key()).(pr.String)
-		width := boxStyle.Get((pr.PBorderBottomWidth + side*5).Key()).(pr.DimOrS)
+		width := boxStyle.Get((pr.PBorderBottomWidth + side*5).Key()).(pr.TaggedDim)
 		color := tree.ResolveColor(boxStyle, pr.PBorderBottomColor+side*5)
 
 		// https://www.w3.org/TR/CSS21/tables.html#border-conflict-resolution

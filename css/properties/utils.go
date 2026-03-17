@@ -26,34 +26,43 @@ const (
 	External
 	Local
 	Attachment
-)
 
-func (t Tag) String() string {
-	switch t {
-	case 0:
-		return "<0>"
-	case Auto:
-		return "Auto"
-	case None:
-		return "None"
-	case Span:
-		return "Span"
-	case Subgrid:
-		return "Subgrid"
-	case Attr:
-		return "Attr"
-	case Internal:
-		return "Internal"
-	case External:
-		return "External"
-	case Local:
-		return "Local"
-	case Attachment:
-		return "Attachment"
-	default:
-		return fmt.Sprintf("unknown Tag %d", t)
-	}
-}
+	// length related
+	Content
+	FromFont
+	Fill
+	MinContent
+	MaxContent
+	Normal
+
+	// background size
+	Cover
+	Contain
+
+	// font size : the order matters
+	XxSmall
+	XSmall
+	Small
+	Medium
+	Large
+	XLarge
+	XxLarge
+
+	Smaller
+	Larger
+
+	Thin
+	Thick
+
+	Baseline
+	Middle
+	TextTop
+	TextBottom
+	Top
+	Bottom
+	Super
+	Sub
+)
 
 // --------------- Values  -----------------------------------------------
 
@@ -73,22 +82,22 @@ func (d Dimension) ToValue() DimOrS {
 	return DimOrS{Dimension: d}
 }
 
-func FToD(f Fl) Dimension       { return Dimension{Value: Float(f), Unit: Scalar} }
-func PercToD(f Fl) Dimension    { return Dimension{Value: Float(f), Unit: Perc} }
-func PercToV(f Fl) DimOrS       { return DimOrS{Dimension: Dimension{Value: Float(f), Unit: Perc}} }
-func SToV(s string) DimOrS      { return DimOrS{S: s} }
-func FToV(f Fl) DimOrS          { return FToD(f).ToValue() }
-func (f Float) ToValue() DimOrS { return FToV(Fl(f)) }
+// FToPx returns `f` as pixels.
+func FToPx(f Float) TaggedDim      { return TaggedDim{Dimension: Dimension{Value: f, Unit: Px}} }
+func FToD(f Fl) Dimension          { return Dimension{Value: Float(f), Unit: Scalar} }
+func PercToD(f Fl) Dimension       { return Dimension{Value: Float(f), Unit: Perc} }
+func PercToV(f Fl) TaggedDim       { return TaggedDim{Dimension: PercToD(f)} }
+func FToV(f Fl) TaggedDim          { return TaggedDim{Dimension: FToD(f)} }
+func (f Float) ToValue() TaggedDim { return FToV(Fl(f)) }
+func TagToV(t Tag) TaggedDim       { return TaggedDim{Tag: t} }
+func SToV(s string) DimOrS         { return DimOrS{S: s} }
 
-func (v DimOrS) ToMaybeFloat() MaybeFloat {
-	if v.S == "auto" {
+func (v TaggedDim) ToMaybeFloat() MaybeFloat {
+	if v.Tag == Auto {
 		return AutoF
 	}
 	return v.Value
 }
-
-// FToPx returns `f` as pixels.
-func FToPx(f Float) DimOrS { return Dimension{Unit: Px, Value: f}.ToValue() }
 
 func NewColor(r, g, b, a Fl) Color {
 	return Color{RGBA: parser.RGBA{R: r, G: g, B: b, A: a}, Type: parser.ColorRGBA}

@@ -384,7 +384,7 @@ func (l *layoutContext) createBlockFormattingContext() {
 func (l *layoutContext) finishBlockFormattingContext(rootBox_ Box) {
 	// See https://www.w3.org/TR/CSS2/visudet.html#root-height
 	rootBox := rootBox_.Box()
-	if rootBox.Style.GetHeight().S == "auto" && len(l.excludedShapes.list) != 0 {
+	if rootBox.Style.GetHeight().Tag == pr.Auto && len(l.excludedShapes.list) != 0 {
 		boxBottom := rootBox.ContentBoxY() + rootBox.Height.V()
 		maxShapeBottom := boxBottom
 		for _, shape := range l.excludedShapes.list {

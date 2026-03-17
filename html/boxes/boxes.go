@@ -209,7 +209,7 @@ type BoxFields struct {
 	Baseline       pr.MaybeFloat
 	ComputedHeight pr.MaybeFloat
 	ContentHeight  pr.Float
-	VerticalAlign  string
+	VerticalAlign  pr.Tag
 
 	// For table cells, [true] when no children is either floated or in normal flow
 	Empty bool
@@ -220,7 +220,6 @@ type BoxFields struct {
 	GridX int
 	Index int
 
-	FlexBasis                                                      pr.DimOrS
 	FlexBaseSize, TargetMainSize, Adjustment, HypotheticalMainSize pr.Float
 	FlexFactor, ScaledFlexShrinkFactor                             pr.Float
 	Frozen                                                         bool
@@ -556,7 +555,7 @@ func IsMonolithic(box Box) bool {
 	style := box.Box().Style
 	overflow, height := style.GetOverflow(), style.GetHeight()
 	return AtomicInlineLevelT.IsInstance(box) || ReplacedT.IsInstance(box) ||
-		overflow == "auto" || overflow == "scroll" || (overflow == "hidden" && height.S != "auto")
+		overflow == "auto" || overflow == "scroll" || (overflow == "hidden" && height.Tag != pr.Auto)
 }
 
 // Return whether this box establishes a block formatting context.

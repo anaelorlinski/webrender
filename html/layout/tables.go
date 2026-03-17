@@ -214,9 +214,9 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 				cell.ComputedHeight = cell.Height
 				cell.Height = pr.AutoF
 				originalStyle := cell.Style
-				if cell.Style.GetHeight().S != "auto" {
+				if cell.Style.GetHeight().Tag != pr.Auto {
 					styleCopy := cell.Style.Copy()
-					styleCopy.SetHeight(pr.SToV("auto"))
+					styleCopy.SetHeight(pr.TagToV(pr.Auto))
 					cell.Style = styleCopy
 				}
 				newCell, tmp, _ := blockContainerLayout(context, cell_, bottomSpace, cellSkipStack, pageIsEmpty,
@@ -279,11 +279,11 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 			for _, cell_ := range row.Children {
 				cell := cell_.Box()
 				verticalAlign := cell.Style.GetVerticalAlign()
-				if verticalAlign.S == "top" || verticalAlign.S == "middle" || verticalAlign.S == "bottom" {
-					cell.VerticalAlign = verticalAlign.S
+				if verticalAlign.Tag == pr.Top || verticalAlign.Tag == pr.Middle || verticalAlign.Tag == pr.Bottom {
+					cell.VerticalAlign = verticalAlign.Tag
 				} else {
 					// Assume "baseline" for any other value
-					cell.VerticalAlign = "baseline"
+					cell.VerticalAlign = pr.Baseline
 					cell.Baseline = cellBaseline(cell_)
 					baselineCells = append(baselineCells, cell_)
 				}
@@ -351,9 +351,9 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 				cellBottomY := cell.PositionY + cell.BorderHeight()
 				extra := rowBottomY - cellBottomY
 				if extra != 0 {
-					if cell.VerticalAlign == "bottom" {
+					if cell.VerticalAlign == pr.Bottom {
 						addTopPadding(cell, extra)
-					} else if cell.VerticalAlign == "middle" {
+					} else if cell.VerticalAlign == pr.Middle {
 						extra /= 2.
 						addTopPadding(cell, extra)
 						cell.PaddingBottom = cell.PaddingBottom.V() + extra
@@ -363,9 +363,9 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 				}
 				if cell.ComputedHeight != pr.AutoF {
 					var verticalAlignShift pr.Float
-					if cell.VerticalAlign == "middle" {
+					if cell.VerticalAlign == pr.Middle {
 						verticalAlignShift = (cell.ComputedHeight.V() - cell.ContentHeight.V()) / 2
-					} else if cell.VerticalAlign == "bottom" {
+					} else if cell.VerticalAlign == pr.Bottom {
 						verticalAlignShift = cell.ComputedHeight.V() - cell.ContentHeight.V()
 					}
 					if verticalAlignShift > 0 {

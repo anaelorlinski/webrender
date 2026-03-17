@@ -45,7 +45,7 @@ func TestTextDecoration(t *testing.T) {
 	})
 	assertValidDict(t, "text-decoration: 100% none", map[pr.KnownProp]pr.DeclaredValue{
 		pr.PTextDecorationLine:      pr.Decorations(0),
-		pr.PTextDecorationThickness: pr.Dimension{Value: 100, Unit: pr.Perc}.ToValue(),
+		pr.PTextDecorationThickness: pr.Dimension{Value: 100, Unit: pr.Perc}.Tagged(),
 	})
 	assertValidDict(t, "text-decoration: inherit", map[pr.KnownProp]pr.DeclaredValue{
 		pr.PTextDecorationColor:     pr.Inherit,
@@ -71,34 +71,34 @@ func TestFourSides(t *testing.T) {
 		pr.PMarginLeft:   pr.Inherit,
 	})
 	assertValidDict(t, "margin: 1em", toValidated(pr.Properties{
-		pr.PMarginTop:    pr.Dimension{Value: 1, Unit: pr.Em}.ToValue(),
-		pr.PMarginRight:  pr.Dimension{Value: 1, Unit: pr.Em}.ToValue(),
-		pr.PMarginBottom: pr.Dimension{Value: 1, Unit: pr.Em}.ToValue(),
-		pr.PMarginLeft:   pr.Dimension{Value: 1, Unit: pr.Em}.ToValue(),
+		pr.PMarginTop:    pr.Dimension{Value: 1, Unit: pr.Em}.Tagged(),
+		pr.PMarginRight:  pr.Dimension{Value: 1, Unit: pr.Em}.Tagged(),
+		pr.PMarginBottom: pr.Dimension{Value: 1, Unit: pr.Em}.Tagged(),
+		pr.PMarginLeft:   pr.Dimension{Value: 1, Unit: pr.Em}.Tagged(),
 	}))
 	assertValidDict(t, "margin: -1em auto 20%", toValidated(pr.Properties{
-		pr.PMarginTop:    pr.Dimension{Value: -1, Unit: pr.Em}.ToValue(),
-		pr.PMarginRight:  pr.SToV("auto"),
-		pr.PMarginBottom: pr.Dimension{Value: 20, Unit: pr.Perc}.ToValue(),
-		pr.PMarginLeft:   pr.SToV("auto"),
+		pr.PMarginTop:    pr.Dimension{Value: -1, Unit: pr.Em}.Tagged(),
+		pr.PMarginRight:  pr.TagToV(pr.Auto),
+		pr.PMarginBottom: pr.Dimension{Value: 20, Unit: pr.Perc}.Tagged(),
+		pr.PMarginLeft:   pr.TagToV(pr.Auto),
 	}))
 	assertValidDict(t, "padding: 1em 0", toValidated(pr.Properties{
-		pr.PPaddingTop:    pr.Dimension{Value: 1, Unit: pr.Em}.ToValue(),
-		pr.PPaddingRight:  pr.Dimension{Value: 0, Unit: pr.Scalar}.ToValue(),
-		pr.PPaddingBottom: pr.Dimension{Value: 1, Unit: pr.Em}.ToValue(),
-		pr.PPaddingLeft:   pr.Dimension{Value: 0, Unit: pr.Scalar}.ToValue(),
+		pr.PPaddingTop:    pr.Dimension{Value: 1, Unit: pr.Em}.Tagged(),
+		pr.PPaddingRight:  pr.Dimension{Value: 0, Unit: pr.Scalar}.Tagged(),
+		pr.PPaddingBottom: pr.Dimension{Value: 1, Unit: pr.Em}.Tagged(),
+		pr.PPaddingLeft:   pr.Dimension{Value: 0, Unit: pr.Scalar}.Tagged(),
 	}))
 	assertValidDict(t, "padding: 1em 0 2%", toValidated(pr.Properties{
-		pr.PPaddingTop:    pr.Dimension{Value: 1, Unit: pr.Em}.ToValue(),
-		pr.PPaddingRight:  pr.Dimension{Value: 0, Unit: pr.Scalar}.ToValue(),
-		pr.PPaddingBottom: pr.Dimension{Value: 2, Unit: pr.Perc}.ToValue(),
-		pr.PPaddingLeft:   pr.Dimension{Value: 0, Unit: pr.Scalar}.ToValue(),
+		pr.PPaddingTop:    pr.Dimension{Value: 1, Unit: pr.Em}.Tagged(),
+		pr.PPaddingRight:  pr.Dimension{Value: 0, Unit: pr.Scalar}.Tagged(),
+		pr.PPaddingBottom: pr.Dimension{Value: 2, Unit: pr.Perc}.Tagged(),
+		pr.PPaddingLeft:   pr.Dimension{Value: 0, Unit: pr.Scalar}.Tagged(),
 	}))
 	assertValidDict(t, "padding: 1em 0 2em 5px", toValidated(pr.Properties{
-		pr.PPaddingTop:    pr.Dimension{Value: 1, Unit: pr.Em}.ToValue(),
-		pr.PPaddingRight:  pr.Dimension{Value: 0, Unit: pr.Scalar}.ToValue(),
-		pr.PPaddingBottom: pr.Dimension{Value: 2, Unit: pr.Em}.ToValue(),
-		pr.PPaddingLeft:   pr.Dimension{Value: 5, Unit: pr.Px}.ToValue(),
+		pr.PPaddingTop:    pr.Dimension{Value: 1, Unit: pr.Em}.Tagged(),
+		pr.PPaddingRight:  pr.Dimension{Value: 0, Unit: pr.Scalar}.Tagged(),
+		pr.PPaddingBottom: pr.Dimension{Value: 2, Unit: pr.Em}.Tagged(),
+		pr.PPaddingLeft:   pr.Dimension{Value: 5, Unit: pr.Px}.Tagged(),
 	}))
 	capt.AssertNoLogs(t)
 
@@ -114,35 +114,35 @@ func TestFourSides(t *testing.T) {
 func TestBorders(t *testing.T) {
 	capt := tu.CaptureLogs()
 	assertValidDict(t, "border-top: 3px dotted red", toValidated(pr.Properties{
-		pr.PBorderTopWidth: pr.Dimension{Value: 3, Unit: pr.Px}.ToValue(),
+		pr.PBorderTopWidth: pr.Dimension{Value: 3, Unit: pr.Px}.Tagged(),
 		pr.PBorderTopStyle: pr.String("dotted"),
 		pr.PBorderTopColor: pr.NewColor(1, 0, 0, 1), // red
 	}))
 	assertValidDict(t, "border-top: 3px dotted", toValidated(pr.Properties{
-		pr.PBorderTopWidth: pr.Dimension{Value: 3, Unit: pr.Px}.ToValue(),
+		pr.PBorderTopWidth: pr.Dimension{Value: 3, Unit: pr.Px}.Tagged(),
 		pr.PBorderTopStyle: pr.String("dotted"),
 	}))
 	assertValidDict(t, "border-top: 3px red", toValidated(pr.Properties{
-		pr.PBorderTopWidth: pr.Dimension{Value: 3, Unit: pr.Px}.ToValue(),
+		pr.PBorderTopWidth: pr.Dimension{Value: 3, Unit: pr.Px}.Tagged(),
 		pr.PBorderTopColor: pr.NewColor(1, 0, 0, 1), // red
 	}))
 	assertValidDict(t, "border-top: solid", toValidated(pr.Properties{
 		pr.PBorderTopStyle: pr.String("solid"),
 	}))
 	assertValidDict(t, "border: 6px dashed lime", toValidated(pr.Properties{
-		pr.PBorderTopWidth: pr.Dimension{Value: 6, Unit: pr.Px}.ToValue(),
+		pr.PBorderTopWidth: pr.Dimension{Value: 6, Unit: pr.Px}.Tagged(),
 		pr.PBorderTopStyle: pr.String("dashed"),
 		pr.PBorderTopColor: pr.NewColor(0, 1, 0, 1), // lime
 
-		pr.PBorderLeftWidth: pr.Dimension{Value: 6, Unit: pr.Px}.ToValue(),
+		pr.PBorderLeftWidth: pr.Dimension{Value: 6, Unit: pr.Px}.Tagged(),
 		pr.PBorderLeftStyle: pr.String("dashed"),
 		pr.PBorderLeftColor: pr.NewColor(0, 1, 0, 1), // lime
 
-		pr.PBorderBottomWidth: pr.Dimension{Value: 6, Unit: pr.Px}.ToValue(),
+		pr.PBorderBottomWidth: pr.Dimension{Value: 6, Unit: pr.Px}.Tagged(),
 		pr.PBorderBottomStyle: pr.String("dashed"),
 		pr.PBorderBottomColor: pr.NewColor(0, 1, 0, 1), // lime
 
-		pr.PBorderRightWidth: pr.Dimension{Value: 6, Unit: pr.Px}.ToValue(),
+		pr.PBorderRightWidth: pr.Dimension{Value: 6, Unit: pr.Px}.Tagged(),
 		pr.PBorderRightStyle: pr.String("dashed"),
 		pr.PBorderRightColor: pr.NewColor(0, 1, 0, 1), // lime
 	}))
@@ -259,21 +259,21 @@ func TestBackground(t *testing.T) {
 		pr.PBackgroundPosition:   pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 100, Unit: pr.Perc}, pr.Dimension{Value: 78, Unit: pr.Px}}}},
 	}))
 	assertBackground(t, "center / cover red", toValidated(pr.Properties{
-		pr.PBackgroundSize:     pr.Sizes{{String: "cover"}},
+		pr.PBackgroundSize:     pr.Sizes{{Tag: pr.Cover}},
 		pr.PBackgroundPosition: pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 50, Unit: pr.Perc}, pr.Dimension{Value: 50, Unit: pr.Perc}}}},
 		pr.PBackgroundColor:    pr.NewColor(1, 0, 0, 1),
 	}))
 	assertBackground(t, "center / auto red", toValidated(pr.Properties{
-		pr.PBackgroundSize:     pr.Sizes{{Width: pr.SToV("auto"), Height: pr.SToV("auto")}},
+		pr.PBackgroundSize:     pr.Sizes{{Width: pr.TagToV(pr.Auto), Height: pr.TagToV(pr.Auto)}},
 		pr.PBackgroundPosition: pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 50, Unit: pr.Perc}, pr.Dimension{Value: 50, Unit: pr.Perc}}}},
 		pr.PBackgroundColor:    pr.NewColor(1, 0, 0, 1),
 	}))
 	assertBackground(t, "center / 42px", toValidated(pr.Properties{
-		pr.PBackgroundSize:     pr.Sizes{{Width: pr.Dimension{Value: 42, Unit: pr.Px}.ToValue(), Height: pr.SToV("auto")}},
+		pr.PBackgroundSize:     pr.Sizes{{Width: pr.Dimension{Value: 42, Unit: pr.Px}.Tagged(), Height: pr.TagToV(pr.Auto)}},
 		pr.PBackgroundPosition: pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 50, Unit: pr.Perc}, pr.Dimension{Value: 50, Unit: pr.Perc}}}},
 	}))
 	assertBackground(t, "center / 7% 4em", toValidated(pr.Properties{
-		pr.PBackgroundSize:     pr.Sizes{{Width: pr.Dimension{Value: 7, Unit: pr.Perc}.ToValue(), Height: pr.Dimension{Value: 4, Unit: pr.Em}.ToValue()}},
+		pr.PBackgroundSize:     pr.Sizes{{Width: pr.Dimension{Value: 7, Unit: pr.Perc}.Tagged(), Height: pr.Dimension{Value: 4, Unit: pr.Em}.Tagged()}},
 		pr.PBackgroundPosition: pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 50, Unit: pr.Perc}, pr.Dimension{Value: 50, Unit: pr.Perc}}}},
 	}))
 	assertBackground(t, "red content-box", toValidated(pr.Properties{
@@ -427,19 +427,19 @@ func TestBorderImage(t *testing.T) {
 func TestFont(t *testing.T) {
 	capt := tu.CaptureLogs()
 	assertValidDict(t, "font: 12px My Fancy Font, serif", toValidated(pr.Properties{
-		pr.PFontSize:   pr.Dimension{Value: 12, Unit: pr.Px}.ToValue(),
+		pr.PFontSize:   pr.Dimension{Value: 12, Unit: pr.Px}.Tagged(),
 		pr.PFontFamily: pr.Strings{"My Fancy Font", "serif"},
 	}))
 	assertValidDict(t, `font: small/1.2 "Some Font", serif`, toValidated(pr.Properties{
-		pr.PFontSize:   pr.SToV("small"),
-		pr.PLineHeight: pr.Dimension{Value: 1.2, Unit: pr.Scalar}.ToValue(),
+		pr.PFontSize:   pr.TagToV(pr.Small),
+		pr.PLineHeight: pr.Dimension{Value: 1.2, Unit: pr.Scalar}.Tagged(),
 		pr.PFontFamily: pr.Strings{"Some Font", "serif"},
 	}))
 	assertValidDict(t, "font: small-caps italic 700 large serif", toValidated(pr.Properties{
 		pr.PFontStyle:       pr.String("italic"),
 		pr.PFontVariantCaps: pr.String("small-caps"),
 		pr.PFontWeight:      pr.IntString{Int: 700},
-		pr.PFontSize:        pr.SToV("large"),
+		pr.PFontSize:        pr.TagToV(pr.Large),
 		pr.PFontFamily:      pr.Strings{"serif"},
 	}))
 	assertValidDict(t, "font: small-caps condensed normal 700 large serif", toValidated(pr.Properties{
@@ -447,7 +447,7 @@ func TestFont(t *testing.T) {
 		pr.PFontStretch:     pr.String("condensed"),
 		pr.PFontVariantCaps: pr.String("small-caps"),
 		pr.PFontWeight:      pr.IntString{Int: 700},
-		pr.PFontSize:        pr.SToV("large"),
+		pr.PFontSize:        pr.TagToV(pr.Large),
 		pr.PFontFamily:      pr.Strings{"serif"},
 	}))
 	assertValidDict(t, "font: italic 13px sans-serif", toValidated(pr.Properties{
@@ -540,37 +540,37 @@ func TestFlex(t *testing.T) {
 	assertValidDict(t, "flex: auto", toValidated(pr.Properties{
 		pr.PFlexGrow:   pr.Float(1),
 		pr.PFlexShrink: pr.Float(1),
-		pr.PFlexBasis:  pr.SToV("auto"),
+		pr.PFlexBasis:  pr.TagToV(pr.Auto),
 	}))
 	assertValidDict(t, "flex: none", toValidated(pr.Properties{
 		pr.PFlexGrow:   pr.Float(0),
 		pr.PFlexShrink: pr.Float(0),
-		pr.PFlexBasis:  pr.SToV("auto"),
+		pr.PFlexBasis:  pr.TagToV(pr.Auto),
 	}))
 	assertValidDict(t, "flex: 10", toValidated(pr.Properties{
 		pr.PFlexGrow:   pr.Float(10),
 		pr.PFlexShrink: pr.Float(1),
-		pr.PFlexBasis:  pr.ZeroPixels.ToValue(),
+		pr.PFlexBasis:  pr.ZeroPixels.Tagged(),
 	}))
 	assertValidDict(t, "flex: 2 2", toValidated(pr.Properties{
 		pr.PFlexGrow:   pr.Float(2),
 		pr.PFlexShrink: pr.Float(2),
-		pr.PFlexBasis:  pr.ZeroPixels.ToValue(),
+		pr.PFlexBasis:  pr.ZeroPixels.Tagged(),
 	}))
 	assertValidDict(t, "flex: 2 2 1px", toValidated(pr.Properties{
 		pr.PFlexGrow:   pr.Float(2),
 		pr.PFlexShrink: pr.Float(2),
-		pr.PFlexBasis:  pr.Dimension{Value: 1, Unit: pr.Px}.ToValue(),
+		pr.PFlexBasis:  pr.Dimension{Value: 1, Unit: pr.Px}.Tagged(),
 	}))
 	assertValidDict(t, "flex: 2 2 auto", toValidated(pr.Properties{
 		pr.PFlexGrow:   pr.Float(2),
 		pr.PFlexShrink: pr.Float(2),
-		pr.PFlexBasis:  pr.SToV("auto"),
+		pr.PFlexBasis:  pr.TagToV(pr.Auto),
 	}))
 	assertValidDict(t, "flex: 2 auto", toValidated(pr.Properties{
 		pr.PFlexGrow:   pr.Float(2),
 		pr.PFlexShrink: pr.Float(1),
-		pr.PFlexBasis:  pr.SToV("auto"),
+		pr.PFlexBasis:  pr.TagToV(pr.Auto),
 	}))
 	assertValidDict(t, "flex: inherit", map[pr.KnownProp]pr.DeclaredValue{
 		pr.PFlexGrow:   pr.Inherit,
@@ -736,15 +736,15 @@ func TestPageBreakInside(t *testing.T) {
 func TestColumns(t *testing.T) {
 	capt := tu.CaptureLogs()
 	assertValidDict(t, "columns: 1em", toValidated(pr.Properties{
-		pr.PColumnWidth: pr.Dimension{Value: 1, Unit: pr.Em}.ToValue(),
+		pr.PColumnWidth: pr.Dimension{Value: 1, Unit: pr.Em}.Tagged(),
 		pr.PColumnCount: pr.IntString{String: "auto"},
 	}))
 	assertValidDict(t, "columns: auto", toValidated(pr.Properties{
-		pr.PColumnWidth: pr.SToV("auto"),
+		pr.PColumnWidth: pr.TagToV(pr.Auto),
 		pr.PColumnCount: pr.IntString{String: "auto"},
 	}))
 	assertValidDict(t, "columns: auto auto", toValidated(pr.Properties{
-		pr.PColumnWidth: pr.SToV("auto"),
+		pr.PColumnWidth: pr.TagToV(pr.Auto),
 		pr.PColumnCount: pr.IntString{String: "auto"},
 	}))
 

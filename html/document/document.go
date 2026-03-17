@@ -46,8 +46,8 @@ func getMatrix(box_ Box) (mt.Transform, bool) {
 	borderWidth := box.BorderWidth()
 	borderHeight := box.BorderHeight()
 	or := box.Style.GetTransformOrigin()
-	offsetX := pr.ResolvePercentage(or[0].ToValue(), borderWidth).V()
-	offsetY := pr.ResolvePercentage(or[1].ToValue(), borderHeight).V()
+	offsetX := pr.ResolvePercentage(or[0].Tagged(), borderWidth).V()
+	offsetY := pr.ResolvePercentage(or[1].Tagged(), borderHeight).V()
 	originX := fl(box.BorderBoxX() + offsetX)
 	originY := fl(box.BorderBoxY() + offsetY)
 
@@ -66,8 +66,8 @@ func getMatrix(box_ Box) (mt.Transform, bool) {
 		case "translate":
 			translateX, translateY := args[0], args[1]
 			rightMat.Translate(
-				fl(pr.ResolvePercentage(translateX.ToValue(), borderWidth).V()),
-				fl(pr.ResolvePercentage(translateY.ToValue(), borderHeight).V()),
+				fl(pr.ResolvePercentage(translateX.Tagged(), borderWidth).V()),
+				fl(pr.ResolvePercentage(translateY.Tagged(), borderHeight).V()),
 			)
 		case "skew":
 			rightMat.Skew(toF(args[0]), toF(args[1]))

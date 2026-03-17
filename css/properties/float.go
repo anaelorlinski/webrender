@@ -51,12 +51,12 @@ func MaybeFloatToFloat(mf MaybeFloat) Float {
 	return mf.V()
 }
 
-func MaybeFloatToValue(mf MaybeFloat) DimOrS {
+func MaybeFloatToValue(mf MaybeFloat) TaggedDim {
 	if mf == nil {
-		return DimOrS{}
+		return TaggedDim{}
 	}
 	if mf == AutoF {
-		return SToV("auto")
+		return TagToV(Auto)
 	}
 	return mf.V().ToValue()
 }
@@ -99,10 +99,10 @@ func Abs(x Float) Float {
 // ResolvePercentage returns the percentage of the reference value, or the value unchanged.
 // “referTo“ is the length for 100%. If “referTo“ is not a number, it
 // just replaces percentages.
-func ResolvePercentage(value DimOrS, referTo Float) MaybeFloat {
+func ResolvePercentage(value TaggedDim, referTo Float) MaybeFloat {
 	if value.IsNone() {
 		return nil
-	} else if value.S == "auto" {
+	} else if value.Tag == Auto {
 		return AutoF
 	} else if value.Unit == Px {
 		return value.Value

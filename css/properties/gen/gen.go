@@ -9,12 +9,13 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/benoitkugler/webrender/css/properties"
+	pr "github.com/benoitkugler/webrender/css/properties"
 )
 
 const (
 	OUT_1 = "props_gen.go"
 	OUT_2 = "../../html/tree/accessors.go"
+	OUT_3 = "tags_gen.go"
 
 	TEMPLATE_1 = `
 	func (s %[1]s) Get%[2]s() %[3]s { return s[%[4]s].(%[3]s)	}
@@ -63,7 +64,7 @@ func main() {
 
 	for _, item := range props {
 		property := item.value
-		v := properties.InitialValues[property]
+		v := pr.InitialValues[property]
 
 		propertyCamel := item.varName[1:]
 
@@ -91,6 +92,9 @@ func main() {
 	if err := os.WriteFile(OUT_2, []byte(code_2), os.ModePerm); err != nil {
 		panic(err)
 	}
+	if err := os.WriteFile(OUT_3, []byte(tagsCode()), os.ModePerm); err != nil {
+		panic(err)
+	}
 
 	if err := exec.Command("goimports", "-w", OUT_1).Run(); err != nil {
 		panic(err)
@@ -98,7 +102,10 @@ func main() {
 	if err := exec.Command("goimports", "-w", OUT_2).Run(); err != nil {
 		panic(err)
 	}
-	fmt.Println("Generated", OUT_1, OUT_2)
+	if err := exec.Command("goimports", "-w", OUT_3).Run(); err != nil {
+		panic(err)
+	}
+	fmt.Println("Generated", OUT_1, OUT_2, OUT_3)
 }
 
 func kebabCase(s string) string {
@@ -113,12 +120,12 @@ func kebabCase(s string) string {
 }
 
 func isImage(v interface{}) bool {
-	interfaceType := reflect.TypeOf((*properties.Image)(nil)).Elem()
+	interfaceType := reflect.TypeOf((*pr.Image)(nil)).Elem()
 	return reflect.TypeOf(v).Implements(interfaceType)
 }
 
 type prop struct {
-	value    properties.KnownProp
+	value    pr.KnownProp
 	varName  string
 	propName string // in CSS form
 }
@@ -129,7 +136,7 @@ func parseConstants(fn string) (out []prop) {
 		panic(err)
 	}
 	inEnum := false
-	var val properties.KnownProp
+	var val pr.KnownProp
 	for _, line := range strings.Split(string(b), "\n") {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "const") {
@@ -149,4 +156,77 @@ func parseConstants(fn string) (out []prop) {
 		}
 	}
 	return out
+}
+
+// tag parsing / stringifying
+
+var tagStrings = [...]string{
+	pr.Auto:       "auto",
+	pr.None:       "none",
+	pr.Span:       "span",
+	pr.Subgrid:    "subgrid",
+	pr.Attr:       "attr",
+	pr.Internal:   "internal",
+	pr.External:   "external",
+	pr.Local:      "local",
+	pr.Attachment: "attachment",
+	pr.Content:    "content",
+	pr.FromFont:   "from-font",
+	pr.Fill:       "fill",
+	pr.MinContent: "min-content",
+	pr.MaxContent: "max-content",
+	pr.Normal:     "normal",
+	pr.Cover:      "cover",
+	pr.Contain:    "contain",
+	pr.XxSmall:    "xx-small",
+	pr.XSmall:     "x-small",
+	pr.Small:      "small",
+	pr.Medium:     "medium",
+	pr.Large:      "large",
+	pr.XLarge:     "x-large",
+	pr.XxLarge:    "xx-large",
+	pr.Smaller:    "smaller",
+	pr.Larger:     "larger",
+	pr.Thin:       "thin",
+	pr.Thick:      "thick",
+	pr.Baseline:   "baseline",
+	pr.Middle:     "middle",
+	pr.TextTop:    "text-top",
+	pr.TextBottom: "text-bottom",
+	pr.Top:        "top",
+	pr.Bottom:     "bottom",
+	pr.Super:      "super",
+	pr.Sub:        "sub",
+}
+
+func tagsCode() string {
+	var casesParse, casesStringify []string
+	for i, v := range tagStrings {
+		if v == "" {
+			continue
+		}
+		casesParse = append(casesParse, fmt.Sprintf("case %q: return %d", v, i))
+		casesStringify = append(casesStringify, fmt.Sprintf("case %d: return %q", i, v))
+	}
+
+	return fmt.Sprintf(`package properties
+
+	// Code generated from properties/gen/gen.go DO NOT EDIT
+	
+	func NewTag(s string) Tag {
+		switch s {
+			%s
+			default:
+				return 0
+		}
+	}
+
+	func (t Tag) String() string {
+		switch t {
+			%s
+			default: 
+				return fmt.Sprintf("unknown tag %%d", t)
+		}
+	}
+	`, strings.Join(casesParse, "\n"), strings.Join(casesStringify, "\n"))
 }

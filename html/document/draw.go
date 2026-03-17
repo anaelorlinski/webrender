@@ -153,16 +153,16 @@ func (ctx drawContext) drawStackingContext(stackingContext StackingContext) {
 
 		if clips := box.Style.GetClip(); box.IsAbsolutelyPositioned() && len(clips) != 0 {
 			top, right, bottom, left := clips[0], clips[1], clips[2], clips[3]
-			if top.S == "auto" {
+			if top.Tag == pr.Auto {
 				top.Value = 0
 			}
-			if right.S == "auto" {
+			if right.Tag == pr.Auto {
 				right.Value = 0
 			}
-			if bottom.S == "auto" {
+			if bottom.Tag == pr.Auto {
 				bottom.Value = box.BorderHeight()
 			}
-			if left.S == "auto" {
+			if left.Tag == pr.Auto {
 				left.Value = box.BorderWidth()
 			}
 			ctx.dst.Rectangle(

@@ -14,9 +14,9 @@ import (
 
 // Layout for grid containers and grid-items.
 
-func isLength(sizing pr.DimOrS) bool { return sizing.Unit != 0 && sizing.Unit != pr.Fr }
+func isLength(sizing pr.TaggedDim) bool { return sizing.Unit != 0 && sizing.Unit != pr.Fr }
 
-func isFr(sizing pr.DimOrS) bool { return sizing.Unit == pr.Fr }
+func isFr(sizing pr.TaggedDim) bool { return sizing.Unit == pr.Fr }
 
 func intersect(position1, size1, position2, size2 int) bool {
 	return position1 < position2+size2 && position2 < position1+size1
@@ -340,7 +340,7 @@ const (
 // sizeContribution : m, c, C ("minimum", "min-content", "max-content")
 // direction : x, y
 func distributeExtraSpace(context *layoutContext, affectedSizes, affectedTracksTypes, sizeContribution byte, tracksChildren [][]Box,
-	sizingFunctions [][2]pr.DimOrS, tracksSizes [][2]pr.MaybeFloat, span int, direction byte, containingBlock *bo.BoxFields,
+	sizingFunctions [][2]pr.TaggedDim, tracksSizes [][2]pr.MaybeFloat, span int, direction byte, containingBlock *bo.BoxFields,
 ) {
 	// 1. Maintain separately for each affected track a planned increase.
 	plannedIncreases := make([]pr.Float, len(tracksSizes))
@@ -352,11 +352,11 @@ func distributeExtraSpace(context *layoutContext, affectedSizes, affectedTracksT
 		isAffected := false
 		switch affectedTracksTypes {
 		case 'i':
-			isAffected = function.S == "min-content" || function.S == "max-content" || function.S == "auto"
+			isAffected = function.Tag == pr.MinContent || function.Tag == pr.MaxContent || function.Tag == pr.Auto
 		case 'c':
-			isAffected = function.S == "min-content" || function.S == "max-content"
+			isAffected = function.Tag == pr.MinContent || function.Tag == pr.MaxContent
 		case 'm':
-			isAffected = function.S == "max-content" || function.S == "auto"
+			isAffected = function.Tag == pr.MaxContent || function.Tag == pr.Auto
 		}
 		affectedTracks[i] = isAffected
 	}
@@ -458,7 +458,7 @@ func distributeExtraSpace(context *layoutContext, affectedSizes, affectedTracksT
 }
 
 // direction : 'x' or 'y'
-func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, boxSize pr.MaybeFloat, childrenPositions map[Box]rect,
+func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.TaggedDim, boxSize pr.MaybeFloat, childrenPositions map[Box]rect,
 	implicitStart int, direction byte, gap pr.Float,
 	containingBlock bo.Box, orthogonalSizes [][2]pr.Float,
 ) [][2]pr.Float {
@@ -475,13 +475,13 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 		var baseSize pr.MaybeFloat
 		if isLength(minFunction) {
 			baseSize = pr.ResolvePercentage(minFunction, percentBoxSize)
-		} else if minFunction.S == "min-content" || minFunction.S == "max-content" || minFunction.S == "auto" {
+		} else if minFunction.Tag == pr.MinContent || minFunction.Tag == pr.MaxContent || minFunction.Tag == pr.Auto {
 			baseSize = pr.Float(0)
 		}
 		var growthLimit pr.MaybeFloat
 		if isLength(maxFunction) {
 			growthLimit = pr.ResolvePercentage(maxFunction, percentBoxSize)
-		} else if (maxFunction.S == "min-content" || maxFunction.S == "max-content" || maxFunction.S == "auto") ||
+		} else if (maxFunction.Tag == pr.MinContent || maxFunction.Tag == pr.MaxContent || maxFunction.Tag == pr.Auto) ||
 			isFr(maxFunction) {
 			growthLimit = pr.Inf
 		}
@@ -540,10 +540,10 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 					parent.Box(), true, nil, nil, nil, false, -1)
 				height = max(height, child.Box().MarginHeight())
 			}
-			if minFunction.S == "min-content" || minFunction.S == "maxContent" || minFunction.S == "auto" {
+			if minFunction.Tag == pr.MinContent || minFunction.Tag == pr.MaxContent || minFunction.Tag == pr.Auto {
 				sizes[0] = height
 			}
-			if maxFunction.S == "min-content" || maxFunction.S == "maxContent" {
+			if maxFunction.Tag == pr.MinContent || maxFunction.Tag == pr.MaxContent {
 				sizes[1] = height
 			}
 			if sizes[0] != nil && sizes[1] != nil {
@@ -551,7 +551,7 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 			}
 			continue
 		}
-		if minFunction.S == "min-content" {
+		if minFunction.Tag == pr.MinContent {
 			ma := pr.Float(0)
 			for _, child := range children {
 				if v := minContentWidth(context, child, true); v > ma {
@@ -559,7 +559,7 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 				}
 			}
 			sizes[0] = ma
-		} else if minFunction.S == "max-content" {
+		} else if minFunction.Tag == pr.MaxContent {
 			ma := pr.Float(0)
 			for _, child := range children {
 				if v := maxContentWidth(context, child, true); v > ma {
@@ -567,7 +567,7 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 				}
 			}
 			sizes[0] = ma
-		} else if minFunction.S == "auto" {
+		} else if minFunction.Tag == pr.Auto {
 			// TODO: Handle min-/max-content constrained parents.
 			// TODO: Use real "minimum contributions".
 			ma := pr.Float(0)
@@ -578,7 +578,7 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 			}
 			sizes[0] = ma
 		}
-		if maxFunction.S == "min-content" {
+		if maxFunction.Tag == pr.MinContent {
 			ma := -pr.Inf
 			for _, child := range children {
 				if v := minContentWidth(context, child, true); v > ma {
@@ -586,7 +586,7 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 				}
 			}
 			sizes[1] = ma
-		} else if maxFunction.S == "auto" || maxFunction.S == "max-content" {
+		} else if maxFunction.Tag == pr.Auto || maxFunction.Tag == pr.MaxContent {
 			ma := -pr.Inf
 			for _, child := range children {
 				if v := maxContentWidth(context, child, true); v > ma {
@@ -788,7 +788,7 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 		var autoTracksSizes []*[2]pr.MaybeFloat
 		for i := range tracksSizes {
 			minFunction := sizingFunctions[i][0]
-			if minFunction.S == "auto" {
+			if minFunction.Tag == pr.Auto {
 				autoTracksSizes = append(autoTracksSizes, &tracksSizes[i])
 			}
 		}
@@ -820,8 +820,8 @@ func extractNames(rows []pr.GridSpec) []pr.GridNames {
 }
 
 // return the equivalent of Python l[1::2]
-func extractDims(rows []pr.GridSpec) [][2]pr.DimOrS {
-	var dims [][2]pr.DimOrS
+func extractDims(rows []pr.GridSpec) [][2]pr.TaggedDim {
+	var dims [][2]pr.TaggedDim
 	for i, row := range rows {
 		if i%2 != 1 {
 			continue
@@ -868,10 +868,10 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 	autoRowsBack := style.GetGridAutoRows().Reverse().Cycle()
 	autoColumnsBack := style.GetGridAutoColumns().Reverse().Cycle()
 	var rowGap, columnGap pr.Float
-	if v := style.GetColumnGap(); v.S != "normal" {
+	if v := style.GetColumnGap(); v.Tag != pr.Normal {
 		columnGap = v.Value
 	}
-	if v := style.GetRowGap(); v.S != "normal" {
+	if v := style.GetRowGap(); v.Tag != pr.Normal {
 		rowGap = v.Value
 	}
 
@@ -1510,7 +1510,7 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 			justifySelf = justifyItems
 		}
 		if justifySelf.Intersects(kw.Normal, kw.Stretch) {
-			if childB.Style.GetWidth().S == "auto" {
+			if childB.Style.GetWidth().Tag == pr.Auto {
 				childB.Style.SetWidth(pr.FToPx(childWidth))
 			}
 		}
@@ -1519,7 +1519,7 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 			alignSelf = alignItems
 		}
 		if alignSelf.Intersects(kw.Normal, kw.Stretch) {
-			if childB.Style.GetHeight().S == "auto" {
+			if childB.Style.GetHeight().Tag == pr.Auto {
 				childB.Style.SetHeight(pr.FToPx(childHeight))
 			}
 		}

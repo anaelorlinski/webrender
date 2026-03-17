@@ -100,8 +100,8 @@ func getCrossMargins(child *bo.BoxFields, cross pr.KnownProp) (out bo.MaybePoint
 }
 
 // use child.Style
-func getDimOrS(box *bo.BoxFields, prop pr.KnownProp) pr.DimOrS {
-	out, _ := box.Style.Get(prop.Key()).(pr.DimOrS)
+func getDimOrS(box *bo.BoxFields, prop pr.KnownProp) pr.TaggedDim {
+	out, _ := box.Style.Get(prop.Key()).(pr.TaggedDim)
 	return out
 }
 
@@ -220,7 +220,7 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 	childSkipStack := skipStack
 
 	// resolve gaps and stores it into rowGap.Value
-	if rowGap.S == "normal" {
+	if rowGap.Tag == pr.Normal {
 		rowGap.Value = 0
 	} else if rowGap.Unit == pr.Perc {
 		if box.Height == pr.AutoF {
@@ -229,7 +229,7 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 			rowGap.Value = rowGap.Value / 100 * box.Height.V()
 		}
 	}
-	if columnGap.S == "normal" {
+	if columnGap.Tag == pr.Normal {
 		columnGap.Value = 0
 	} else if columnGap.Unit == pr.Perc {
 		if box.Width == pr.AutoF {
@@ -291,16 +291,16 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 		}
 		child.PositionX = positionX
 		child.PositionY = positionY
-		if child.Style.GetMinWidth().S == "auto" {
+		if child.Style.GetMinWidth().Tag == pr.Auto {
 			specifiedSize := child.Width
 			newChild := child_.Copy()
 			if bo.ParentT.IsInstance(child_) {
 				newChild = bo.CopyWithChildren(child_, child.Children)
 			}
 			newChild.Box().Style = child.Style.Copy()
-			newChild.Box().Style.SetWidth(pr.SToV("auto"))
-			newChild.Box().Style.SetMinWidth(pr.ZeroPixels.ToValue())
-			newChild.Box().Style.SetMaxWidth(pr.Dimension{Value: pr.Inf, Unit: pr.Px}.ToValue())
+			newChild.Box().Style.SetWidth(pr.TagToV(pr.Auto))
+			newChild.Box().Style.SetMinWidth(pr.ZeroPixels.Tagged())
+			newChild.Box().Style.SetMaxWidth(pr.Dimension{Value: pr.Inf, Unit: pr.Px}.Tagged())
 			contentSize := minContentWidth(context, newChild, false)
 			var transferredSize pr.MaybeFloat
 			if replaced, isReplaced := child_.(bo.ReplacedBoxITF); isReplaced {
@@ -320,14 +320,14 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 				child.MinWidth = contentSize
 			}
 		}
-		if child.Style.GetMinHeight().S == "auto" {
+		if child.Style.GetMinHeight().Tag == pr.Auto {
 			specifiedSize := child.Height
 			newChild := child_.Copy()
 			newChild.Box().Style = child.Style.Copy()
-			newChild.Box().Style.SetHeight(pr.SToV("auto"))
-			newChild.Box().Style.SetMinHeight(pr.ZeroPixels.ToValue())
-			newChild.Box().Style.SetMaxHeight(pr.Dimension{Value: pr.Inf, Unit: pr.Px}.ToValue())
-			if cs := newChild.Box().Style; cs.GetWidth().S == "auto" {
+			newChild.Box().Style.SetHeight(pr.TagToV(pr.Auto))
+			newChild.Box().Style.SetMinHeight(pr.ZeroPixels.Tagged())
+			newChild.Box().Style.SetMaxHeight(pr.Dimension{Value: pr.Inf, Unit: pr.Px}.Tagged())
+			if cs := newChild.Box().Style; cs.GetWidth().Tag == pr.Auto {
 				newChildWidth := maxContentWidth(context, newChild, true)
 				cs.SetWidth(pr.FToPx(newChildWidth))
 			}
@@ -361,7 +361,7 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 		}
 
 		var flexBasis pr.MaybeFloat // nil means "content"
-		if styleFlexBasis := child.Style.GetFlexBasis(); styleFlexBasis.S == "content" {
+		if styleFlexBasis := child.Style.GetFlexBasis(); styleFlexBasis.Tag == pr.Content {
 			flexBasis = nil
 		} else {
 			resolved := pr.ResolvePercentage(styleFlexBasis, availableMainSpace)
@@ -408,14 +408,14 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 			newChild.Style = child.Style.Copy()
 			if main == pr.PWidth {
 				// … the item’s min and max main sizes are ignored.
-				newChild.Style.SetMinWidth(pr.ZeroPixels.ToValue())
+				newChild.Style.SetMinWidth(pr.ZeroPixels.Tagged())
 				newChild.Style.SetMaxWidth(pr.FToPx(pr.Inf))
 
 				child.FlexBaseSize = maxContentWidth(context, newChild_, false)
 				child.MainOuterExtra = maxContentWidth(context, child_, true) - child.FlexBaseSize
 			} else {
 				// … the item’s min and max main sizes are ignored.
-				newChild.Style.SetMinHeight(pr.ZeroPixels.ToValue())
+				newChild.Style.SetMinHeight(pr.ZeroPixels.Tagged())
 				newChild.Style.SetMaxHeight(pr.FToPx(pr.Inf))
 
 				newChild.Width = pr.Inf
@@ -813,11 +813,11 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 	}
 	if alignContent.Has(kw.Stretch) {
 		var definiteCrossSize pr.MaybeFloat
-		if he := box.Style.GetHeight(); cross == pr.PHeight && he.S != "auto" {
+		if he := box.Style.GetHeight(); cross == pr.PHeight && he.Tag != pr.Auto {
 			definiteCrossSize = he.Value
 		} else if cross == pr.PWidth {
 			if bo.FlexT.IsInstance(box_) {
-				if box.Style.GetWidth().S == "auto" {
+				if box.Style.GetWidth().Tag == pr.Auto {
 					definiteCrossSize = availableCrossSpace
 				} else {
 					definiteCrossSize = box.Style.GetWidth().Value
@@ -857,7 +857,7 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 			} else if alignSelf.Has(kw.Auto) {
 				alignSelf = alignItems
 			}
-			if alignSelf.Has(kw.Stretch) && getDimOrS(child, cross).S == "auto" {
+			if alignSelf.Has(kw.Stretch) && getDimOrS(child, cross).Tag == pr.Auto {
 				crossMargins := getCrossMargins(child, cross)
 				if !(crossMargins[0] == pr.AutoF || crossMargins[1] == pr.AutoF) {
 					crossSize := line.crossSize
@@ -1094,17 +1094,17 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 					// If its outer cross size is less than the cross size…
 					extraCross /= autoMargins
 					if cross == pr.PHeight {
-						if child.Style.GetMarginTop().S == "auto" {
+						if child.Style.GetMarginTop().Tag == pr.Auto {
 							child.MarginTop = extraCross
 						}
-						if child.Style.GetMarginBottom().S == "auto" {
+						if child.Style.GetMarginBottom().Tag == pr.Auto {
 							child.MarginBottom = extraCross
 						}
 					} else {
-						if child.Style.GetMarginLeft().S == "auto" {
+						if child.Style.GetMarginLeft().Tag == pr.Auto {
 							child.MarginLeft = extraCross
 						}
-						if child.Style.GetMarginRight().S == "auto" {
+						if child.Style.GetMarginRight().Tag == pr.Auto {
 							child.MarginRight = extraCross
 						}
 					}
@@ -1153,7 +1153,7 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 					}
 					// TODO: Handle vertical text.
 				} else if alignSelf.Has(kw.Stretch) {
-					if getDimOrS(child, cross).S == "auto" {
+					if getDimOrS(child, cross).Tag == pr.Auto {
 						var margins pr.Float
 						if cross == pr.PHeight {
 							margins = child.MarginTop.V() + child.MarginBottom.V()
@@ -1179,7 +1179,7 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 
 	// 15 Determine the flex container’s used cross size.
 	// TODO: Use the updated algorithm.
-	if getDimOrS(box, cross).S == "auto" {
+	if getDimOrS(box, cross).Tag == pr.Auto {
 		// Otherwise, use the sum of the flex lines' cross sizes…
 		// TODO: Handle min-max.
 		// TODO: What about align-content here?

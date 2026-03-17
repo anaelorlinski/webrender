@@ -36,7 +36,7 @@ func (ctx drawContext) drawColumnRules(box *bo.BoxFields) {
 	ruleStyle := box.Style.GetColumnRuleStyle()
 	columnGap := box.Style.GetColumnGap()
 	var gap pr.Float
-	if columnGap.S == "normal" {
+	if columnGap.Tag == pr.Normal {
 		gap = box.Style.GetFontSize().Value // normal equals 1em
 	} else {
 		gap = pr.ResolvePercentage(columnGap, box.Width.V()).V()
@@ -74,7 +74,7 @@ func (ctx drawContext) drawBorder(box_ Box) {
 	}
 
 	// Draw column rules.
-	columns := bo.BlockContainerT.IsInstance(box_) && (box.Style.GetColumnWidth().S != "auto" || box.Style.GetColumnCount().String != "auto")
+	columns := bo.BlockContainerT.IsInstance(box_) && (box.Style.GetColumnWidth().Tag != pr.Auto || box.Style.GetColumnCount().String != "auto")
 	if columns && !box.Style.GetColumnRuleWidth().IsNone() {
 		// with stream.artifact():
 		ctx.drawColumnRules(box)
@@ -159,7 +159,7 @@ func (ctx drawContext) drawBorderImage(box *bo.BoxFields, forMask bool) {
 	imageSlice := slice[:4]
 	shouldFill := slice[4]
 
-	computeSliceDimension := func(dimension pr.DimOrS, intrinsic pr.Float) fl {
+	computeSliceDimension := func(dimension pr.TaggedDim, intrinsic pr.Float) fl {
 		if dimension.Unit == pr.Scalar {
 			return fl(min(dimension.Value, intrinsic))
 		} else {
@@ -181,7 +181,7 @@ func (ctx drawContext) drawBorderImage(box *bo.BoxFields, forMask bool) {
 	borderRight := w - fl(paddingBox.Width) - borderLeft
 	borderBottom := h - fl(paddingBox.Height) - borderTop
 
-	computeOutsetDimension := func(dimension pr.DimOrS, fromBorder fl) fl {
+	computeOutsetDimension := func(dimension pr.TaggedDim, fromBorder fl) fl {
 		if dimension.Unit == pr.Scalar {
 			return fl(dimension.Value) * fromBorder
 		} else {
@@ -200,8 +200,8 @@ func (ctx drawContext) drawBorderImage(box *bo.BoxFields, forMask bool) {
 	w += outsetLeft + outsetRight
 	h += outsetTop + outsetBottom
 
-	computeWidthAdjustment := func(dimension pr.DimOrS, original, intrinsic, areaDimension fl) fl {
-		if dimension.S == "auto" {
+	computeWidthAdjustment := func(dimension pr.TaggedDim, original, intrinsic, areaDimension fl) fl {
+		if dimension.Tag == pr.Auto {
 			return fl(intrinsic)
 		} else if dimension.Unit == pr.Scalar {
 			return fl(dimension.Value) * original

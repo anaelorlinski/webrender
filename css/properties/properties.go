@@ -253,33 +253,35 @@ const (
 // InitialValues stores the default values for the CSS properties.
 var InitialValues = Properties{
 	// CSS 2.1: https://www.w3.org/TR/CSS21/propidx.html
-	PBottom:      SToV("auto"),
+	PBottom: TaggedDim{Tag: Auto},
+	PLeft:   TaggedDim{Tag: Auto},
+	PRight:  TaggedDim{Tag: Auto},
+	PTop:    TaggedDim{Tag: Auto},
+
 	PCaptionSide: String("top"),
 	PClear:       String("none"),
 	PClip:        Values{},                                // computed value for "auto"
 	PColor:       Color(parser.ParseColorString("black")), // chosen by the user agent
 
-	PDirection:    String("ltr"),
-	PDisplay:      Display{"inline", "flow"},
-	PEmptyCells:   String("show"),
-	PFloat:        String("none"),
-	PLeft:         SToV("auto"),
-	PRight:        SToV("auto"),
-	PLineHeight:   SToV("normal"),
-	PMarginTop:    zeroPixelsValue,
-	PMarginRight:  zeroPixelsValue,
-	PMarginBottom: zeroPixelsValue,
-	PMarginLeft:   zeroPixelsValue,
+	PDirection:  String("ltr"),
+	PDisplay:    Display{"inline", "flow"},
+	PEmptyCells: String("show"),
+	PFloat:      String("none"),
+	PLineHeight: TagToV(Normal),
 
-	PPaddingTop:    zeroPixelsValue,
-	PPaddingRight:  zeroPixelsValue,
-	PPaddingBottom: zeroPixelsValue,
-	PPaddingLeft:   zeroPixelsValue,
+	PMarginTop:    ZeroPixels.Tagged(), // 0px
+	PMarginRight:  ZeroPixels.Tagged(), // 0px
+	PMarginBottom: ZeroPixels.Tagged(), // 0px
+	PMarginLeft:   ZeroPixels.Tagged(), // 0px
+
+	PPaddingTop:    ZeroPixels.Tagged(), // 0px
+	PPaddingRight:  ZeroPixels.Tagged(), // 0px
+	PPaddingBottom: ZeroPixels.Tagged(), // 0px
+	PPaddingLeft:   ZeroPixels.Tagged(), // 0px
 	PPosition:      BoolString{String: "static"},
 	PTableLayout:   String("auto"),
-	PTop:           SToV("auto"),
 	PUnicodeBidi:   String("normal"),
-	PVerticalAlign: SToV("baseline"),
+	PVerticalAlign: TagToV(Baseline),
 	PVisibility:    String("visible"),
 	PZIndex:        IntString{String: "auto"},
 
@@ -293,7 +295,7 @@ var InitialValues = Properties{
 		Center{OriginX: "left", OriginY: "top", Pos: Point{Dimension{Unit: Perc}, Dimension{Unit: Perc}}},
 	},
 	PBackgroundRepeat:  Repeats{{"repeat", "repeat"}},
-	PBackgroundSize:    Sizes{Size{Width: SToV("auto"), Height: SToV("auto")}},
+	PBackgroundSize:    Sizes{Size{Width: TaggedDim{Tag: Auto}, Height: TaggedDim{Tag: Auto}}},
 	PBorderBottomColor: CurrentColor,
 	PBorderLeftColor:   CurrentColor,
 	PBorderRightColor:  CurrentColor,
@@ -312,7 +314,7 @@ var InitialValues = Properties{
 	PBorderImageSource: NoneImage{},
 	PBorderImageSlice: Values{
 		PercToV(100), PercToV(100), PercToV(100), PercToV(100),
-		DimOrS{},
+		TaggedDim{},
 	},
 	PBorderImageWidth: Values{FToV(1), FToV(1), FToV(1), FToV(1)},
 	PBorderImageOutset: Values{
@@ -324,9 +326,9 @@ var InitialValues = Properties{
 	PMaskBorderSource: NoneImage{},
 	PMaskBorderSlice: Values{
 		PercToV(100), PercToV(100), PercToV(100), PercToV(100),
-		DimOrS{},
+		TaggedDim{},
 	},
-	PMaskBorderWidth: Values{SToV("auto"), SToV("auto"), SToV("auto"), SToV("auto")},
+	PMaskBorderWidth: Values{TaggedDim{Tag: Auto}, TaggedDim{Tag: Auto}, TaggedDim{Tag: Auto}, TaggedDim{Tag: Auto}},
 	PMaskBorderOutset: Values{
 		FToV(0), FToV(0),
 		FToV(0), FToV(0),
@@ -343,11 +345,11 @@ var InitialValues = Properties{
 	POpacity: Float(1),
 
 	// Multi-column Layout (WD): https://www.w3.org/TR/css-multicol-1/
-	PColumnWidth:     SToV("auto"),
+	PColumnWidth:     TaggedDim{Tag: Auto},
 	PColumnCount:     IntString{String: "auto"},
 	PColumnRuleColor: CurrentColor,
 	PColumnRuleStyle: String("none"),
-	PColumnRuleWidth: SToV("medium"),
+	PColumnRuleWidth: TagToV(Medium),
 	PColumnFill:      String("balance"),
 	PColumnSpan:      String("none"),
 
@@ -402,26 +404,26 @@ var InitialValues = Properties{
 	// Paged Media 3 (WD): https://www.w3.org/TR/css-page-3/
 	PSize:        A4.ToPixels(),
 	PPage:        Page("auto"),
-	PBleedLeft:   SToV("auto"),
-	PBleedRight:  SToV("auto"),
-	PBleedTop:    SToV("auto"),
-	PBleedBottom: SToV("auto"),
+	PBleedLeft:   TaggedDim{Tag: Auto},
+	PBleedRight:  TaggedDim{Tag: Auto},
+	PBleedTop:    TaggedDim{Tag: Auto},
+	PBleedBottom: TaggedDim{Tag: Auto},
 	PMarks:       Marks{}, // computed value for 'none'
 
 	// Text 3/4 (WD/WD): https://www.w3.org/TR/css-text-4/
 	PHyphenateCharacter:  String("‐"), // computed value chosen by the user agent
 	PHyphenateLimitChars: Limits{5, 2, 2},
-	PHyphenateLimitZone:  zeroPixelsValue,
+	PHyphenateLimitZone:  ZeroPixels.Tagged(),
 	PHyphens:             String("manual"),
-	PLetterSpacing:       SToV("normal"),
-	PTabSize:             DimOrS{Dimension: Dimension{Value: 8}},
+	PLetterSpacing:       TagToV(Normal),
+	PTabSize:             Dimension{Value: 8}.Tagged(),
 	PTextAlignAll:        String("start"),
 	PTextAlignLast:       String("auto"),
-	PTextIndent:          zeroPixelsValue,
+	PTextIndent:          ZeroPixels.Tagged(),
 	PTextTransform:       String("none"),
 	PWhiteSpace:          String("normal"),
 	PWordBreak:           String("normal"),
-	PWordSpacing:         DimOrS{}, // computed value for "normal"
+	PWordSpacing:         TaggedDim{}, // computed value for "normal"
 
 	// Transforms 1 (CR): https://www.w3.org/TR/css-transforms-1/
 	PTransformOrigin: Point{{Value: 50, Unit: Perc}, {Value: 50, Unit: Perc}},
@@ -431,19 +433,19 @@ var InitialValues = Properties{
 	PAppearance:   String("none"),
 	POutlineColor: CurrentColor, // invert is not supported
 	POutlineStyle: String("none"),
-	POutlineWidth: DimOrS{Dimension: Dimension{Value: 3}}, // computed value for "medium"
+	POutlineWidth: TaggedDim{Dimension: Dimension{Value: 3}}, // computed value for "medium"
 
 	// Sizing 3 (WD): https://www.w3.org/TR/css-sizing-3/
 	PBoxSizing: String("content-box"),
-	PHeight:    SToV("auto"),
-	PMaxHeight: DimOrS{Dimension: Dimension{Value: Inf, Unit: Px}}, // parsed value for "none}"
-	PMaxWidth:  DimOrS{Dimension: Dimension{Value: Inf, Unit: Px}},
-	PMinHeight: SToV("auto"),
-	PMinWidth:  SToV("auto"),
-	PWidth:     SToV("auto"),
+	PHeight:    TagToV(Auto),
+	PWidth:     TagToV(Auto),
+	PMaxHeight: Dimension{Value: Inf, Unit: Px}.Tagged(), // parsed value for "none}"
+	PMaxWidth:  Dimension{Value: Inf, Unit: Px}.Tagged(),
+	PMinHeight: TaggedDim{Tag: Auto},
+	PMinWidth:  TaggedDim{Tag: Auto},
 
 	// Flexible Box Layout Module 1 (CR): https://www.w3.org/TR/css-flexbox-1/
-	PFlexBasis:     SToV("auto"),
+	PFlexBasis:     TaggedDim{Tag: Auto},
 	PFlexDirection: String("row"),
 	PFlexGrow:      Float(0),
 	PFlexShrink:    Float(1),
@@ -451,8 +453,8 @@ var InitialValues = Properties{
 
 	// Grid Layout Module Level 2 (CR): https://www.w3.org/TR/css-grid-2/
 	PGridAutoFlow:        Strings{"row"},
-	PGridAutoColumns:     GridAuto{NewGridDimsValue(SToV("auto"))},
-	PGridAutoRows:        GridAuto{NewGridDimsValue(SToV("auto"))},
+	PGridAutoColumns:     GridAuto{NewGridDimsValue(TaggedDim{Tag: Auto})},
+	PGridAutoRows:        GridAuto{NewGridDimsValue(TaggedDim{Tag: Auto})},
 	PGridTemplateAreas:   GridTemplateAreas{},
 	PGridTemplateColumns: GridTemplate{Tag: None},
 	PGridTemplateRows:    GridTemplate{Tag: None},
@@ -469,15 +471,15 @@ var InitialValues = Properties{
 	PJustifyItems:   JustifyOrAlign{kw.Normal},
 	PJustifySelf:    JustifyOrAlign{kw.Auto},
 	POrder:          Int(0),
-	PColumnGap:      DimOrS{S: "normal"},
-	PRowGap:         DimOrS{S: "normal"},
+	PColumnGap:      TagToV(Normal),
+	PRowGap:         TagToV(Normal),
 
 	// Text Decoration Module 3/4 (CR/WD): https://www.w3.org/TR/css-text-decor-4/
 	PTextDecorationLine:      Decorations(0),
 	PTextDecorationColor:     CurrentColor,
 	PTextDecorationStyle:     String("solid"),
-	PTextDecorationThickness: DimOrS{S: "auto"},
-	PTextUnderlineOffset:     DimOrS{S: "auto"},
+	PTextDecorationThickness: TaggedDim{Tag: Auto},
+	PTextUnderlineOffset:     TaggedDim{Tag: Auto},
 
 	// Overflow Module 3 (WD): https://www.w3.org/TR/css-overflow-3/
 	PBlockEllipsis: TaggedString{Tag: None},

@@ -108,26 +108,26 @@ func TestClip(t *testing.T) {
 	capt := tu.CaptureLogs()
 	assertValidDict(t, "clip: rect(1px, 3em, auto, auto)", toValidated(pr.Properties{
 		pr.PClip: pr.Values{
-			pr.Dimension{Value: 1, Unit: pr.Px}.ToValue(),
-			pr.Dimension{Value: 3, Unit: pr.Em}.ToValue(),
-			pr.SToV("auto"),
-			pr.SToV("auto"),
+			pr.Dimension{Value: 1, Unit: pr.Px}.Tagged(),
+			pr.Dimension{Value: 3, Unit: pr.Em}.Tagged(),
+			pr.TagToV(pr.Auto),
+			pr.TagToV(pr.Auto),
 		},
 	}))
 	assertValidDict(t, "clip: rect(1px, 3em, auto auto)", toValidated(pr.Properties{
 		pr.PClip: pr.Values{
-			pr.Dimension{Value: 1, Unit: pr.Px}.ToValue(),
-			pr.Dimension{Value: 3, Unit: pr.Em}.ToValue(),
-			pr.SToV("auto"),
-			pr.SToV("auto"),
+			pr.Dimension{Value: 1, Unit: pr.Px}.Tagged(),
+			pr.Dimension{Value: 3, Unit: pr.Em}.Tagged(),
+			pr.TagToV(pr.Auto),
+			pr.TagToV(pr.Auto),
 		},
 	}))
 	assertValidDict(t, "clip: rect(1px 3em auto 1px)", toValidated(pr.Properties{
 		pr.PClip: pr.Values{
-			pr.Dimension{Value: 1, Unit: pr.Px}.ToValue(),
-			pr.Dimension{Value: 3, Unit: pr.Em}.ToValue(),
-			pr.SToV("auto"),
-			pr.Dimension{Value: 1, Unit: pr.Px}.ToValue(),
+			pr.Dimension{Value: 1, Unit: pr.Px}.Tagged(),
+			pr.Dimension{Value: 3, Unit: pr.Em}.Tagged(),
+			pr.TagToV(pr.Auto),
+			pr.Dimension{Value: 1, Unit: pr.Px}.Tagged(),
 		},
 	}))
 	assertInvalid(t, "clip: square(1px, 3em, auto, auto)", "invalid")
@@ -166,16 +166,16 @@ func TestCounters(t *testing.T) {
 func TestSpacing(t *testing.T) {
 	capt := tu.CaptureLogs()
 	assertValidDict(t, "letter-spacing: normal", toValidated(pr.Properties{
-		pr.PLetterSpacing: pr.SToV("normal"),
+		pr.PLetterSpacing: pr.TagToV(pr.Normal),
 	}))
 	assertValidDict(t, "letter-spacing: 3px", toValidated(pr.Properties{
-		pr.PLetterSpacing: pr.Dimension{Value: 3, Unit: pr.Px}.ToValue(),
+		pr.PLetterSpacing: pr.Dimension{Value: 3, Unit: pr.Px}.Tagged(),
 	}))
 	assertValidDict(t, "word-spacing: normal", toValidated(pr.Properties{
-		pr.PWordSpacing: pr.SToV("normal"),
+		pr.PWordSpacing: pr.TagToV(pr.Normal),
 	}))
 	assertValidDict(t, "word-spacing: 3px", toValidated(pr.Properties{
-		pr.PWordSpacing: pr.Dimension{Value: 3, Unit: pr.Px}.ToValue(),
+		pr.PWordSpacing: pr.Dimension{Value: 3, Unit: pr.Px}.Tagged(),
 	}))
 	capt.AssertNoLogs(t)
 	assertInvalid(t, "letter_spacing: normal", "unknown property")
@@ -402,25 +402,25 @@ func TestFontFamily(t *testing.T) {
 func TestLineHeight(t *testing.T) {
 	capt := tu.CaptureLogs()
 	assertValidDict(t, "line-height: 1px", toValidated(pr.Properties{
-		pr.PLineHeight: pr.Dimension{Value: 1, Unit: pr.Px}.ToValue(),
+		pr.PLineHeight: pr.Dimension{Value: 1, Unit: pr.Px}.Tagged(),
 	}))
 	assertValidDict(t, "line-height: 1.1%", toValidated(pr.Properties{
-		pr.PLineHeight: pr.Dimension{Value: 1.1, Unit: pr.Perc}.ToValue(),
+		pr.PLineHeight: pr.Dimension{Value: 1.1, Unit: pr.Perc}.Tagged(),
 	}))
 	assertValidDict(t, "line-height: 1em", toValidated(pr.Properties{
-		pr.PLineHeight: pr.Dimension{Value: 1, Unit: pr.Em}.ToValue(),
+		pr.PLineHeight: pr.Dimension{Value: 1, Unit: pr.Em}.Tagged(),
 	}))
 	assertValidDict(t, "line-height: 1", toValidated(pr.Properties{
-		pr.PLineHeight: pr.Dimension{Value: 1, Unit: pr.Scalar}.ToValue(),
+		pr.PLineHeight: pr.Dimension{Value: 1, Unit: pr.Scalar}.Tagged(),
 	}))
 	assertValidDict(t, "line-height: 1.3", toValidated(pr.Properties{
-		pr.PLineHeight: pr.Dimension{Value: 1.3, Unit: pr.Scalar}.ToValue(),
+		pr.PLineHeight: pr.Dimension{Value: 1.3, Unit: pr.Scalar}.Tagged(),
 	}))
 	assertValidDict(t, "line-height: -0", toValidated(pr.Properties{
-		pr.PLineHeight: pr.Dimension{Value: 0, Unit: pr.Scalar}.ToValue(),
+		pr.PLineHeight: pr.Dimension{Value: 0, Unit: pr.Scalar}.Tagged(),
 	}))
 	assertValidDict(t, "line-height: 0px", toValidated(pr.Properties{
-		pr.PLineHeight: pr.Dimension{Value: 0, Unit: pr.Px}.ToValue(),
+		pr.PLineHeight: pr.Dimension{Value: 0, Unit: pr.Px}.Tagged(),
 	}))
 	capt.AssertNoLogs(t)
 	assertInvalid(t, "line-height: 1deg", "invalid")
@@ -479,8 +479,8 @@ func TestBorderImageSlice(t *testing.T) {
 		{"1 2    3 4", pr.Values{pr.FToV(1), pr.FToV(2), pr.FToV(3), pr.FToV(4)}},
 		{"50% 1000.1 0", pr.Values{pr.PercToV(50), pr.FToV(1000.1), pr.FToV(0)}},
 		{"1% 2% 3% 4%", pr.Values{pr.PercToV(1), pr.PercToV(2), pr.PercToV(3), pr.PercToV(4)}},
-		{"fill 10% 20", pr.Values{pr.SToV("fill"), pr.PercToV(10), pr.FToV(20)}},
-		{"0 1 0.5 fill", pr.Values{pr.FToV(0), pr.FToV(1), pr.FToV(0.5), pr.SToV("fill")}},
+		{"fill 10% 20", pr.Values{pr.TagToV(pr.Fill), pr.PercToV(10), pr.FToV(20)}},
+		{"0 1 0.5 fill", pr.Values{pr.FToV(0), pr.FToV(1), pr.FToV(0.5), pr.TagToV(pr.Fill)}},
 	} {
 		assertValidDict(t, fmt.Sprintf("border-image-slice: %s", test.css), map[pr.KnownProp]pr.DeclaredValue{
 			pr.PBorderImageSlice: test.value,
@@ -511,11 +511,11 @@ func TestBorderImageWidth(t *testing.T) {
 		{"1", pr.Values{pr.FToV(1)}},
 		{"1 2    3 4", pr.Values{pr.FToV(1), pr.FToV(2), pr.FToV(3), pr.FToV(4)}},
 		{"50% 1000.1 0", pr.Values{pr.PercToV(50), pr.FToV(1000.1), pr.FToV(0)}},
-		{"1% 2px 3em 4", pr.Values{pr.PercToV(1), pr.FToPx(2), pr.DimOrS{Dimension: pr.Dimension{Value: 3, Unit: pr.Em}}, pr.FToV(4)}},
-		{"auto", pr.Values{pr.SToV("auto")}},
-		{"1 auto", pr.Values{pr.FToV(1), pr.SToV("auto")}},
-		{"auto auto", pr.Values{pr.SToV("auto"), pr.SToV("auto")}},
-		{"auto auto auto 2", pr.Values{pr.SToV("auto"), pr.SToV("auto"), pr.SToV("auto"), pr.FToV(2)}},
+		{"1% 2px 3em 4", pr.Values{pr.PercToV(1), pr.FToPx(2), pr.Dimension{Value: 3, Unit: pr.Em}.Tagged(), pr.FToV(4)}},
+		{"auto", pr.Values{pr.TagToV(pr.Auto)}},
+		{"1 auto", pr.Values{pr.FToV(1), pr.TagToV(pr.Auto)}},
+		{"auto auto", pr.Values{pr.TagToV(pr.Auto), pr.TagToV(pr.Auto)}},
+		{"auto auto auto 2", pr.Values{pr.TagToV(pr.Auto), pr.TagToV(pr.Auto), pr.TagToV(pr.Auto), pr.FToV(2)}},
 	} {
 		assertValidDict(t, fmt.Sprintf("border-image-width: %s", test.css), map[pr.KnownProp]pr.DeclaredValue{
 			pr.PBorderImageWidth: test.value,
@@ -547,7 +547,7 @@ func TestBorderImageOutset(t *testing.T) {
 		{"1", pr.Values{pr.FToV(1)}},
 		{"1 2    3 4", pr.Values{pr.FToV(1), pr.FToV(2), pr.FToV(3), pr.FToV(4)}},
 		{"50px 1000.1 0", pr.Values{pr.FToPx(50), pr.FToV(1000.1), pr.FToV(0)}},
-		{"1in 2px 3em 4", pr.Values{pr.Dimension{Value: 1, Unit: pr.In}.ToValue(), pr.FToPx(2), pr.Dimension{Value: 3, Unit: pr.Em}.ToValue(), pr.FToV(4)}},
+		{"1in 2px 3em 4", pr.Values{pr.Dimension{Value: 1, Unit: pr.In}.Tagged(), pr.FToPx(2), pr.Dimension{Value: 3, Unit: pr.Em}.Tagged(), pr.FToV(4)}},
 	} {
 		assertValidDict(t, fmt.Sprintf("border-image-outset: %s", test.css), map[pr.KnownProp]pr.DeclaredValue{
 			pr.PBorderImageOutset: test.value,
@@ -898,15 +898,15 @@ func TestGridAutoColumnsRows(t *testing.T) {
 		value pr.GridAuto
 	}{
 		{"40px", pr.GridAuto{pr.NewGridDimsValue(pr.FToPx(40))}},
-		{"2fr", pr.GridAuto{pr.NewGridDimsValue(pr.Dimension{Value: 2, Unit: pr.Fr}.ToValue())}},
+		{"2fr", pr.GridAuto{pr.NewGridDimsValue(pr.Dimension{Value: 2, Unit: pr.Fr}.Tagged())}},
 		{"18%", pr.GridAuto{pr.NewGridDimsValue(pr.PercToV(18))}},
-		{"auto", pr.GridAuto{pr.NewGridDimsValue(pr.SToV("auto"))}},
-		{"min-content", pr.GridAuto{pr.NewGridDimsValue(pr.SToV("min-content"))}},
-		{"max-content", pr.GridAuto{pr.NewGridDimsValue(pr.SToV("max-content"))}},
+		{"auto", pr.GridAuto{pr.NewGridDimsValue(pr.TagToV(pr.Auto))}},
+		{"min-content", pr.GridAuto{pr.NewGridDimsValue(pr.TagToV(pr.MinContent))}},
+		{"max-content", pr.GridAuto{pr.NewGridDimsValue(pr.TagToV(pr.MaxContent))}},
 		{"fit-content(20%)", pr.GridAuto{pr.NewGridDimsFitcontent(pr.PercToD(20))}},
 		{"minmax(20px, 25px)", pr.GridAuto{pr.NewGridDimsMinmax(pr.FToPx(20), pr.FToPx(25))}},
-		{"minmax(min-content, max-content)", pr.GridAuto{pr.NewGridDimsMinmax(pr.SToV("min-content"), pr.SToV("max-content"))}},
-		{"min-content max-content", pr.GridAuto{pr.NewGridDimsValue(pr.SToV("min-content")), pr.NewGridDimsValue(pr.SToV("max-content"))}},
+		{"minmax(min-content, max-content)", pr.GridAuto{pr.NewGridDimsMinmax(pr.TagToV(pr.MinContent), pr.TagToV(pr.MaxContent))}},
+		{"min-content max-content", pr.GridAuto{pr.NewGridDimsValue(pr.TagToV(pr.MinContent)), pr.NewGridDimsValue(pr.TagToV(pr.MaxContent))}},
 	} {
 		assertValidDict(t, fmt.Sprintf("grid-auto-columns: %s", test.css), map[pr.KnownProp]pr.DeclaredValue{
 			pr.PGridAutoColumns: test.value,
@@ -986,11 +986,11 @@ func TestGridTemplateColumnsRows(t *testing.T) {
 			pr.GridNames{"outer-edge"},
 			pr.NewGridDimsValue(pr.FToPx(20)),
 			pr.GridNames{"main-start"},
-			pr.NewGridDimsValue(pr.NewDim(1, pr.Fr).ToValue()),
+			pr.NewGridDimsValue(pr.NewDim(1, pr.Fr).Tagged()),
 			pr.GridNames{"center"},
-			pr.NewGridDimsValue(pr.NewDim(1, pr.Fr).ToValue()),
+			pr.NewGridDimsValue(pr.NewDim(1, pr.Fr).Tagged()),
 			pr.GridNames{},
-			pr.NewGridDimsValue(pr.SToV("max-content")),
+			pr.NewGridDimsValue(pr.TagToV(pr.MaxContent)),
 			pr.GridNames{"main-end"},
 		}}},
 		{"repeat(auto-fill, minmax(25ch, 1fr))", pr.GridTemplate{
@@ -998,7 +998,7 @@ func TestGridTemplateColumnsRows(t *testing.T) {
 				pr.GridNames{},
 				pr.GridRepeat{Repeat: pr.RepeatAutoFill, Names: []pr.GridSpec{
 					pr.GridNames{},
-					pr.NewGridDimsMinmax(pr.NewDim(25, pr.Ch).ToValue(), pr.NewDim(1, pr.Fr).ToValue()),
+					pr.NewGridDimsMinmax(pr.NewDim(25, pr.Ch).Tagged(), pr.NewDim(1, pr.Fr).Tagged()),
 					pr.GridNames{},
 				}},
 				pr.GridNames{},
@@ -1006,9 +1006,9 @@ func TestGridTemplateColumnsRows(t *testing.T) {
 		}},
 		{"[a] auto [b] minmax(min-content, 1fr) [b c d] repeat(2, [e] 40px) repeat(5, auto)", pr.GridTemplate{Names: []pr.GridSpec{
 			pr.GridNames{"a"},
-			pr.NewGridDimsValue(pr.SToV("auto")),
+			pr.NewGridDimsValue(pr.TagToV(pr.Auto)),
 			pr.GridNames{"b"},
-			pr.NewGridDimsMinmax(pr.SToV("min-content"), pr.NewDim(1, pr.Fr).ToValue()),
+			pr.NewGridDimsMinmax(pr.TagToV(pr.MinContent), pr.NewDim(1, pr.Fr).Tagged()),
 			pr.GridNames{"b", "c", "d"},
 			pr.GridRepeat{Repeat: 2, Names: []pr.GridSpec{
 				pr.GridNames{"e"},
@@ -1018,7 +1018,7 @@ func TestGridTemplateColumnsRows(t *testing.T) {
 			pr.GridNames{},
 			pr.GridRepeat{Repeat: 5, Names: []pr.GridSpec{
 				pr.GridNames{},
-				pr.NewGridDimsValue(pr.SToV("auto")),
+				pr.NewGridDimsValue(pr.TagToV(pr.Auto)),
 				pr.GridNames{},
 			}},
 			pr.GridNames{},

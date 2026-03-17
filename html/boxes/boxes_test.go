@@ -858,15 +858,15 @@ func TestColumnStyle(t *testing.T) {
 	table := wrapper.Box().Children[0].(TableBoxITF)
 	colgroup := table.Table().ColumnGroups[0]
 	var (
-		widths []pr.DimOrS
+		widths []pr.TaggedDim
 		gridXs []int
 	)
 	for _, col := range colgroup.Box().Children {
 		widths = append(widths, col.Box().Style.GetWidth())
 		gridXs = append(gridXs, col.Box().GridX)
 	}
-	if !reflect.DeepEqual(widths, []pr.DimOrS{
-		pr.FToPx(10), pr.FToPx(10), pr.FToPx(10), pr.SToV("auto"), pr.SToV("auto"),
+	if !reflect.DeepEqual(widths, []pr.TaggedDim{
+		pr.FToPx(10), pr.FToPx(10), pr.FToPx(10), pr.TagToV(pr.Auto), pr.TagToV(pr.Auto),
 	}) {
 		t.Fatal()
 	}

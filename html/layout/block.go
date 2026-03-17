@@ -131,7 +131,7 @@ func blockBoxLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.
 	discard bool, maxLines int,
 ) (bo.BlockLevelBoxITF, blockLayout) {
 	box := box_.Box()
-	if box.Style.GetColumnWidth().S != "auto" || box.Style.GetColumnCount().String != "auto" {
+	if box.Style.GetColumnWidth().Tag != pr.Auto || box.Style.GetColumnCount().String != "auto" {
 		newBox_, result := columnsLayout(context, box_, bottomSpace, skipStack, containingBlock,
 			pageIsEmpty, absoluteBoxes, fixedBoxes, *adjoiningMargins)
 		resumeAt := result.resumeAt
@@ -938,7 +938,7 @@ func inFlowLayout(context *layoutContext, box_ bo.Box, index int, child_ Box, ne
 			adjoiningMargins = new([]pr.Float)
 		} else if !bo.BlockT.IsInstance(child_) { // blocks handle that themselves
 			var marginTop pr.Float
-			if mt := child.Style.GetMarginTop(); mt.S != "auto" {
+			if mt := child.Style.GetMarginTop(); mt.Tag != pr.Auto {
 				marginTop = pr.ResolvePercentage(mt, box.Width.V()).V()
 			}
 			*adjoiningMargins = append(*adjoiningMargins, marginTop)

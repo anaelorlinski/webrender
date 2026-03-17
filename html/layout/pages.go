@@ -576,7 +576,7 @@ func marginBoxContentLayout(context *layoutContext, mBox *bo.MarginBox) Box {
 	box := newBox_.Box()
 	verticalAlign := box.Style.GetVerticalAlign()
 	// Every other value is read as "top", ie. no change.
-	if L := len(box.Children); (verticalAlign.S == "middle" || verticalAlign.S == "bottom") && L != 0 {
+	if L := len(box.Children); (verticalAlign.Tag == pr.Middle || verticalAlign.Tag == pr.Bottom) && L != 0 {
 		firstChild := box.Children[0]
 		lastChild := box.Children[L-1].Box()
 		top := firstChild.Box().PositionY
@@ -585,7 +585,7 @@ func marginBoxContentLayout(context *layoutContext, mBox *bo.MarginBox) Box {
 		bottom := lastChild.PositionY + lastChild.MarginHeight()
 		contentHeight := bottom - top
 		offset := box.Height.V() - contentHeight
-		if verticalAlign.S == "middle" {
+		if verticalAlign.Tag == pr.Middle {
 			offset /= 2
 		}
 		for _, child := range box.Children {

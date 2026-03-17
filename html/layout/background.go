@@ -138,7 +138,7 @@ func layoutBoxBackgrounds(page *bo.PageBox, box_ Box, getImageFromUri bo.ImageFe
 	box.Background = &bo.Background{Color: color, ImageRendering: style.GetImageRendering(), Layers: layers}
 }
 
-func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.DimOrS, image images.Image, size pr.Size, clip string, repeat [2]string,
+func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.TaggedDim, image images.Image, size pr.Size, clip string, repeat [2]string,
 	origin string, position pr.Center, attachment string,
 ) bo.BackgroundLayer {
 	var (
@@ -250,9 +250,9 @@ func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.DimOrS, ima
 
 	_, _, positioningWidth, positioningHeight := positioningArea[0], positioningArea[1], positioningArea[2], positioningArea[3]
 	var imageWidth, imageHeight pr.Float
-	if size.String == "cover" {
+	if size.Tag == pr.Cover {
 		imageWidth, imageHeight = coverConstraintImageSizing(positioningWidth, positioningHeight, ratio)
-	} else if size.String == "contain" {
+	} else if size.Tag == pr.Contain {
 		imageWidth, imageHeight = containConstraintImageSizing(positioningWidth, positioningHeight, ratio)
 	} else {
 		sizeWidth, sizeHeight := size.Width, size.Height
@@ -264,8 +264,8 @@ func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.DimOrS, ima
 	originX, positionX_, originY, positionY_ := position.OriginX, position.Pos[0], position.OriginY, position.Pos[1]
 	refX := positioningWidth - imageWidth
 	refY := positioningHeight - imageHeight
-	positionX := pr.ResolvePercentage(positionX_.ToValue(), refX)
-	positionY := pr.ResolvePercentage(positionY_.ToValue(), refY)
+	positionX := pr.ResolvePercentage(positionX_.Tagged(), refX)
+	positionY := pr.ResolvePercentage(positionY_.Tagged(), refY)
 	if originX == "right" {
 		positionX = refX - positionX.V()
 	}
@@ -279,7 +279,7 @@ func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.DimOrS, ima
 		nRepeats := max(1, int(math.Round(float64(positioningWidth/imageWidth))))
 		newWidth := positioningWidth / pr.Float(nRepeats)
 		positionX = pr.Float(0) // Ignore background-position for this dimension
-		if repeatY != "round" && size.Height.S == "auto" {
+		if repeatY != "round" && size.Height.Tag == pr.Auto {
 			imageHeight *= newWidth / imageWidth
 		}
 		imageWidth = newWidth
@@ -288,7 +288,7 @@ func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.DimOrS, ima
 		nRepeats := max(1, int(math.Round(float64(positioningHeight/imageHeight))))
 		newHeight := positioningHeight / pr.Float(nRepeats)
 		positionY = pr.Float(0) // Ignore background-position for this dimension
-		if repeatX != "round" && size.Width.S == "auto" {
+		if repeatX != "round" && size.Width.Tag == pr.Auto {
 			imageWidth *= newHeight / imageHeight
 		}
 		imageHeight = newHeight

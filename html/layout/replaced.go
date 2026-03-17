@@ -111,8 +111,8 @@ func LayoutReplacedBox(box_ bo.ReplacedBoxITF) (drawWidth, drawHeight, positionX
 	refX := box.Width.V() - drawWidth
 	refY := box.Height.V() - drawHeight
 
-	positionX = pr.ResolvePercentage(positionX_.ToValue(), refX).V()
-	positionY = pr.ResolvePercentage(positionY_.ToValue(), refY).V()
+	positionX = pr.ResolvePercentage(positionX_.Tagged(), refX).V()
+	positionY = pr.ResolvePercentage(positionY_.Tagged(), refY).V()
 	if originX == "right" {
 		positionX = refX - positionX
 	}
@@ -285,7 +285,7 @@ func inlineReplacedBoxLayout(box_ Box, containingBlock *bo.BoxFields) {
 }
 
 func inlineReplacedBoxWidthHeight(box Box, containingBlock containingBlock) {
-	if style := box.Box().Style; style.GetWidth().S == "auto" && style.GetHeight().S == "auto" {
+	if style := box.Box().Style; style.GetWidth().Tag == pr.Auto && style.GetHeight().Tag == pr.Auto {
 		replacedBoxWidth_(box, nil, containingBlock)
 		replacedBoxHeight_(box, nil, nil)
 		minMaxAutoReplaced(box.Box())
@@ -299,7 +299,7 @@ func inlineReplacedBoxWidthHeight(box Box, containingBlock containingBlock) {
 func blockReplacedBoxLayout(context *layoutContext, box_ bo.ReplacedBoxITF, containingBlock *bo.BoxFields) (bo.ReplacedBoxITF, blockLayout) {
 	box_ = box_.Copy().(bo.ReplacedBoxITF) // Copy is type stable
 	box := box_.Box()
-	if box.Style.GetWidth().S == "auto" && box.Style.GetHeight().S == "auto" {
+	if box.Style.GetWidth().Tag == pr.Auto && box.Style.GetHeight().Tag == pr.Auto {
 		computedMarginsL, computedMarginsR := box.MarginLeft, box.MarginRight
 		blockReplacedWidth_(box_, nil, containingBlock)
 		replacedBoxHeight_(box_, nil, nil)
