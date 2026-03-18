@@ -197,18 +197,6 @@ type IntNamedString struct {
 
 type String string
 
-type DimOrS struct {
-	S string
-	Dimension
-}
-
-func (ds DimOrS) String() string {
-	if ds.S != "" {
-		return ds.S
-	}
-	return ds.Dimension.String()
-}
-
 // OptionalRanges is either 'auto' or a slice of ranges.
 type OptionalRanges struct {
 	Ranges [][2]int
@@ -648,7 +636,6 @@ func (String) isCssProperty()            {}
 func (StringSet) isCssProperty()         {}
 func (Strings) isCssProperty()           {}
 func (Transforms) isCssProperty()        {}
-func (DimOrS) isCssProperty()            {}
 func (Values) isCssProperty()            {}
 func (AttrData) isCssProperty()          {}
 func (NoneImage) isCssProperty()         {}
@@ -694,7 +681,6 @@ func (String) isDeclaredValue()            {}
 func (StringSet) isDeclaredValue()         {}
 func (Strings) isDeclaredValue()           {}
 func (Transforms) isDeclaredValue()        {}
-func (DimOrS) isDeclaredValue()            {}
 func (Values) isDeclaredValue()            {}
 func (AttrData) isDeclaredValue()          {}
 func (NoneImage) isDeclaredValue()         {}

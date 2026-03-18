@@ -16,17 +16,17 @@ var attrFallbacks = map[string]pr.CssProperty{
 	"string":  pr.String(""),
 	"color":   pr.String("currentcolor"),
 	"url":     pr.String("about:invalid"),
-	"integer": pr.Dimension{Unit: pr.Scalar}.ToValue(),
-	"number":  pr.Dimension{Unit: pr.Scalar}.ToValue(),
-	"%":       pr.Dimension{Unit: pr.Scalar}.ToValue(),
+	"integer": pr.Dimension{Unit: pr.Scalar}.Tagged(),
+	"number":  pr.Dimension{Unit: pr.Scalar}.Tagged(),
+	"%":       pr.Dimension{Unit: pr.Scalar}.Tagged(),
 }
 
 func init() {
 	for unitString, unit := range LENGTHUNITS {
-		attrFallbacks[unitString] = pr.Dimension{Unit: unit}.ToValue()
+		attrFallbacks[unitString] = pr.Dimension{Unit: unit}.Tagged()
 	}
 	for unitString, unit := range AngleUnits {
-		attrFallbacks[unitString] = pr.Dimension{Unit: unit}.ToValue()
+		attrFallbacks[unitString] = pr.Dimension{Unit: unit}.Tagged()
 	}
 }
 

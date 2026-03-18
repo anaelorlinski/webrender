@@ -620,5 +620,5 @@ func TestNestingCSS(t *testing.T) {
 	s2 := styleFor.Get(p2, "")
 
 	tu.AssertEqual(t, s1.GetWidth(), pr.FToPx(10))
-	tu.AssertEqual(t, s2.GetWidth(), pr.SToV("auto"))
+	tu.AssertEqual(t, s2.GetWidth(), pr.TagToV(pr.Auto))
 }

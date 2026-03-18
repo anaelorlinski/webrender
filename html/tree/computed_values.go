@@ -558,7 +558,7 @@ func computeAttrFunction(computer *ComputedStyle, values pr.AttrData) (out pr.Co
 			if err != nil {
 				return out, err
 			}
-			prop = pr.Dimension{Value: pr.Float(f), Unit: pr.Perc}.ToValue()
+			prop = pr.Dimension{Value: pr.Float(f), Unit: pr.Perc}.Tagged()
 			typeOrUnit = "length"
 		default:
 			unit, isUnit := validation.LENGTHUNITS[typeOrUnit]
@@ -568,14 +568,14 @@ func computeAttrFunction(computer *ComputedStyle, values pr.AttrData) (out pr.Co
 				if err != nil {
 					return out, err
 				}
-				prop = pr.Dimension{Value: pr.Float(f), Unit: unit}.ToValue()
+				prop = pr.Dimension{Value: pr.Float(f), Unit: unit}.Tagged()
 				typeOrUnit = "length"
 			} else if isAngle {
 				f, err := strconv.ParseFloat(strings.TrimSpace(attrValue), 64)
 				if err != nil {
 					return out, err
 				}
-				prop = pr.Dimension{Value: pr.Float(f), Unit: angle}.ToValue()
+				prop = pr.Dimension{Value: pr.Float(f), Unit: angle}.Tagged()
 				typeOrUnit = "angle"
 			}
 		}
@@ -850,7 +850,7 @@ func lineHeight(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) 
 	default:
 		pixels = length_(computer, value, -1, true).Value
 	}
-	return pr.Dimension{Value: pixels, Unit: pr.Px}.ToValue()
+	return pr.Dimension{Value: pixels, Unit: pr.Px}.Tagged()
 }
 
 // Compute the “anchor“ property.

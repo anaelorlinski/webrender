@@ -77,11 +77,6 @@ func (p Point) ToPixels() Point {
 	return Point{p[0].ToPixels(), p[1].ToPixels()}
 }
 
-// ToValue wraps `d` to a Value object.
-func (d Dimension) ToValue() DimOrS {
-	return DimOrS{Dimension: d}
-}
-
 // FToPx returns `f` as pixels.
 func FToPx(f Float) TaggedDim      { return TaggedDim{Dimension: Dimension{Value: f, Unit: Px}} }
 func FToD(f Fl) Dimension          { return Dimension{Value: Float(f), Unit: Scalar} }
@@ -90,7 +85,6 @@ func PercToV(f Fl) TaggedDim       { return TaggedDim{Dimension: PercToD(f)} }
 func FToV(f Fl) TaggedDim          { return TaggedDim{Dimension: FToD(f)} }
 func (f Float) ToValue() TaggedDim { return FToV(Fl(f)) }
 func TagToV(t Tag) TaggedDim       { return TaggedDim{Tag: t} }
-func SToV(s string) DimOrS         { return DimOrS{S: s} }
 
 func (v TaggedDim) ToMaybeFloat() MaybeFloat {
 	if v.Tag == Auto {
