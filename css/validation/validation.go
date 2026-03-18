@@ -710,7 +710,7 @@ func getKeyword(token Token) string {
 
 func getKeywordT(token Token) kw.Keyword {
 	if ident, ok := token.(pa.Ident); ok {
-		return kw.NewKeyword(utils.AsciiLower(ident.Value))
+		return kw.New(utils.AsciiLower(ident.Value))
 	}
 	return 0
 }
@@ -1747,38 +1747,38 @@ func direction(tokens []Token, _ string) pr.CssProperty {
 // @singleKeyword
 // “display“ property validation.
 func display(tokens []Token, _ string) pr.CssProperty {
-	keyword := getSingleKeyword(tokens)
+	keyword := kw.New(getSingleKeyword(tokens))
 	switch keyword {
-	case "none", "table-caption", "table-row-group", "table-cell",
-		"table-header-group", "table-footer-group", "table-row",
-		"table-column-group", "table-column":
-		return pr.Display{keyword}
-	case "inline-table", "inline-flex", "inline-grid":
-		return pr.Display{"inline", keyword[7:]}
-	case "inline-block":
-		return pr.Display{"inline", "flow-root"}
+	case kw.None, kw.TableCaption, kw.TableRowGroup, kw.TableCell,
+		kw.TableHeaderGroup, kw.TableFooterGroup, kw.TableRow,
+		kw.TableColumnGroup, kw.TableColumn:
+		return pr.Display{Outside: keyword}
+	case kw.InlineTable:
+		return pr.Display{Outside: kw.Inline, Inside: kw.Table}
+	case kw.InlineFlex:
+		return pr.Display{Outside: kw.Inline, Inside: kw.Flex}
+	case kw.InlineGrid:
+		return pr.Display{Outside: kw.Inline, Inside: kw.Grid}
+	case kw.InlineBlock:
+		return pr.Display{Outside: kw.Inline, Inside: kw.FlowRoot}
 	}
 
-	var outside, inside, listItem string
+	var outside, inside, listItem kw.Keyword
 	for _, token := range tokens {
-		ident, ok := token.(pa.Ident)
-		if !ok {
-			return nil
-		}
-		value := string(ident.Value)
+		value := getKeywordT(token)
 		switch value {
-		case "block", "inline":
-			if outside != "" {
+		case kw.Block, kw.Inline:
+			if outside != 0 {
 				return nil
 			}
 			outside = value
-		case "flow", "flow-root", "table", "flex", "grid":
-			if inside != "" {
+		case kw.Flow, kw.FlowRoot, kw.Table, kw.Flex, kw.Grid:
+			if inside != 0 {
 				return nil
 			}
 			inside = value
-		case "list-item":
-			if listItem != "" {
+		case kw.ListItem:
+			if listItem != 0 {
 				return nil
 			}
 			listItem = value
@@ -1787,18 +1787,15 @@ func display(tokens []Token, _ string) pr.CssProperty {
 		}
 	}
 
-	if outside == "" {
-		outside = "block"
+	if outside == 0 {
+		outside = kw.Block
 	}
-	if inside == "" {
-		inside = "flow"
+	if inside == 0 {
+		inside = kw.Flow
 	}
-	if listItem != "" {
-		if inside == "flow" || inside == "flow-root" {
-			return pr.Display{outside, inside, listItem}
-		}
-	} else {
-		return pr.Display{outside, inside}
+
+	if listItem == 0 || (inside == kw.Flow || inside == kw.FlowRoot) {
+		return pr.Display{Outside: outside, Inside: inside, ListItem: listItem}
 	}
 
 	return nil

@@ -14,6 +14,7 @@ import (
 	"golang.org/x/net/html/atom"
 
 	"github.com/benoitkugler/webrender/css/parser"
+	kw "github.com/benoitkugler/webrender/css/properties/keywords"
 	"github.com/benoitkugler/webrender/html/tree"
 
 	pr "github.com/benoitkugler/webrender/css/properties"
@@ -567,7 +568,7 @@ func EstablishesFormattingContext(box_ Box) bool {
 		box.IsColumn ||
 		(BlockContainerT.IsInstance(box_) && !BlockT.IsInstance(box_)) ||
 		(BlockT.IsInstance(box_) && box.Style.GetOverflow() != "visible") ||
-		box.Style.GetDisplay().Has("flow-root"))
+		box.Style.GetDisplay().Has(kw.FlowRoot))
 }
 
 // Start and end page values for named pages

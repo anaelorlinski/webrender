@@ -3,6 +3,7 @@ package boxes
 import (
 	"strings"
 
+	kw "github.com/benoitkugler/webrender/css/properties/keywords"
 	"github.com/benoitkugler/webrender/images"
 	"github.com/benoitkugler/webrender/logger"
 
@@ -40,7 +41,7 @@ func handleElement(element *utils.HTMLNode, box Box, resolver URLResolver, baseU
 // element should be.
 func makeReplacedBox(element *utils.HTMLNode, box Box, image images.Image) Box {
 	var newBox Box
-	if box.Box().Style.GetDisplay().Has("block") {
+	if box.Box().Style.GetDisplay().Has(kw.Block) {
 		b := NewBlockReplacedBox(box.Box().Style, (*html.Node)(element), "", image)
 		newBox = &b
 	} else {

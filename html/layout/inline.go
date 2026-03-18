@@ -12,6 +12,7 @@ import (
 	"github.com/benoitkugler/webrender/utils/testutils/tracer"
 
 	pr "github.com/benoitkugler/webrender/css/properties"
+	kw "github.com/benoitkugler/webrender/css/properties/keywords"
 	bo "github.com/benoitkugler/webrender/html/boxes"
 	"github.com/benoitkugler/webrender/html/tree"
 )
@@ -227,7 +228,7 @@ func getNextLinebox(context *layoutContext, linebox *bo.LineBox, positionY, bott
 
 	line := line_.Box()
 	for _, placeholder := range linePlaceholders {
-		if placeholder.Box().Style.Specified().Display.Has("inline") {
+		if placeholder.Box().Style.Specified().Display.Has(kw.Inline) {
 			// Inline-level static position :
 			placeholder.Translate(placeholder, 0, positionY-placeholder.Box().PositionY.V(), false)
 		} else {

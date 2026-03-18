@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	kw "github.com/benoitkugler/webrender/css/properties/keywords"
 	"github.com/benoitkugler/webrender/css/validation"
 	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/text"
@@ -692,15 +693,15 @@ func display(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) pr.
 	float_ := computer.specified.Float
 	position := computer.specified.Position
 	if (!position.Bool && (position.String == "absolute" || position.String == "fixed")) || float_ != "none" || computer.isRootElement() {
-		if value == (pr.Display{"inline-table"}) {
-			return pr.Display{"block", "table"}
-		} else if d := value[0]; value[1] == "" && value[2] == "" && strings.HasPrefix(d, "table-") {
-			return pr.Display{"block", "flow"}
-		} else if d == "inline" {
-			if value.Has("list-item") {
-				return pr.Display{"block", "flow", "list-item"}
+		if value == (pr.Display{Outside: kw.InlineTable}) {
+			return pr.Display{Outside: kw.Block, Inside: kw.Table}
+		} else if d := value.Outside; value.Inside == 0 && value.ListItem == 0 && d.HasTablePrefix() {
+			return pr.Display{Outside: kw.Block, Inside: kw.Flow}
+		} else if d == kw.Inline {
+			if value.Has(kw.ListItem) {
+				return pr.Display{Outside: kw.Block, Inside: kw.Flow, ListItem: kw.ListItem}
 			} else {
-				return pr.Display{"block", "flow"}
+				return pr.Display{Outside: kw.Block, Inside: kw.Flow}
 			}
 		}
 	}

@@ -42,7 +42,9 @@ type SContent struct {
 	Contents ContentProperties
 }
 
-type Display [3]string
+type Display struct {
+	Outside, Inside, ListItem keywords.Keyword
+}
 
 // Decorations zero value means "none"
 type Decorations uint8

@@ -5,6 +5,7 @@ import (
 	"math"
 
 	"github.com/benoitkugler/webrender/css/parser"
+	"github.com/benoitkugler/webrender/css/properties/keywords"
 )
 
 var Inf = Float(math.Inf(+1))
@@ -98,8 +99,8 @@ func NewColor(r, g, b, a Fl) Color {
 }
 
 // Has returns `true` is v is one of the three elements.
-func (d Display) Has(v string) bool {
-	return d[0] == v || d[1] == v || d[2] == v
+func (d Display) Has(v keywords.Keyword) bool {
+	return d.Inside == v || d.Outside == v || d.ListItem == v
 }
 
 const (

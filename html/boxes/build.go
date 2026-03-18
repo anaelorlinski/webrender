@@ -11,6 +11,7 @@ import (
 	"github.com/benoitkugler/webrender/text"
 
 	"github.com/benoitkugler/webrender/css/parser"
+	kw "github.com/benoitkugler/webrender/css/properties/keywords"
 
 	"github.com/benoitkugler/webrender/css/counters"
 	pr "github.com/benoitkugler/webrender/css/properties"
@@ -74,9 +75,9 @@ func (r rootStyleFor) Get(element tree.Element, pseudoType string) pr.ElementSty
 	style := r.StyleFor.Get(element, pseudoType)
 	if style != nil {
 		if element == r.elementTree {
-			style.SetDisplay(pr.Display{"block", "flow"})
+			style.SetDisplay(pr.Display{Outside: kw.Block, Inside: kw.Flow})
 		} else {
-			style.SetDisplay(pr.Display{"none"})
+			style.SetDisplay(pr.Display{Outside: kw.None})
 		}
 	}
 	return style
@@ -124,43 +125,43 @@ func BuildFormattingStructure(elementTree *utils.HTMLNode, styleFor *tree.StyleF
 // Maps values of the “display“ CSS property to box types.
 func makeBox(style pr.ElementStyle, content []Box, element *utils.HTMLNode, pseudoType string) (b Box, _ error) {
 	tmp := style.GetDisplay()
-	display := [2]string{tmp[0], tmp[1]}
+	display := [2]kw.Keyword{tmp.Outside, tmp.Inside}
 	switch display {
-	case [2]string{"block", "flow"}:
+	case [2]kw.Keyword{kw.Block, kw.Flow}:
 		b = NewBlockBox(style, (*html.Node)(element), pseudoType, content)
-	case [2]string{"inline", "flow"}:
+	case [2]kw.Keyword{kw.Inline, kw.Flow}:
 		b = NewInlineBox(style, (*html.Node)(element), pseudoType, content)
-	case [2]string{"block", "flow-root"}:
+	case [2]kw.Keyword{kw.Block, kw.FlowRoot}:
 		b = NewBlockBox(style, (*html.Node)(element), pseudoType, content)
-	case [2]string{"inline", "flow-root"}:
+	case [2]kw.Keyword{kw.Inline, kw.FlowRoot}:
 		b = NewInlineBlockBox(style, (*html.Node)(element), pseudoType, content)
-	case [2]string{"block", "table"}:
+	case [2]kw.Keyword{kw.Block, kw.Table}:
 		b = NewTableBox(style, (*html.Node)(element), pseudoType, content)
-	case [2]string{"inline", "table"}:
+	case [2]kw.Keyword{kw.Inline, kw.Table}:
 		b = NewInlineTableBox(style, (*html.Node)(element), pseudoType, content)
-	case [2]string{"block", "flex"}:
+	case [2]kw.Keyword{kw.Block, kw.Flex}:
 		b = NewFlexBox(style, (*html.Node)(element), pseudoType, content)
-	case [2]string{"inline", "flex"}:
+	case [2]kw.Keyword{kw.Inline, kw.Flex}:
 		b = NewInlineFlexBox(style, (*html.Node)(element), pseudoType, content)
-	case [2]string{"block", "grid"}:
+	case [2]kw.Keyword{kw.Block, kw.Grid}:
 		b = NewGridBox(style, (*html.Node)(element), pseudoType, content)
-	case [2]string{"inline", "grid"}:
+	case [2]kw.Keyword{kw.Inline, kw.Grid}:
 		b = NewInlineGridBox(style, (*html.Node)(element), pseudoType, content)
-	case [2]string{"table-row"}:
+	case [2]kw.Keyword{kw.TableRow}:
 		b = NewTableRowBox(style, (*html.Node)(element), pseudoType, content)
-	case [2]string{"table-row-group"}:
+	case [2]kw.Keyword{kw.TableRowGroup}:
 		b = NewTableRowGroupBox(style, (*html.Node)(element), pseudoType, content)
-	case [2]string{"table-header-group"}:
+	case [2]kw.Keyword{kw.TableHeaderGroup}:
 		b = NewTableRowGroupBox(style, (*html.Node)(element), pseudoType, content)
-	case [2]string{"table-footer-group"}:
+	case [2]kw.Keyword{kw.TableFooterGroup}:
 		b = NewTableRowGroupBox(style, (*html.Node)(element), pseudoType, content)
-	case [2]string{"table-column"}:
+	case [2]kw.Keyword{kw.TableColumn}:
 		b = NewTableColumnBox(style, (*html.Node)(element), pseudoType, content)
-	case [2]string{"table-column-group"}:
+	case [2]kw.Keyword{kw.TableColumnGroup}:
 		b = NewTableColumnGroupBox(style, (*html.Node)(element), pseudoType, content)
-	case [2]string{"table-cell"}:
+	case [2]kw.Keyword{kw.TableCell}:
 		b = NewTableCellBox(style, (*html.Node)(element), pseudoType, content)
-	case [2]string{"table-caption"}:
+	case [2]kw.Keyword{kw.TableCaption}:
 		b = NewTableCaptionBox(style, (*html.Node)(element), pseudoType, content)
 	default:
 		return nil, fmt.Errorf("ignored box %s: display property %s not supported", element.Data, tmp)
@@ -201,15 +202,15 @@ func elementToBox(element *utils.HTMLNode, styleFor styleForI,
 	style := styleFor.Get(element, "")
 
 	display := style.GetDisplay()
-	if display == (pr.Display{"none"}) {
+	if display == (pr.Display{Outside: kw.None}) {
 		return nil
 	}
 
 	if style.GetFloat() == "footnote" {
 		if style.GetFootnoteDisplay() == "block" {
-			style.SetDisplay(pr.Display{"block", "flow"})
+			style.SetDisplay(pr.Display{Outside: kw.Block, Inside: kw.Flow})
 		} else {
-			style.SetDisplay(pr.Display{"inline", "flow"})
+			style.SetDisplay(pr.Display{Outside: kw.Inline, Inside: kw.Flow})
 		}
 	}
 
@@ -244,7 +245,7 @@ func elementToBox(element *utils.HTMLNode, styleFor styleForI,
 	box.Box().firstLineStyle = styleFor.Get(element, "first-line")
 
 	var children, markerBoxes []Box
-	if display.Has("list-item") {
+	if display.Has(kw.ListItem) {
 		mb := markerToBox(element, state, style, styleFor, resolver, targetCollector, cs)
 		if mb != nil {
 			markerBoxes = []Box{mb}
@@ -370,7 +371,7 @@ func beforeAfterToBox(element *utils.HTMLNode, pseudoType string, state *tree.Pa
 
 	display := style.GetDisplay()
 	content := style.GetContent()
-	if display == (pr.Display{"none"}) || content.String == "none" || content.String == "normal" || content.String == "inhibit" {
+	if display == (pr.Display{Outside: kw.None}) || content.String == "none" || content.String == "normal" || content.String == "inhibit" {
 		return nil
 	}
 
@@ -383,7 +384,7 @@ func beforeAfterToBox(element *utils.HTMLNode, pseudoType string, state *tree.Pa
 	UpdateCounters(state, style)
 
 	var children []Box
-	if display.Has("list-item") {
+	if display.Has(kw.ListItem) {
 		mb := markerToBox(element, state, style, styleFor, resolver, targetCollector, cs)
 		if mb != nil {
 			children = append(children, mb)
@@ -417,7 +418,7 @@ func markerToBox(element *utils.HTMLNode, state *tree.PageState, parentStyle pr.
 
 	children := &box.Box().Children
 
-	if style.GetDisplay() == (pr.Display{"none"}) {
+	if style.GetDisplay() == (pr.Display{Outside: kw.None}) {
 		return nil
 	}
 
@@ -921,7 +922,7 @@ func UpdateCounters(state *tree.PageState, style pr.ElementStyle) {
 		// there was no counter-increment declaration for this element.
 		// (Or the winning value was "initial".)
 		// https://drafts.csswg.org/css-lists-3/#declaring-a-list-item
-		if style.GetDisplay().Has("list-item") {
+		if style.GetDisplay().Has(kw.ListItem) {
 			counterIncrement = pr.SIntStrings{Values: pr.IntStrings{{String: "list-item", Int: 1}}}
 		} else {
 			counterIncrement = pr.SIntStrings{}
@@ -1199,10 +1200,10 @@ func wrapTable(box TableBoxITF, children boxIterator) Box {
 	for _, _group := range rowGroups {
 		group := _group.Box()
 		display := group.Style.GetDisplay()
-		if display == (pr.Display{"table-header-group"}) && header == nil {
+		if display == (pr.Display{Outside: kw.TableHeaderGroup}) && header == nil {
 			group.IsHeader = true
 			header = _group
-		} else if display == (pr.Display{"table-footer-group"}) && footer == nil {
+		} else if display == (pr.Display{Outside: kw.TableFooterGroup}) && footer == nil {
 			group.IsFooter = true
 			footer = _group
 		} else {

@@ -264,7 +264,7 @@ var InitialValues = Properties{
 	PColor:       Color(parser.ParseColorString("black")), // chosen by the user agent
 
 	PDirection:  String("ltr"),
-	PDisplay:    Display{"inline", "flow"},
+	PDisplay:    Display{Outside: kw.Inline, Inside: kw.Flow},
 	PEmptyCells: String("show"),
 	PFloat:      String("none"),
 	PLineHeight: TagToV(Normal),
