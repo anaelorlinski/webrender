@@ -223,7 +223,7 @@ func BenchmarkRenderAttestation(b *testing.B) {
 }
 
 func TestLayoutTime(t *testing.T) {
-	t.Skip("dev only test") // TODO
+	t.Skip("dev only test")
 	logger.ProgressLogger.SetOutput(io.Discard)
 	logger.WarningLogger.SetOutput(io.Discard)
 	defer func() {
@@ -249,7 +249,7 @@ func TestLayoutTime(t *testing.T) {
 	fmt.Println(time.Since(ti))
 }
 
-func Benchmark(b *testing.B) {
+func BenchmarkDraw(b *testing.B) {
 	logger.ProgressLogger.SetOutput(io.Discard)
 	logger.WarningLogger.SetOutput(io.Discard)
 	defer func() {
@@ -273,10 +273,10 @@ func Benchmark(b *testing.B) {
 		}
 	})
 
-	b.Run("pango", func(b *testing.B) {
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			_ = Render(doc, nil, true, fc)
-		}
-	})
+	// b.Run("pango", func(b *testing.B) {
+	// 	b.ResetTimer()
+	// 	for i := 0; i < b.N; i++ {
+	// 		_ = Render(doc, nil, true, fc)
+	// 	}
+	// })
 }

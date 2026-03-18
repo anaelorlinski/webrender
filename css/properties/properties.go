@@ -5,8 +5,11 @@ import (
 	kw "github.com/benoitkugler/webrender/css/properties/keywords"
 )
 
-// This file is used to generate typed accessors
 //go:generate go run gen/gen.go
+
+// This file is used to generate typed accessors
+// The order of props matters : it is choosen so that the more frequent
+// props come first
 
 const (
 	_ KnownProp = iota
@@ -40,19 +43,6 @@ const (
 	PMarginTop
 	PPaddingTop
 
-	PBorderImageSource
-	PBorderImageSlice
-	PBorderImageWidth
-	PBorderImageOutset
-	PBorderImageRepeat
-
-	PMaskBorderSource
-	PMaskBorderSlice
-	PMaskBorderWidth
-	PMaskBorderOutset
-	PMaskBorderRepeat
-	PMaskBorderMode
-
 	// min-XXX is at +2, max-XXX is at + 4
 	PWidth
 	PHeight
@@ -60,6 +50,12 @@ const (
 	PMinHeight
 	PMaxWidth
 	PMaxHeight
+
+	PBorderCollapse
+	PTabSize
+
+	PBorderImageSource
+	PMaskBorderSource
 
 	PColor
 	PDirection
@@ -70,20 +66,14 @@ const (
 	PPosition
 	PTableLayout
 	PTop
-	PUnicodeBidi
 	PVerticalAlign
 	PVisibility
-	PZIndex
 
 	PBorderBottomLeftRadius
 	PBorderBottomRightRadius
 	PBorderTopLeftRadius
 	PBorderTopRightRadius
 
-	POpacity
-
-	PColumnRuleStyle
-	PColumnRuleWidth
 	PColumnCount
 	PColumnWidth
 
@@ -106,6 +96,7 @@ const (
 	PFontWeight
 	PFontVariationSettings
 
+	PHyphenateLimitZone
 	PHyphenateCharacter
 	PHyphenateLimitChars
 	PHyphens
@@ -159,16 +150,16 @@ const (
 	PBackgroundClip
 	PBackgroundOrigin
 
+	PBreakAfter
+	PBreakBefore
+	PBreakInside
+
 	// text-decoration-XXX
 	PTextDecorationLine
 	PTextDecorationColor
 	PTextDecorationStyle
 	PTextDecorationThickness
 	PTextUnderlineOffset
-
-	PBreakAfter
-	PBreakBefore
-	PBreakInside
 
 	PGridAutoColumns
 	PGridAutoFlow
@@ -211,14 +202,11 @@ const (
 
 	PTextOverflow
 	PBlockEllipsis
-	PBorderCollapse
 	PBorderSpacing
 
 	PTransformOrigin
 
 	PFontVariant
-
-	PTabSize
 
 	PMarginBreak
 	POrphans
@@ -242,10 +230,24 @@ const (
 	PBleedBottom
 	PMarks
 
+	PUnicodeBidi
+	PZIndex
+	POpacity
+	PColumnRuleStyle
+	PColumnRuleWidth
+
+	PBorderImageSlice
+	PBorderImageWidth
+	PBorderImageOutset
+	PBorderImageRepeat
+	PMaskBorderSlice
+	PMaskBorderWidth
+	PMaskBorderOutset
+	PMaskBorderRepeat
+	PMaskBorderMode
+
 	PObjectFit
 	PObjectPosition
-
-	PHyphenateLimitZone
 
 	NbProperties
 )
