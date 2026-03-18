@@ -448,36 +448,3 @@ func hslToRgb(_hue int, saturation, lightness utils.Fl) (utils.Fl, utils.Fl, uti
 	m1 = float64(lightness*2) - m2
 	return hueToRgb(m1, m2, hue+1./3), hueToRgb(m1, m2, hue), hueToRgb(m1, m2, hue-1./3)
 }
-
-// Parse a list of tokens (typically the content of a function token)
-// as arguments made of a single token each, separated by mandatory commas,
-// with optional white space around each argument.
-// return the argument list without commas or white space;
-// or `nil` if the function token content do not match the description above.
-func parseCommaSeparated(tokens []Token) []Token {
-	var filtered []Token
-	for _, token := range tokens {
-		if token.Kind() != KWhitespace && token.Kind() != KComment {
-			filtered = append(filtered, token)
-		}
-	}
-
-	if len(filtered)%2 == 1 {
-		others := []Token{filtered[0]}
-		isAll := true
-		for i := 1; i < len(filtered); i += 2 {
-			token := filtered[i]
-			others = append(others, filtered[i+1])
-			litteral, ok := token.(Literal)
-			if !ok || litteral.Value != "," {
-				isAll = false
-				break
-			}
-		}
-
-		if isAll {
-			return others
-		}
-	}
-	return nil
-}

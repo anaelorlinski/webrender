@@ -14,7 +14,7 @@ import (
 )
 
 // Set “box“ mask border as alpha state on “stream“.
-func (ctx drawContext) setMaskBorder(box_ Box) {
+func (ctx *drawContext) setMaskBorder(box_ Box) {
 	box := box_.Box()
 	style := box.Style
 	if style.GetMaskBorderSource() == (pr.NoneImage{}) || box.MaskBorderImage == nil {

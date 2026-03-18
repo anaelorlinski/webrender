@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/benoitkugler/webrender/utils"
@@ -154,7 +153,7 @@ func TestIdentifiers(t *testing.T) {
 		t.Fatal(err)
 	}
 	if res != refJson {
-		t.Fatalf(fmt.Sprintf("expected \n %s \n got \n %s \n", ref, res))
+		t.Fatalf("expected \n %s \n got \n %s \n", ref, res)
 	}
 }
 

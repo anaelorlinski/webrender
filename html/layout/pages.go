@@ -999,7 +999,7 @@ func updatePageGroups(pageGroups *[]pageGroup, resumeAt tree.ResumeStack, nextPa
 	}
 
 	// Find the descendant with named page.
-	for true {
+	for {
 		if currentElement.Box().Style.GetPage() == nextPage.Page {
 			*pageGroups = append(*pageGroups, pageGroup{nextPage.Page, 0, pageGroupResumeAt})
 			return nextPage.Page
