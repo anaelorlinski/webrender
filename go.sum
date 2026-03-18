@@ -7,10 +7,10 @@ github.com/benoitkugler/textlayout-testdata v0.1.1 h1:AvFxBxpfrQd8v55qH59mZOJOQj
 github.com/benoitkugler/textlayout-testdata v0.1.1/go.mod h1:i/qZl09BbUOtd7Bu/W1CAubRwTWrEXWq6JwMkw8wYxo=
 github.com/benoitkugler/textprocessing v0.0.5 h1:bKCso6l6JQhLcToA2FwIDOMH4eWsaOBaSrN5ojX1VK4=
 github.com/benoitkugler/textprocessing v0.0.5/go.mod h1:Io0gN08/PXEzrSOWFa88xHx2Xv3VjvLMY7H76YoI23A=
-github.com/go-text/typesetting v0.3.0 h1:OWCgYpp8njoxSRpwrdd1bQOxdjOXDj9Rqart9ML4iF4=
-github.com/go-text/typesetting v0.3.0/go.mod h1:qjZLkhRgOEYMhU9eHBr3AR4sfnGJvOXNLt8yRAySFuY=
-github.com/go-text/typesetting-utils v0.0.0-20241103174707-87a29e9e6066 h1:qCuYC+94v2xrb1PoS4NIDe7DGYtLnU2wWiQe9a1B1c0=
-github.com/go-text/typesetting-utils v0.0.0-20241103174707-87a29e9e6066/go.mod h1:DDxDdQEnB70R8owOx3LVpEFvpMK9eeH1o2r0yZhFI9o=
+github.com/go-text/typesetting v0.3.4 h1:YYurUOtEb9kGSOz4uE3k4OpBGsp1dDL8+fjCeaFamAU=
+github.com/go-text/typesetting v0.3.4/go.mod h1:4qZCQphq4KSgGTAeI0uMEkVbROgfah8BuyF5LRYr7XY=
+github.com/go-text/typesetting-utils v0.0.0-20260223113751-2d88ac90dae3 h1:drBZzMgdYPbmyXqOto4YhhJGrFIQCX94FpR4MzTCsos=
+github.com/go-text/typesetting-utils v0.0.0-20260223113751-2d88ac90dae3/go.mod h1:3/62I4La/HBRX9TcTpBj4eipLiwzf+vhI+7whTc9V7o=
 golang.org/x/image v0.0.0-20210504121937-7319ad40d33e/go.mod h1:FeLwcggjj3mMvU+oOTbSwawSJRM1uh48EjtB4UJZlP0=
 golang.org/x/image v0.29.0 h1:HcdsyR4Gsuys/Axh0rDEmlBmB68rW1U9BUdB3UVHsas=
 golang.org/x/image v0.29.0/go.mod h1:RVJROnf3SLK8d26OW91j4FrIHGbsJ8QnbEocVTOWQDA=
