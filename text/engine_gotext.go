@@ -28,7 +28,7 @@ import (
 
 var (
 	_ FontConfiguration = (*FontConfigurationGotext)(nil)
-	_ EngineLayout      = layoutGotext{}
+	_ EngineLayout      = TextLayoutGotext{}
 )
 
 type FontConfigurationGotext struct {
@@ -146,6 +146,11 @@ func (f *FontConfigurationGotext) loadOneFont(url pr.TaggedString, ruleDescripto
 	return url.S, nil
 }
 
+func (f *FontConfigurationGotext) FontLocation(font *font.Font) fontscan.Location {
+	// TODO: simplify FontContent impl.
+	return f.fm.FontLocation(font)
+}
+
 // FontContent returns the content of the given face, which may be needed
 // in the final output.
 func (f *FontConfigurationGotext) FontContent(font FontOrigin) []byte {
@@ -165,23 +170,23 @@ func (f *FontConfigurationGotext) FontContent(font FontOrigin) []byte {
 	return b
 }
 
-type layoutGotext struct {
+type TextLayoutGotext struct {
 	text  []rune
-	style *TextStyle
-	line  shaping.Line
+	Style *TextStyle
+	Line  shaping.Line
 }
 
 // Text returns a readonly slice of the text in the layout
-func (l layoutGotext) Text() []rune { return l.text }
+func (l TextLayoutGotext) Text() []rune { return l.text }
 
 // Metrics may return nil when [TextDecorationLine] is empty
-func (l layoutGotext) Metrics() LineMetrics {
-	if l.style.TextDecorationLine == 0 {
+func (l TextLayoutGotext) Metrics() LineMetrics {
+	if l.Style.TextDecorationLine == 0 {
 		return LineMetrics{}
 	}
 
-	face := l.line[0].Face
-	factor := pr.Fl(l.style.FontDescription.Size) / pr.Fl(face.Upem())
+	face := l.Line[0].Face
+	factor := pr.Fl(l.Style.FontDescription.Size) / pr.Fl(face.Upem())
 
 	extents, _ := face.FontHExtents()
 	return LineMetrics{
@@ -194,14 +199,14 @@ func (l layoutGotext) Metrics() LineMetrics {
 }
 
 // Justification returns the current justification
-func (layoutGotext) Justification() pr.Float { return 0 }
+func (TextLayoutGotext) Justification() pr.Float { return 0 }
 
 // SetJustification add an additional spacing between words
 // to justify text. Depending on the implementation, it
 // may be ignored until [ApplyJustification] is called.
-func (layoutGotext) SetJustification(spacing pr.Float) {}
+func (TextLayoutGotext) SetJustification(spacing pr.Float) {}
 
-func (layoutGotext) ApplyJustification() {}
+func (TextLayoutGotext) ApplyJustification() {}
 
 func newAspect(style FontStyle, weight uint16, stretch FontStretch) font.Aspect {
 	aspect := font.Aspect{
@@ -369,6 +374,22 @@ func (fc *FontConfigurationGotext) getNextBreakPoint(text []rune) int {
 	return -1
 }
 
+// GetLastWordEnd returns the index in `t` of the end of the before-last word,
+// or -1
+func (fc *FontConfigurationGotext) GetLastWordEnd(t []rune) int {
+	if len(t) < 2 {
+		return -1
+	}
+	fc.unicodeSeg.Init(t)
+	iter := fc.unicodeSeg.WordIterator()
+	var word1, word2 segmenter.Word
+	for iter.Next() {
+		word1 = word2
+		word2 = iter.Word()
+	}
+	return word1.Offset + len(word1.Text)
+}
+
 // returns the first occurence of c, or -1 if not found
 func index(text []rune, c rune) int {
 	for i, r := range text {
@@ -424,7 +445,7 @@ type textKey struct {
 func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, maxWidth pr.Float, allowWordBreak bool) FirstLine {
 	if len(text) == 0 {
 		return FirstLine{
-			Layout:   layoutGotext{style: style},
+			Layout:   TextLayoutGotext{Style: style},
 			Length:   0,
 			ResumeAt: -1,
 			Width:    0, Height: 0, Baseline: 0,
@@ -514,7 +535,7 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 
 	if len(line) == 0 {
 		return FirstLine{
-			Layout:   layoutGotext{style: style},
+			Layout:   TextLayoutGotext{Style: style},
 			Length:   0,
 			ResumeAt: -1,
 			Width:    0, Height: 0, Baseline: 0,
@@ -600,7 +621,7 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 	}
 
 	out := FirstLine{
-		Layout:       layoutGotext{text: text[:firstLineLength], style: style, line: outLine},
+		Layout:       TextLayoutGotext{text: text[:firstLineLength], Style: style, Line: outLine},
 		Length:       firstLineLength,
 		ResumeAt:     resumeAt,
 		FirstLineRTL: firstLineRTL,

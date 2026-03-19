@@ -18,8 +18,10 @@ type Context struct {
 // It also register the fonts used with [backend.Canvas.AddFont].
 func (ctx Context) CreateFirstLine(layout text.EngineLayout, textOverflow string, blockEllipsis pr.TaggedString, scaleX, x, y, angle pr.Fl,
 ) backend.TextDrawing {
-	if layout, ok := layout.(*text.TextLayoutPango); ok {
-		return ctx.createFirstLinePango(layout, textOverflow, blockEllipsis, scaleX, x, y, angle)
+	if layoutP, ok := layout.(*text.TextLayoutPango); ok {
+		return ctx.createFirstLinePango(layoutP, textOverflow, blockEllipsis, scaleX, x, y, angle)
+	} else if layoutG, ok := layout.(text.TextLayoutGotext); ok {
+		return ctx.createFirstLineGotext(layoutG, textOverflow, blockEllipsis, scaleX, x, y, angle)
 	}
 	return backend.TextDrawing{}
 }
@@ -31,5 +33,7 @@ func DrawEmoji(font backend.Font, glyph backend.GID, extents backend.GlyphExtent
 ) {
 	if pFont, ok := font.(*pangoFont); ok {
 		drawEmojiPango(pFont, glyph, extents, fontSize, x, y, xAdvance, dst)
+	} else if gFont, ok := font.(*gotextFont); ok {
+		drawEmojiGotext(gFont, glyph, extents, fontSize, x, y, xAdvance, dst)
 	}
 }

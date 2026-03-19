@@ -124,8 +124,7 @@ func (ctx Context) createFirstLinePango(layout *text.TextLayoutPango,
 		outFont := ctx.Output.AddFont((*pangoFont)(pFont), content)
 
 		if outFont != lastFont { // add a new "run"
-			var outRun backend.TextRun
-			outRun.Font = (*pangoFont)(pFont)
+			outRun := backend.TextRun{Font: (*pangoFont)(pFont)}
 			output.Runs = append(output.Runs, outRun)
 		} // else use the last one
 

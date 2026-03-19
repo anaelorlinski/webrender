@@ -260,9 +260,18 @@ func TestTextDimension(t *testing.T) {
 }
 
 func TestGetLastWordEnd(t *testing.T) {
-	fc := &FontConfigurationPango{fontmap: fontmapPango}
-	if i := GetLastWordEnd(fc, []rune{99, 99, 32, 99}); i != 2 {
-		t.Fatalf("expected %d, got %d", 2, i)
+	pango := &FontConfigurationPango{}
+	gotext := &FontConfigurationGotext{}
+	for _, test := range []struct {
+		text     string
+		expected int
+	}{
+		{"aa a", 2},
+		{"aaa cc", 3},
+		{"a", -1},
+	} {
+		tu.AssertEqual(t, GetLastWordEnd(pango, []rune(test.text)), test.expected)
+		tu.AssertEqual(t, gotext.GetLastWordEnd([]rune(test.text)), test.expected)
 	}
 }
 
@@ -823,7 +832,7 @@ func resolveFacePango(fc *FontConfigurationPango, text string, style *TextStyle)
 
 func resolveFaceGotext(fc *FontConfigurationGotext, text string, style *TextStyle) (out []faceRun) {
 	lineG := fc.wrap([]rune(text), style, pr.Inf)
-	line := lineG.Layout.(layoutGotext).line
+	line := lineG.Layout.(TextLayoutGotext).Line
 	for _, run := range line {
 		out = append(out, faceRun{
 			run.Runes.Offset, run.Runes.Count,

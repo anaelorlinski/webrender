@@ -103,7 +103,7 @@ const (
 	isLineBreak
 )
 
-func (fc *FontConfigurationPango) runeProps(text []rune) []runeProp {
+func (*FontConfigurationPango) runeProps(text []rune) []runeProp {
 	text = []rune(bidiMarkReplacer.Replace(string(text)))
 	logAttrs := pango.ComputeCharacterAttributes(text, -1)
 	out := make([]runeProp, len(logAttrs))
@@ -954,7 +954,7 @@ func (fc *FontConfigurationPango) wordBoundaries(t []rune) *[2]int {
 	return &out
 }
 
-// GetLastWordEnd returns the index in `t` of the last word,
+// GetLastWordEnd returns the index in `t` of the end of the before-last word,
 // or -1
 func GetLastWordEnd(fc *FontConfigurationPango, t []rune) int {
 	if len(t) < 2 {
