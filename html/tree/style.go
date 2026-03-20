@@ -271,18 +271,23 @@ func (c propsCache) get(key pr.PropKey) (out pr.CssProperty, ok bool) {
 	return
 }
 
-func (c *propsCache) Set(key pr.PropKey, value pr.CssProperty) {
-	if k := int(key.KnownProp); k != 0 {
-		L := len(c.known)
-		if k < L {
-			c.known[k] = value
-		} else { // grow to at least k+1
-			if cap(c.known) < k+1 {
-				c.known = append(c.known, make([]pr.CssProperty, k+1-L)...)
-			}
-			c.known = c.known[:k+1]
-			c.known[k] = value
+func (c *propsCache) setKnown(k_ pr.KnownProp, value pr.CssProperty) {
+	k := int(k_)
+	L := len(c.known)
+	if k < L {
+		c.known[k] = value
+	} else { // grow to at least k+1
+		if cap(c.known) < k+1 {
+			c.known = append(c.known, make([]pr.CssProperty, k+1-L)...)
 		}
+		c.known = c.known[:k+1]
+		c.known[k] = value
+	}
+}
+
+func (c *propsCache) Set(key pr.PropKey, value pr.CssProperty) {
+	if key.KnownProp != 0 {
+		c.setKnown(key.KnownProp, value)
 	} else {
 		c.vars[key.Var] = value
 	}

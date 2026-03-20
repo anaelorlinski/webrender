@@ -27,7 +27,7 @@ const (
 		return s.Get(pr.%[4]s.Key()).(%[3]s)
 	}
 	func (s *%[1]s) Set%[2]s(v %[3]s) {
-		s.propsCache.known[pr.%[4]s] = v
+		s.propsCache.setKnown(pr.%[4]s, v)
 	}
 	`
 
