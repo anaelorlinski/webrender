@@ -104,6 +104,10 @@ def get_itf_and_type_code(class_: type) -> str:
             itf_code += f"""func({class_name}) is{ancestor}() {{}}
             """
 
+        if class_name != "TableBox":
+            itf_code += f"""func (b *{class_name}) Translate(dx, dy pr.Float, ignoreFloats bool) {{ defaultTranslate(b, dx, dy, ignoreFloats) }}
+            """
+
     if should_generate_anonymous_from(class_):
         itf_code += f"""
         func {class_name}AnonymousFrom(parent Box, children []Box) *{class_name} {{

@@ -20,7 +20,6 @@ import (
 	"unicode"
 
 	"github.com/benoitkugler/webrender/css/counters"
-	kw "github.com/benoitkugler/webrender/css/properties/keywords"
 	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/text"
 
@@ -187,7 +186,7 @@ func (s StyleFor) Get(element Element, pseudoType string) pr.ElementStyle {
 	style := s.computedStyles[element.ToKey(pseudoType)]
 	if style != nil {
 		display := style.GetDisplay()
-		if display.Has(kw.Table) && style.GetBorderCollapse() == "collapse" {
+		if display.Has(pr.Table) && style.GetBorderCollapse() == "collapse" {
 			// Padding do not apply
 			style.SetPaddingTop(pr.ZeroPixels.Tagged())
 			style.SetPaddingBottom(pr.ZeroPixels.Tagged())
@@ -195,7 +194,7 @@ func (s StyleFor) Get(element Element, pseudoType string) pr.ElementStyle {
 			style.SetPaddingRight(pr.ZeroPixels.Tagged())
 		}
 
-		if d := display.Outside; display.Inside == 0 && display.ListItem == 0 && d.HasTablePrefix() && d != kw.TableCaption {
+		if d := display.Outside; display.Inside == 0 && display.ListItem == 0 && d.HasTablePrefix() && d != pr.TableCaption {
 			// Margins do not apply
 			style.SetMarginTop(pr.ZeroPixels.Tagged())
 			style.SetMarginBottom(pr.ZeroPixels.Tagged())

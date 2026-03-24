@@ -369,7 +369,7 @@ func columnsLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.F
 			i_ := pr.Float(i)
 
 			columnBox = createColumnBox(box_, containingBlock, columnChildren, width, currentPositionY)
-			if style.GetDirection() == "rtl" {
+			if style.GetDirection() == pr.Rtl {
 				columnBox.Box().PositionX += box.Width.V() - (i_+1)*width - i_*gap
 			} else {
 				columnBox.Box().PositionX += i_ * (width + gap)

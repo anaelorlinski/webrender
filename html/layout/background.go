@@ -139,7 +139,7 @@ func layoutBoxBackgrounds(page *bo.PageBox, box_ Box, getImageFromUri bo.ImageFe
 }
 
 func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.TaggedDim, image images.Image, size pr.Size, clip string, repeat [2]string,
-	origin string, position pr.Center, attachment string,
+	origin string, position pr.CenterPos, attachment string,
 ) bo.BackgroundLayer {
 	var (
 		clippedBoxes []bo.RoundedBox

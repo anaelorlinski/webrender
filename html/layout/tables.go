@@ -35,7 +35,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 	positionX := table.ContentBoxX()
 	rowsLeftX := positionX + borderSpacingX
 	var rowsWidth pr.Float
-	if table.Style.GetDirection() == "ltr" {
+	if table.Style.GetDirection() == pr.Ltr {
 		positionX := table.ContentBoxX()
 		rowsX := positionX + borderSpacingX
 		for _, width := range columnWidths {
@@ -153,7 +153,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 					break
 				}
 				resolvePercentagesBox(cell_, &table.BoxFields)
-				if table.Style.GetDirection() == "ltr" {
+				if table.Style.GetDirection() == pr.Ltr {
 					cell.PositionX = table.ColumnPositions[cell.GridX]
 				} else {
 					cell.PositionX = table.ColumnPositions[cell.GridX+cell.Colspan-1]
@@ -370,7 +370,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 					}
 					if verticalAlignShift > 0 {
 						for _, child := range cell.Children {
-							child.Translate(child, 0, verticalAlignShift, false)
+							child.Translate(0, verticalAlignShift, false)
 						}
 					}
 				}
@@ -635,7 +635,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 			newTableChildren, resumeAt, nextPage, endPositionY = bodyGroupsLayout(skipStack, positionY+headerHeight,
 				bottomSpace+footerHeight, avoidBreaks)
 			if len(newTableChildren) != 0 || len(tableRows) == 0 || !pageIsEmpty {
-				footer.Translate(footer, 0, endPositionY-footer.Box().PositionY, false)
+				footer.Translate(0, endPositionY-footer.Box().PositionY, false)
 				endPositionY += footerHeight
 				return header, newTableChildren, footer, endPositionY, resumeAt, nextPage
 			} else {
@@ -667,7 +667,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 			)
 			newTableChildren, resumeAt, nextPage, endPositionY = bodyGroupsLayout(skipStack, positionY, bottomSpace+footerHeight, avoidBreaks)
 			if len(newTableChildren) != 0 || len(tableRows) == 0 || !pageIsEmpty {
-				footer.Translate(footer, 0, endPositionY-footer.Box().PositionY, false)
+				footer.Translate(0, endPositionY-footer.Box().PositionY, false)
 				endPositionY += footerHeight
 				return header, newTableChildren, footer, endPositionY, resumeAt, nextPage
 			} else {
@@ -785,7 +785,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 func addTopPadding(box *bo.BoxFields, extraPadding pr.Float) {
 	box.PaddingTop = box.PaddingTop.V() + extraPadding
 	for _, child := range box.Children {
-		child.Translate(child, 0, extraPadding, false)
+		child.Translate(0, extraPadding, false)
 	}
 }
 

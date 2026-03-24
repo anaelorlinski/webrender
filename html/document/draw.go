@@ -519,7 +519,7 @@ func (ctx drawContext) drawCollapsedBorders(table *bo.TableBox) {
 	}
 
 	// Add the end of the last column, but make a copy from the table attr.
-	if table.Style.GetDirection() == "ltr" {
+	if table.Style.GetDirection() == pr.Ltr {
 		columnPositions = append(columnPositions, columnPositions[len(columnPositions)-1]+columnWidths[len(columnWidths)-1])
 	} else {
 		columnPositions = append([]pr.Float{columnPositions[0] + columnWidths[0]}, columnPositions...)
@@ -620,7 +620,7 @@ func (ctx drawContext) drawCollapsedBorders(table *bo.TableBox) {
 		shiftBefore := halfMaxWidth(verticalBorders, [2][2]int{{y - 1, x}, {y, x}}, true)
 		shiftAfter := halfMaxWidth(verticalBorders, [2][2]int{{y - 1, x + 1}, {y, x + 1}}, true)
 		var posX1, posX2 pr.Float
-		if table.Style.GetDirection() == "ltr" {
+		if table.Style.GetDirection() == pr.Ltr {
 			posX1 = columnPositions[x] - shiftBefore
 			posX2 = columnPositions[x+1] + shiftAfter
 		} else {
@@ -724,7 +724,7 @@ func (ctx drawContext) drawInlineLevel(page *bo.PageBox, box_ Box, offsetX fl, t
 }
 
 func (ctx *drawContext) drawBlockLevel(page *bo.PageBox, blocksAndCells BoxTree) {
-	for block, blocksAndCells := range blocksAndCells {
+	for block, innerBlocksAndCells := range blocksAndCells {
 		if blockRep, ok := block.(bo.ReplacedBoxITF); ok {
 			ctx.drawReplacedbox(blockRep)
 		} else if children := block.Box().Children; len(children) != 0 {
@@ -734,6 +734,6 @@ func (ctx *drawContext) drawBlockLevel(page *bo.PageBox, blocksAndCells BoxTree)
 				}
 			}
 		}
-		ctx.drawBlockLevel(page, blocksAndCells)
+		ctx.drawBlockLevel(page, innerBlocksAndCells)
 	}
 }

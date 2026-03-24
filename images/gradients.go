@@ -241,7 +241,7 @@ type RadialGradient struct {
 	gradient
 	shape  string
 	size   pr.GradientSize
-	center pr.Center
+	center pr.CenterPos
 }
 
 func (RadialGradient) isImage() {}

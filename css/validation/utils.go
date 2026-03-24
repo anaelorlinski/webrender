@@ -89,7 +89,7 @@ func getImage(_token Token, baseUrl string) (pr.Image, error) {
 		if result.IsNone() {
 			result.shape = "ellipse"
 			result.size = pr.GradientSize{Keyword: "farthest-corner"}
-			result.position = pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{fiftyPercent, fiftyPercent}}
+			result.position = pr.CenterPos{OriginX: "left", OriginY: "top", Pos: pr.Point{fiftyPercent, fiftyPercent}}
 			result.colorStops = arguments
 		}
 		if len(result.colorStops) > 0 {
@@ -146,7 +146,7 @@ func reverse(a []Token) []Token {
 type radialGradientParameters struct {
 	shape      string
 	colorStops [][]Token
-	position   pr.Center
+	position   pr.CenterPos
 	size       pr.GradientSize
 }
 
@@ -156,7 +156,7 @@ func (r radialGradientParameters) IsNone() bool {
 
 func parseRadialGradientParameters(arguments [][]Token) radialGradientParameters {
 	var shape, sizeShape string
-	var position pr.Center
+	var position pr.CenterPos
 	var size pr.GradientSize
 	stack := reverse(arguments[0])
 	for len(stack) > 0 {
@@ -216,7 +216,7 @@ func parseRadialGradientParameters(arguments [][]Token) radialGradientParameters
 		out.size = pr.GradientSize{Keyword: "farthest-corner"}
 	}
 	if position.IsNone() {
-		out.position = pr.Center{
+		out.position = pr.CenterPos{
 			OriginX: "left",
 			OriginY: "top",
 			Pos:     pr.Point{fiftyPercent, fiftyPercent},
@@ -378,10 +378,10 @@ func checkAttrFunction(token pa.FunctionBlock, allowedType string) (out pr.AttrD
 //
 // See http://drafts.csswg.org/csswg/css-backgrounds-3/#the-background-position
 // https://drafts.csswg.org/css-images-3/#propdef-object-position
-func parsePosition(tokens []Token) pr.Center {
+func parsePosition(tokens []Token) pr.CenterPos {
 	center := parse2dPosition(tokens)
 	if !center.IsNone() {
-		return pr.Center{
+		return pr.CenterPos{
 			OriginX: "left",
 			OriginY: "top",
 			Pos:     center,
@@ -395,14 +395,14 @@ func parsePosition(tokens []Token) pr.Center {
 		length2 := getLength(tokens[3], true, true)
 		if !length1.IsNone() && !length2.IsNone() {
 			if (keyword1 == "left" || keyword1 == "right") && (keyword2 == "top" || keyword2 == "bottom") {
-				return pr.Center{
+				return pr.CenterPos{
 					OriginX: keyword1,
 					OriginY: keyword2,
 					Pos:     pr.Point{length1, length2},
 				}
 			}
 			if (keyword2 == "left" || keyword2 == "right") && (keyword1 == "top" || keyword1 == "bottom") {
-				return pr.Center{
+				return pr.CenterPos{
 					OriginX: keyword2,
 					OriginY: keyword1,
 					Pos:     pr.Point{length2, length1},
@@ -428,22 +428,22 @@ func parsePosition(tokens []Token) pr.Center {
 			case "center":
 				switch keyword {
 				case "top", "bottom":
-					return pr.Center{OriginX: "left", OriginY: keyword, Pos: pr.Point{fiftyPercent, length}}
+					return pr.CenterPos{OriginX: "left", OriginY: keyword, Pos: pr.Point{fiftyPercent, length}}
 				case "left", "right":
-					return pr.Center{OriginX: keyword, OriginY: "top", Pos: pr.Point{length, fiftyPercent}}
+					return pr.CenterPos{OriginX: keyword, OriginY: "top", Pos: pr.Point{length, fiftyPercent}}
 				}
 			case "top", "bottom":
 				if keyword == "left" || keyword == "right" {
-					return pr.Center{OriginX: keyword, OriginY: otherKeyword, Pos: pr.Point{length, zeroPercent}}
+					return pr.CenterPos{OriginX: keyword, OriginY: otherKeyword, Pos: pr.Point{length, zeroPercent}}
 				}
 			case "left", "right":
 				if keyword == "top" || keyword == "bottom" {
-					return pr.Center{OriginX: otherKeyword, OriginY: keyword, Pos: pr.Point{zeroPercent, length}}
+					return pr.CenterPos{OriginX: otherKeyword, OriginY: keyword, Pos: pr.Point{zeroPercent, length}}
 				}
 			}
 		}
 	}
-	return pr.Center{}
+	return pr.CenterPos{}
 }
 
 // Parse a <string> token.

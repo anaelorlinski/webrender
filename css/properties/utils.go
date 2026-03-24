@@ -5,65 +5,9 @@ import (
 	"math"
 
 	"github.com/benoitkugler/webrender/css/parser"
-	"github.com/benoitkugler/webrender/css/properties/keywords"
 )
 
 var Inf = Float(math.Inf(+1))
-
-// Tag is a flag indicating special values,
-// such as "none" or "auto".
-type Tag uint8
-
-const (
-	_       Tag = iota
-	Auto        // "auto"
-	None        // "none"
-	Span        // "span"
-	Subgrid     // "subgrid"
-	Attr        // "attr()"
-
-	// url related
-	Internal
-	External
-	Local
-	Attachment
-
-	// length related
-	Content
-	FromFont
-	Fill
-	MinContent
-	MaxContent
-	Normal
-
-	// background size
-	Cover
-	Contain
-
-	// font size : the order matters
-	XxSmall
-	XSmall
-	Small
-	Medium
-	Large
-	XLarge
-	XxLarge
-
-	Smaller
-	Larger
-
-	Thin
-	Thick
-
-	Baseline
-	Middle
-	TextTop
-	TextBottom
-	Top
-	Bottom
-	Super
-	Sub
-)
 
 // --------------- Values  -----------------------------------------------
 
@@ -85,7 +29,7 @@ func PercToD(f Fl) Dimension       { return Dimension{Value: Float(f), Unit: Per
 func PercToV(f Fl) TaggedDim       { return TaggedDim{Dimension: PercToD(f)} }
 func FToV(f Fl) TaggedDim          { return TaggedDim{Dimension: FToD(f)} }
 func (f Float) ToValue() TaggedDim { return FToV(Fl(f)) }
-func TagToV(t Tag) TaggedDim       { return TaggedDim{Tag: t} }
+func TagToV(t Keyword) TaggedDim   { return TaggedDim{Tag: t} }
 
 func (v TaggedDim) ToMaybeFloat() MaybeFloat {
 	if v.Tag == Auto {
@@ -94,12 +38,18 @@ func (v TaggedDim) ToMaybeFloat() MaybeFloat {
 	return v.Value
 }
 
+// HasTablePrefix returns true for all keywords starting
+// by "table-"
+func (kw Keyword) HasTablePrefix() bool {
+	return TableCaption <= kw && kw <= TableRowGroup
+}
+
 func NewColor(r, g, b, a Fl) Color {
 	return Color{RGBA: parser.RGBA{R: r, G: g, B: b, A: a}, Type: parser.ColorRGBA}
 }
 
 // Has returns `true` is v is one of the three elements.
-func (d Display) Has(v keywords.Keyword) bool {
+func (d Display) Has(v Keyword) bool {
 	return d.Inside == v || d.Outside == v || d.ListItem == v
 }
 

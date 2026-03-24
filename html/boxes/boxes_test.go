@@ -12,7 +12,6 @@ import (
 	"github.com/benoitkugler/webrender/css/counters"
 	"github.com/benoitkugler/webrender/css/parser"
 	pr "github.com/benoitkugler/webrender/css/properties"
-	kw "github.com/benoitkugler/webrender/css/properties/keywords"
 	"github.com/benoitkugler/webrender/html/tree"
 	"github.com/benoitkugler/webrender/images"
 	"github.com/benoitkugler/webrender/utils"
@@ -1301,7 +1300,7 @@ func testDisplayNoneRoot(t *testing.T, html string) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	box := parseAndBuild(t, html)
-	if d := box.Box().Style.GetDisplay(); d != (pr.Display{Outside: kw.Block, Inside: kw.Flow}) {
+	if d := box.Box().Style.GetDisplay(); d != (pr.Display{Outside: pr.Block, Inside: pr.Flow}) {
 		t.Fatalf("unexpected display: %s", d)
 	}
 	if len(box.Box().Children) != 0 {

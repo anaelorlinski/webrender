@@ -163,7 +163,7 @@ func blockBoxLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.
 		// Don't collide with floats
 		// https://www.w3.org/TR/CSS21/visuren.html#floats
 		positionX, positionY, _ := avoidCollisions(context, newBox, containingBlock, false)
-		newBox.Translate(newBox, positionX-newBox.Box().PositionX, positionY-newBox.Box().PositionY, false)
+		newBox.Translate(positionX-newBox.Box().PositionX, positionY-newBox.Box().PositionY, false)
 	}
 
 	return newBox, result
@@ -189,7 +189,7 @@ func blockLevelWidth_(box_ Box, _ *layoutContext, containingBlock_ containingBlo
 	// "cb" stands for "containing block"
 	var (
 		cbWidth   pr.Float
-		direction pr.String
+		direction pr.Keyword
 	)
 	switch cb := containingBlock_.(type) {
 	case *bo.BoxFields:
@@ -197,7 +197,7 @@ func blockLevelWidth_(box_ Box, _ *layoutContext, containingBlock_ containingBlo
 		cbWidth = cb.Width.V()
 	case block:
 		cbWidth = cb.Width
-		direction = "ltr"
+		direction = pr.Ltr
 	}
 	// https://www.w3.org/TR/CSS21/visudet.html#blockwidth
 
@@ -237,7 +237,7 @@ func blockLevelWidth_(box_ Box, _ *layoutContext, containingBlock_ containingBlo
 	}
 	if width != pr.AutoF && marginL != pr.AutoF && marginR != pr.AutoF {
 		// The equation is over-constrained.
-		if direction == "rtl" && !box.IsColumn {
+		if direction == pr.Rtl && !box.IsColumn {
 			box.PositionX += cbWidth - paddingsPlusBorders - width.V() - marginR.V() - marginL.V()
 		} // Do nothing in ltr.
 	}
@@ -272,7 +272,7 @@ func relativePositioning(box_ Box, containingBlock bo.Point) {
 		resolvePositionPercentages(box, containingBlock)
 		var translateX, translateY pr.Float
 		if box.Left != pr.AutoF && box.Right != pr.AutoF {
-			if box.Style.GetDirection() == "ltr" {
+			if box.Style.GetDirection() == pr.Ltr {
 				translateX = box.Left.V()
 			} else {
 				translateX = -box.Right.V()
@@ -293,7 +293,7 @@ func relativePositioning(box_ Box, containingBlock bo.Point) {
 			translateY = 0
 		}
 
-		box_.Translate(box_, translateX, translateY, false)
+		box_.Translate(translateX, translateY, false)
 	}
 	if IsLine(box_) {
 		for _, child := range box.Children {
@@ -407,7 +407,7 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 			}
 			if child.IsOutsideMarker {
 				newChild.Box().PositionX = box.BorderBoxX()
-				if child.Style.GetDirection() == "rtl" {
+				if child.Style.GetDirection() == pr.Rtl {
 					newChild.Box().PositionX += box.Width.V() + box.PaddingRight.V()
 				}
 			}
@@ -733,9 +733,8 @@ func lineBoxLayout(context *layoutContext, box_ Box, index int, child_ *bo.LineB
 		box_, absoluteBoxes, fixedBoxes, firstLetterStyle)
 	for i := 0; linesIterator.Has(); i++ {
 		tmp := linesIterator.Next()
-		line_ := tmp.line
 		resumeAt = tmp.resumeAt
-		line := line_.Box()
+		line_, line := tmp.line, tmp.line.Box()
 
 		// Break box if we reached max-lines
 		if maxLines != -1 {
@@ -813,7 +812,7 @@ func lineBoxLayout(context *layoutContext, box_ Box, index int, child_ *bo.LineB
 			// Remove the top border when a page is empty && the box is
 			// too high to be drawn := range one page
 			newPositionY -= box.MarginTop.V()
-			line_.Translate(line_, 0, -box.MarginTop.V(), false)
+			line_.Translate(0, -box.MarginTop.V(), false)
 			box.MarginTop = pr.Float(0)
 		}
 
@@ -915,12 +914,12 @@ func inFlowLayout(context *layoutContext, box_ bo.Box, index int, child_ Box, ne
 			newCollapsedMargin := collapseMargin(append(*adjoiningMargins, childMarginTop.V()))
 			collapsedMarginDifference := newCollapsedMargin - oldCollapsedMargin
 			for _, previousNewChild := range newChildren {
-				previousNewChild.Translate(previousNewChild, 0, collapsedMarginDifference, false)
+				previousNewChild.Translate(0, collapsedMarginDifference, false)
 			}
 
 			if clearance := getClearance(context, child, newCollapsedMargin); clearance != nil {
 				for _, previousNewChild := range newChildren {
-					previousNewChild.Translate(previousNewChild, 0, -collapsedMarginDifference, false)
+					previousNewChild.Translate(0, -collapsedMarginDifference, false)
 				}
 
 				collapsedMargin := collapseMargin(*adjoiningMargins)

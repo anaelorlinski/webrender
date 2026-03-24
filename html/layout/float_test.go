@@ -822,3 +822,29 @@ func TestFormattingContextAvoidRtl(t *testing.T) {
       </div>
     `)
 }
+
+func TestFloatInlineRtl(t *testing.T) {
+	page := renderOnePage(t, `
+	<style>
+        @font-face {src: url(../resources_test/weasyprint.otf); font-family: weasyprint}
+        @page { size: 15px 5px }
+        body { font-family: weasyprint; font-size: 2px; line-height: 1;
+               color: lime }
+      </style>
+      <div style="direction: rtl">
+        <img style="float: left" src="../resources_test/pattern.png">
+        <img style="float: right" src="../resources_test/blue.jpg">
+        <span>a</span>
+      </div>
+	`)
+	html := unpack1(page)
+	body := unpack1(html)
+	div := unpack1(body)
+	_, _, inner := unpack3(div)
+	line := unpack1(inner)
+	inline := unpack1(line)
+	text := unpack1(inline)
+	tu.AssertEqual(t, inline.Box().PositionX, pr.Float(9))
+	tu.AssertEqual(t, text.Box().PositionX, pr.Float(9))
+	assertText(t, text, "a")
+}

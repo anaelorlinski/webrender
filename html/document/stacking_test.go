@@ -96,7 +96,7 @@ func TestImageContexts(t *testing.T) {
       <body>Some text: <img style="position: relative" src=pattern.png>`)[0]
 	html := page.Box().Children[0]
 	context := NewStackingContextFromBox(html, page, nil)
-	// The image is *not* := range this context:
+	// The image is *not* in this context:
 	tu.AssertEqual(t, bo.Serialize([]Box{context.box}), []bo.SerBox{
 		{
 			Tag: "html", Type: bo.BlockT, Content: bo.BC{
@@ -127,4 +127,18 @@ func TestImageContexts(t *testing.T) {
 	tu.AssertEqual(t, got, []bo.SerBox{
 		{Tag: "img", Type: bo.InlineReplacedT, Content: bo.BC{Text: "<replaced>"}},
 	})
+}
+
+func TestFloats(t *testing.T) {
+	pages := renderPages(t, `
+	<style>
+		@page { size: 10px 5px }
+  	</style>
+  	<div>
+		<img style="float: left" src="../resources_test/pattern.png">
+		<img style="float: right" src="../resources_test/blue.jpg">
+  	</div>`)
+	sc := NewStackingContextFromPage(pages[0])
+	sc = sc.zeroZContexts[0]
+	tu.AssertEqual(t, len(sc.floatContexts), 2)
 }

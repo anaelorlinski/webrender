@@ -84,8 +84,8 @@ func handleLeader(context *layoutContext, line *bo.LineBox, containingBlock cont
 		}
 		leaderBox.Children = children
 
-		if line.Style.GetDirection() == "rtl" {
-			leaderBox_.Translate(leaderBox_, -extraWidth, 0, false)
+		if line.Style.GetDirection() == pr.Rtl {
+			leaderBox_.Translate(-extraWidth, 0, false)
 		}
 	}
 
@@ -94,10 +94,10 @@ func handleLeader(context *layoutContext, line *bo.LineBox, containingBlock cont
 	for index != nil {
 		for _, child := range box.Box().Children[index.value+1:] {
 			if child.Box().IsInNormalFlow() {
-				if line.Style.GetDirection() == "ltr" {
-					child.Translate(child, extraWidth, 0, false)
+				if line.Style.GetDirection() == pr.Ltr {
+					child.Translate(extraWidth, 0, false)
 				} else {
-					child.Translate(child, -extraWidth, 0, false)
+					child.Translate(-extraWidth, 0, false)
 				}
 			}
 		}

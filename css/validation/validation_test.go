@@ -9,7 +9,6 @@ import (
 
 	"github.com/benoitkugler/webrender/css/parser"
 	pr "github.com/benoitkugler/webrender/css/properties"
-	kw "github.com/benoitkugler/webrender/css/properties/keywords"
 	"github.com/benoitkugler/webrender/utils"
 	tu "github.com/benoitkugler/webrender/utils/testutils"
 )
@@ -316,7 +315,7 @@ type repeatable interface {
 	Repeat(int) pr.CssProperty
 }
 
-func checkPosition(t *testing.T, css string, expected pr.Center) {
+func checkPosition(t *testing.T, css string, expected pr.CenterPos) {
 	l := expandToDict(t, "background-position:"+css, "")
 	var (
 		name pr.KnownProp
@@ -348,41 +347,41 @@ func TestBackgroundPosition(t *testing.T) {
 		for j, css_y := range css_ys {
 			val_y := val_ys[j]
 			// Two tokens:
-			checkPosition(t, fmt.Sprintf("%s %s", css_x, css_y), pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{val_x, val_y}})
+			checkPosition(t, fmt.Sprintf("%s %s", css_x, css_y), pr.CenterPos{OriginX: "left", OriginY: "top", Pos: pr.Point{val_x, val_y}})
 		}
 		// One token:
-		checkPosition(t, css_x, pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{val_x, {Value: 50, Unit: pr.Perc}}})
+		checkPosition(t, css_x, pr.CenterPos{OriginX: "left", OriginY: "top", Pos: pr.Point{val_x, {Value: 50, Unit: pr.Perc}}})
 	}
 	// One token, vertical
-	checkPosition(t, "top", pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 50, Unit: pr.Perc}, {Value: 0, Unit: pr.Perc}}})
-	checkPosition(t, "bottom", pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 50, Unit: pr.Perc}, {Value: 100, Unit: pr.Perc}}})
+	checkPosition(t, "top", pr.CenterPos{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 50, Unit: pr.Perc}, {Value: 0, Unit: pr.Perc}}})
+	checkPosition(t, "bottom", pr.CenterPos{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 50, Unit: pr.Perc}, {Value: 100, Unit: pr.Perc}}})
 
 	// Three tokens:
-	checkPosition(t, "center top 10%", pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 50, Unit: pr.Perc}, {Value: 10, Unit: pr.Perc}}})
-	checkPosition(t, "top 10% center", pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 50, Unit: pr.Perc}, {Value: 10, Unit: pr.Perc}}})
-	checkPosition(t, "center bottom 10%", pr.Center{OriginX: "left", OriginY: "bottom", Pos: pr.Point{{Value: 50, Unit: pr.Perc}, {Value: 10, Unit: pr.Perc}}})
-	checkPosition(t, "bottom 10% center", pr.Center{OriginX: "left", OriginY: "bottom", Pos: pr.Point{{Value: 50, Unit: pr.Perc}, {Value: 10, Unit: pr.Perc}}})
+	checkPosition(t, "center top 10%", pr.CenterPos{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 50, Unit: pr.Perc}, {Value: 10, Unit: pr.Perc}}})
+	checkPosition(t, "top 10% center", pr.CenterPos{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 50, Unit: pr.Perc}, {Value: 10, Unit: pr.Perc}}})
+	checkPosition(t, "center bottom 10%", pr.CenterPos{OriginX: "left", OriginY: "bottom", Pos: pr.Point{{Value: 50, Unit: pr.Perc}, {Value: 10, Unit: pr.Perc}}})
+	checkPosition(t, "bottom 10% center", pr.CenterPos{OriginX: "left", OriginY: "bottom", Pos: pr.Point{{Value: 50, Unit: pr.Perc}, {Value: 10, Unit: pr.Perc}}})
 
-	checkPosition(t, "right top 10%", pr.Center{OriginX: "right", OriginY: "top", Pos: pr.Point{{Value: 0, Unit: pr.Perc}, {Value: 10, Unit: pr.Perc}}})
-	checkPosition(t, "top 10% right", pr.Center{OriginX: "right", OriginY: "top", Pos: pr.Point{{Value: 0, Unit: pr.Perc}, {Value: 10, Unit: pr.Perc}}})
-	checkPosition(t, "right bottom 10%", pr.Center{OriginX: "right", OriginY: "bottom", Pos: pr.Point{{Value: 0, Unit: pr.Perc}, {Value: 10, Unit: pr.Perc}}})
-	checkPosition(t, "bottom 10% right", pr.Center{OriginX: "right", OriginY: "bottom", Pos: pr.Point{{Value: 0, Unit: pr.Perc}, {Value: 10, Unit: pr.Perc}}})
+	checkPosition(t, "right top 10%", pr.CenterPos{OriginX: "right", OriginY: "top", Pos: pr.Point{{Value: 0, Unit: pr.Perc}, {Value: 10, Unit: pr.Perc}}})
+	checkPosition(t, "top 10% right", pr.CenterPos{OriginX: "right", OriginY: "top", Pos: pr.Point{{Value: 0, Unit: pr.Perc}, {Value: 10, Unit: pr.Perc}}})
+	checkPosition(t, "right bottom 10%", pr.CenterPos{OriginX: "right", OriginY: "bottom", Pos: pr.Point{{Value: 0, Unit: pr.Perc}, {Value: 10, Unit: pr.Perc}}})
+	checkPosition(t, "bottom 10% right", pr.CenterPos{OriginX: "right", OriginY: "bottom", Pos: pr.Point{{Value: 0, Unit: pr.Perc}, {Value: 10, Unit: pr.Perc}}})
 
-	checkPosition(t, "center left 10%", pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 50, Unit: pr.Perc}}})
-	checkPosition(t, "left 10% center", pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 50, Unit: pr.Perc}}})
-	checkPosition(t, "center right 10%", pr.Center{OriginX: "right", OriginY: "top", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 50, Unit: pr.Perc}}})
-	checkPosition(t, "right 10% center", pr.Center{OriginX: "right", OriginY: "top", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 50, Unit: pr.Perc}}})
+	checkPosition(t, "center left 10%", pr.CenterPos{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 50, Unit: pr.Perc}}})
+	checkPosition(t, "left 10% center", pr.CenterPos{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 50, Unit: pr.Perc}}})
+	checkPosition(t, "center right 10%", pr.CenterPos{OriginX: "right", OriginY: "top", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 50, Unit: pr.Perc}}})
+	checkPosition(t, "right 10% center", pr.CenterPos{OriginX: "right", OriginY: "top", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 50, Unit: pr.Perc}}})
 
-	checkPosition(t, "bottom left 10%", pr.Center{OriginX: "left", OriginY: "bottom", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 0, Unit: pr.Perc}}})
-	checkPosition(t, "left 10% bottom", pr.Center{OriginX: "left", OriginY: "bottom", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 0, Unit: pr.Perc}}})
-	checkPosition(t, "bottom right 10%", pr.Center{OriginX: "right", OriginY: "bottom", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 0, Unit: pr.Perc}}})
-	checkPosition(t, "right 10% bottom", pr.Center{OriginX: "right", OriginY: "bottom", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 0, Unit: pr.Perc}}})
+	checkPosition(t, "bottom left 10%", pr.CenterPos{OriginX: "left", OriginY: "bottom", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 0, Unit: pr.Perc}}})
+	checkPosition(t, "left 10% bottom", pr.CenterPos{OriginX: "left", OriginY: "bottom", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 0, Unit: pr.Perc}}})
+	checkPosition(t, "bottom right 10%", pr.CenterPos{OriginX: "right", OriginY: "bottom", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 0, Unit: pr.Perc}}})
+	checkPosition(t, "right 10% bottom", pr.CenterPos{OriginX: "right", OriginY: "bottom", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 0, Unit: pr.Perc}}})
 
 	// Four tokens :
-	checkPosition(t, "left 10% bottom 3px", pr.Center{OriginX: "left", OriginY: "bottom", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 3, Unit: pr.Px}}})
-	checkPosition(t, "bottom 3px left 10%", pr.Center{OriginX: "left", OriginY: "bottom", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 3, Unit: pr.Px}}})
-	checkPosition(t, "right 10% top 3px", pr.Center{OriginX: "right", OriginY: "top", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 3, Unit: pr.Px}}})
-	checkPosition(t, "top 3px right 10%", pr.Center{OriginX: "right", OriginY: "top", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 3, Unit: pr.Px}}})
+	checkPosition(t, "left 10% bottom 3px", pr.CenterPos{OriginX: "left", OriginY: "bottom", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 3, Unit: pr.Px}}})
+	checkPosition(t, "bottom 3px left 10%", pr.CenterPos{OriginX: "left", OriginY: "bottom", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 3, Unit: pr.Px}}})
+	checkPosition(t, "right 10% top 3px", pr.CenterPos{OriginX: "right", OriginY: "top", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 3, Unit: pr.Px}}})
+	checkPosition(t, "top 3px right 10%", pr.CenterPos{OriginX: "right", OriginY: "top", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 3, Unit: pr.Px}}})
 
 	capt.AssertNoLogs(t)
 
@@ -796,7 +795,7 @@ func TestLinearGradient(t *testing.T) {
 func TestRadialGradient(t *testing.T) {
 	capt := tu.CaptureLogs()
 
-	gradient := func(t *testing.T, css string, shape string, size pr.GradientSize, center pr.Center, colors []pr.Color, stopPositions []pr.Dimension) {
+	gradient := func(t *testing.T, css string, shape string, size pr.GradientSize, center pr.CenterPos, colors []pr.Color, stopPositions []pr.Dimension) {
 		if colors == nil {
 			colors = []pr.Color{blue}
 		}
@@ -814,7 +813,7 @@ func TestRadialGradient(t *testing.T) {
 			size = pr.GradientSize{Keyword: "farthest-corner"}
 		}
 		if center.IsNone() {
-			center = pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 50, Unit: pr.Perc}, {Value: 50, Unit: pr.Perc}}}
+			center = pr.CenterPos{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 50, Unit: pr.Perc}, {Value: 50, Unit: pr.Perc}}}
 		}
 		checkGradientGeneric(t, css, pr.RadialGradient{ColorStops: colorStops, Shape: shape, Size: size, Center: center})
 	}
@@ -847,47 +846,47 @@ func TestRadialGradient(t *testing.T) {
 	invalid(t, "at appex, blue")
 	capt.AssertNoLogs(t)
 
-	gradient(t, "blue", "", pr.GradientSize{}, pr.Center{}, nil, nil)
-	gradient(t, "red", "", pr.GradientSize{}, pr.Center{}, []pr.Color{red}, nil)
-	gradient(t, "blue 1%, lime,red 2em ", "", pr.GradientSize{}, pr.Center{},
+	gradient(t, "blue", "", pr.GradientSize{}, pr.CenterPos{}, nil, nil)
+	gradient(t, "red", "", pr.GradientSize{}, pr.CenterPos{}, []pr.Color{red}, nil)
+	gradient(t, "blue 1%, lime,red 2em ", "", pr.GradientSize{}, pr.CenterPos{},
 		[]pr.Color{blue, lime, red},
 		[]pr.Dimension{{Value: 1, Unit: pr.Perc}, {}, {Value: 2, Unit: pr.Em}})
-	gradient(t, "circle, blue", "circle", pr.GradientSize{}, pr.Center{}, nil, nil)
-	gradient(t, "ellipse, blue", "ellipse", pr.GradientSize{}, pr.Center{}, nil, nil)
+	gradient(t, "circle, blue", "circle", pr.GradientSize{}, pr.CenterPos{}, nil, nil)
+	gradient(t, "ellipse, blue", "ellipse", pr.GradientSize{}, pr.CenterPos{}, nil, nil)
 
 	gradient(t, "ellipse closest-corner, blue",
-		"ellipse", pr.GradientSize{Keyword: "closest-corner"}, pr.Center{}, nil, nil)
+		"ellipse", pr.GradientSize{Keyword: "closest-corner"}, pr.CenterPos{}, nil, nil)
 	gradient(t, "circle closest-side, blue",
-		"circle", pr.GradientSize{Keyword: "closest-side"}, pr.Center{}, nil, nil)
+		"circle", pr.GradientSize{Keyword: "closest-side"}, pr.CenterPos{}, nil, nil)
 	gradient(t, "farthest-corner circle, blue",
-		"circle", pr.GradientSize{Keyword: "farthest-corner"}, pr.Center{}, nil, nil)
+		"circle", pr.GradientSize{Keyword: "farthest-corner"}, pr.CenterPos{}, nil, nil)
 	gradient(t, "farthest-side, blue",
-		"ellipse", pr.GradientSize{Keyword: "farthest-side"}, pr.Center{}, nil, nil)
+		"ellipse", pr.GradientSize{Keyword: "farthest-side"}, pr.CenterPos{}, nil, nil)
 	gradient(t, "5ch, blue",
-		"circle", pr.GradientSize{Explicit: pr.Point{{Value: 5, Unit: pr.Ch}, {Value: 5, Unit: pr.Ch}}}, pr.Center{}, nil, nil)
+		"circle", pr.GradientSize{Explicit: pr.Point{{Value: 5, Unit: pr.Ch}, {Value: 5, Unit: pr.Ch}}}, pr.CenterPos{}, nil, nil)
 	gradient(t, "5ch circle, blue",
-		"circle", pr.GradientSize{Explicit: pr.Point{{Value: 5, Unit: pr.Ch}, {Value: 5, Unit: pr.Ch}}}, pr.Center{}, nil, nil)
+		"circle", pr.GradientSize{Explicit: pr.Point{{Value: 5, Unit: pr.Ch}, {Value: 5, Unit: pr.Ch}}}, pr.CenterPos{}, nil, nil)
 	gradient(t, "circle 5ch, blue",
-		"circle", pr.GradientSize{Explicit: pr.Point{{Value: 5, Unit: pr.Ch}, {Value: 5, Unit: pr.Ch}}}, pr.Center{}, nil, nil)
+		"circle", pr.GradientSize{Explicit: pr.Point{{Value: 5, Unit: pr.Ch}, {Value: 5, Unit: pr.Ch}}}, pr.CenterPos{}, nil, nil)
 
 	gradient(t, "10px 50px, blue",
-		"ellipse", pr.GradientSize{Explicit: pr.Point{{Value: 10, Unit: pr.Px}, {Value: 50, Unit: pr.Px}}}, pr.Center{}, nil, nil)
+		"ellipse", pr.GradientSize{Explicit: pr.Point{{Value: 10, Unit: pr.Px}, {Value: 50, Unit: pr.Px}}}, pr.CenterPos{}, nil, nil)
 	gradient(t, "10px 50px ellipse, blue",
-		"ellipse", pr.GradientSize{Explicit: pr.Point{{Value: 10, Unit: pr.Px}, {Value: 50, Unit: pr.Px}}}, pr.Center{}, nil, nil)
+		"ellipse", pr.GradientSize{Explicit: pr.Point{{Value: 10, Unit: pr.Px}, {Value: 50, Unit: pr.Px}}}, pr.CenterPos{}, nil, nil)
 	gradient(t, "ellipse 10px 50px, blue",
-		"ellipse", pr.GradientSize{Explicit: pr.Point{{Value: 10, Unit: pr.Px}, {Value: 50, Unit: pr.Px}}}, pr.Center{}, nil, nil)
+		"ellipse", pr.GradientSize{Explicit: pr.Point{{Value: 10, Unit: pr.Px}, {Value: 50, Unit: pr.Px}}}, pr.CenterPos{}, nil, nil)
 
 	gradient(t, "10px 50px, blue",
-		"ellipse", pr.GradientSize{Explicit: pr.Point{{Value: 10, Unit: pr.Px}, {Value: 50, Unit: pr.Px}}}, pr.Center{}, nil, nil)
+		"ellipse", pr.GradientSize{Explicit: pr.Point{{Value: 10, Unit: pr.Px}, {Value: 50, Unit: pr.Px}}}, pr.CenterPos{}, nil, nil)
 	gradient(t, "at top 10% right, blue", "", pr.GradientSize{},
-		pr.Center{OriginX: "right", OriginY: "top", Pos: pr.Point{{Value: 0, Unit: pr.Perc}, {Value: 10, Unit: pr.Perc}}}, nil, nil)
+		pr.CenterPos{OriginX: "right", OriginY: "top", Pos: pr.Point{{Value: 0, Unit: pr.Perc}, {Value: 10, Unit: pr.Perc}}}, nil, nil)
 	gradient(t, "circle at bottom, blue", "circle", pr.GradientSize{},
-		pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 50, Unit: pr.Perc}, {Value: 100, Unit: pr.Perc}}}, nil, nil)
+		pr.CenterPos{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 50, Unit: pr.Perc}, {Value: 100, Unit: pr.Perc}}}, nil, nil)
 	gradient(t, "circle at 10px, blue", "circle", pr.GradientSize{},
-		pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 10, Unit: pr.Px}, {Value: 50, Unit: pr.Perc}}}, nil, nil)
+		pr.CenterPos{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 10, Unit: pr.Px}, {Value: 50, Unit: pr.Perc}}}, nil, nil)
 	gradient(t, "closest-side circle at right 5em, blue",
 		"circle", pr.GradientSize{Keyword: "closest-side"},
-		pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 100, Unit: pr.Perc}, {Value: 5, Unit: pr.Em}}}, nil, nil)
+		pr.CenterPos{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 100, Unit: pr.Perc}, {Value: 5, Unit: pr.Em}}}, nil, nil)
 }
 
 func TestGridAutoColumnsRows(t *testing.T) {
@@ -1133,25 +1132,25 @@ func TestAlignContent(t *testing.T) {
 		css   string
 		value pr.JustifyOrAlign
 	}{
-		{"normal", pr.JustifyOrAlign{kw.Normal}},
-		{"baseline", pr.JustifyOrAlign{kw.First, kw.Baseline}},
-		{"first baseline", pr.JustifyOrAlign{kw.First, kw.Baseline}},
-		{"last baseline", pr.JustifyOrAlign{kw.Last, kw.Baseline}},
-		{"baseline last", pr.JustifyOrAlign{kw.Baseline, kw.Last}},
-		{"space-between", pr.JustifyOrAlign{kw.SpaceBetween}},
-		{"space-around", pr.JustifyOrAlign{kw.SpaceAround}},
-		{"space-evenly", pr.JustifyOrAlign{kw.SpaceEvenly}},
-		{"stretch", pr.JustifyOrAlign{kw.Stretch}},
-		{"center", pr.JustifyOrAlign{kw.Center}},
-		{"start", pr.JustifyOrAlign{kw.Start}},
-		{"end", pr.JustifyOrAlign{kw.End}},
-		{"flex-start", pr.JustifyOrAlign{kw.FlexStart}},
-		{"flex-end", pr.JustifyOrAlign{kw.FlexEnd}},
-		{"safe center", pr.JustifyOrAlign{kw.Safe, kw.Center}},
-		{"unsafe start", pr.JustifyOrAlign{kw.Unsafe, kw.Start}},
-		{"safe end", pr.JustifyOrAlign{kw.Safe, kw.End}},
-		{"safe flex-start", pr.JustifyOrAlign{kw.Safe, kw.FlexStart}},
-		{"unsafe flex-start", pr.JustifyOrAlign{kw.Unsafe, kw.FlexStart}},
+		{"normal", pr.JustifyOrAlign{pr.Normal}},
+		{"baseline", pr.JustifyOrAlign{pr.First, pr.Baseline}},
+		{"first baseline", pr.JustifyOrAlign{pr.First, pr.Baseline}},
+		{"last baseline", pr.JustifyOrAlign{pr.Last, pr.Baseline}},
+		{"baseline last", pr.JustifyOrAlign{pr.Baseline, pr.Last}},
+		{"space-between", pr.JustifyOrAlign{pr.SpaceBetween}},
+		{"space-around", pr.JustifyOrAlign{pr.SpaceAround}},
+		{"space-evenly", pr.JustifyOrAlign{pr.SpaceEvenly}},
+		{"stretch", pr.JustifyOrAlign{pr.Stretch}},
+		{"center", pr.JustifyOrAlign{pr.Center}},
+		{"start", pr.JustifyOrAlign{pr.Start}},
+		{"end", pr.JustifyOrAlign{pr.End}},
+		{"flex-start", pr.JustifyOrAlign{pr.FlexStart}},
+		{"flex-end", pr.JustifyOrAlign{pr.FlexEnd}},
+		{"safe center", pr.JustifyOrAlign{pr.Safe, pr.Center}},
+		{"unsafe start", pr.JustifyOrAlign{pr.Unsafe, pr.Start}},
+		{"safe end", pr.JustifyOrAlign{pr.Safe, pr.End}},
+		{"safe flex-start", pr.JustifyOrAlign{pr.Safe, pr.FlexStart}},
+		{"unsafe flex-start", pr.JustifyOrAlign{pr.Unsafe, pr.FlexStart}},
 	} {
 		assertValidDict(t, fmt.Sprintf("align-content: %s", test.css), map[pr.KnownProp]pr.DeclaredValue{
 			pr.PAlignContent: test.value,
@@ -1181,26 +1180,26 @@ func TestAlignItems(t *testing.T) {
 		css   string
 		value pr.JustifyOrAlign
 	}{
-		{"normal", pr.JustifyOrAlign{kw.Normal}},
-		{"stretch", pr.JustifyOrAlign{kw.Stretch}},
-		{"baseline", pr.JustifyOrAlign{kw.First, kw.Baseline}},
-		{"first baseline", pr.JustifyOrAlign{kw.First, kw.Baseline}},
-		{"last baseline", pr.JustifyOrAlign{kw.Last, kw.Baseline}},
-		{"baseline last", pr.JustifyOrAlign{kw.Baseline, kw.Last}},
-		{"center", pr.JustifyOrAlign{kw.Center}},
-		{"self-start", pr.JustifyOrAlign{kw.SelfStart}},
-		{"self-end", pr.JustifyOrAlign{kw.SelfEnd}},
-		{"start", pr.JustifyOrAlign{kw.Start}},
-		{"end", pr.JustifyOrAlign{kw.End}},
-		{"flex-start", pr.JustifyOrAlign{kw.FlexStart}},
-		{"flex-end", pr.JustifyOrAlign{kw.FlexEnd}},
-		{"safe center", pr.JustifyOrAlign{kw.Safe, kw.Center}},
-		{"unsafe start", pr.JustifyOrAlign{kw.Unsafe, kw.Start}},
-		{"safe end", pr.JustifyOrAlign{kw.Safe, kw.End}},
-		{"unsafe self-start", pr.JustifyOrAlign{kw.Unsafe, kw.SelfStart}},
-		{"safe self-end", pr.JustifyOrAlign{kw.Safe, kw.SelfEnd}},
-		{"safe flex-start", pr.JustifyOrAlign{kw.Safe, kw.FlexStart}},
-		{"unsafe flex-start", pr.JustifyOrAlign{kw.Unsafe, kw.FlexStart}},
+		{"normal", pr.JustifyOrAlign{pr.Normal}},
+		{"stretch", pr.JustifyOrAlign{pr.Stretch}},
+		{"baseline", pr.JustifyOrAlign{pr.First, pr.Baseline}},
+		{"first baseline", pr.JustifyOrAlign{pr.First, pr.Baseline}},
+		{"last baseline", pr.JustifyOrAlign{pr.Last, pr.Baseline}},
+		{"baseline last", pr.JustifyOrAlign{pr.Baseline, pr.Last}},
+		{"center", pr.JustifyOrAlign{pr.Center}},
+		{"self-start", pr.JustifyOrAlign{pr.SelfStart}},
+		{"self-end", pr.JustifyOrAlign{pr.SelfEnd}},
+		{"start", pr.JustifyOrAlign{pr.Start}},
+		{"end", pr.JustifyOrAlign{pr.End}},
+		{"flex-start", pr.JustifyOrAlign{pr.FlexStart}},
+		{"flex-end", pr.JustifyOrAlign{pr.FlexEnd}},
+		{"safe center", pr.JustifyOrAlign{pr.Safe, pr.Center}},
+		{"unsafe start", pr.JustifyOrAlign{pr.Unsafe, pr.Start}},
+		{"safe end", pr.JustifyOrAlign{pr.Safe, pr.End}},
+		{"unsafe self-start", pr.JustifyOrAlign{pr.Unsafe, pr.SelfStart}},
+		{"safe self-end", pr.JustifyOrAlign{pr.Safe, pr.SelfEnd}},
+		{"safe flex-start", pr.JustifyOrAlign{pr.Safe, pr.FlexStart}},
+		{"unsafe flex-start", pr.JustifyOrAlign{pr.Unsafe, pr.FlexStart}},
 	} {
 		assertValidDict(t, fmt.Sprintf("align-items: %s", test.css), map[pr.KnownProp]pr.DeclaredValue{
 			pr.PAlignItems: test.value,
@@ -1231,27 +1230,27 @@ func TestAlignSelf(t *testing.T) {
 		css   string
 		value pr.JustifyOrAlign
 	}{
-		{"auto", pr.JustifyOrAlign{kw.Auto}},
-		{"normal", pr.JustifyOrAlign{kw.Normal}},
-		{"stretch", pr.JustifyOrAlign{kw.Stretch}},
-		{"baseline", pr.JustifyOrAlign{kw.First, kw.Baseline}},
-		{"first baseline", pr.JustifyOrAlign{kw.First, kw.Baseline}},
-		{"last baseline", pr.JustifyOrAlign{kw.Last, kw.Baseline}},
-		{"baseline last", pr.JustifyOrAlign{kw.Baseline, kw.Last}},
-		{"center", pr.JustifyOrAlign{kw.Center}},
-		{"self-start", pr.JustifyOrAlign{kw.SelfStart}},
-		{"self-end", pr.JustifyOrAlign{kw.SelfEnd}},
-		{"start", pr.JustifyOrAlign{kw.Start}},
-		{"end", pr.JustifyOrAlign{kw.End}},
-		{"flex-start", pr.JustifyOrAlign{kw.FlexStart}},
-		{"flex-end", pr.JustifyOrAlign{kw.FlexEnd}},
-		{"safe center", pr.JustifyOrAlign{kw.Safe, kw.Center}},
-		{"unsafe start", pr.JustifyOrAlign{kw.Unsafe, kw.Start}},
-		{"safe end", pr.JustifyOrAlign{kw.Safe, kw.End}},
-		{"unsafe self-start", pr.JustifyOrAlign{kw.Unsafe, kw.SelfStart}},
-		{"safe self-end", pr.JustifyOrAlign{kw.Safe, kw.SelfEnd}},
-		{"safe flex-start", pr.JustifyOrAlign{kw.Safe, kw.FlexStart}},
-		{"unsafe flex-start", pr.JustifyOrAlign{kw.Unsafe, kw.FlexStart}},
+		{"auto", pr.JustifyOrAlign{pr.Auto}},
+		{"normal", pr.JustifyOrAlign{pr.Normal}},
+		{"stretch", pr.JustifyOrAlign{pr.Stretch}},
+		{"baseline", pr.JustifyOrAlign{pr.First, pr.Baseline}},
+		{"first baseline", pr.JustifyOrAlign{pr.First, pr.Baseline}},
+		{"last baseline", pr.JustifyOrAlign{pr.Last, pr.Baseline}},
+		{"baseline last", pr.JustifyOrAlign{pr.Baseline, pr.Last}},
+		{"center", pr.JustifyOrAlign{pr.Center}},
+		{"self-start", pr.JustifyOrAlign{pr.SelfStart}},
+		{"self-end", pr.JustifyOrAlign{pr.SelfEnd}},
+		{"start", pr.JustifyOrAlign{pr.Start}},
+		{"end", pr.JustifyOrAlign{pr.End}},
+		{"flex-start", pr.JustifyOrAlign{pr.FlexStart}},
+		{"flex-end", pr.JustifyOrAlign{pr.FlexEnd}},
+		{"safe center", pr.JustifyOrAlign{pr.Safe, pr.Center}},
+		{"unsafe start", pr.JustifyOrAlign{pr.Unsafe, pr.Start}},
+		{"safe end", pr.JustifyOrAlign{pr.Safe, pr.End}},
+		{"unsafe self-start", pr.JustifyOrAlign{pr.Unsafe, pr.SelfStart}},
+		{"safe self-end", pr.JustifyOrAlign{pr.Safe, pr.SelfEnd}},
+		{"safe flex-start", pr.JustifyOrAlign{pr.Safe, pr.FlexStart}},
+		{"unsafe flex-start", pr.JustifyOrAlign{pr.Unsafe, pr.FlexStart}},
 	} {
 		assertValidDict(t, fmt.Sprintf("align-self: %s", test.css), map[pr.KnownProp]pr.DeclaredValue{
 			pr.PAlignSelf: test.value,
@@ -1281,25 +1280,25 @@ func TestJustifyContent(t *testing.T) {
 		css   string
 		value pr.JustifyOrAlign
 	}{
-		{"normal", pr.JustifyOrAlign{kw.Normal}},
-		{"space-between", pr.JustifyOrAlign{kw.SpaceBetween}},
-		{"space-around", pr.JustifyOrAlign{kw.SpaceAround}},
-		{"space-evenly", pr.JustifyOrAlign{kw.SpaceEvenly}},
-		{"stretch", pr.JustifyOrAlign{kw.Stretch}},
-		{"center", pr.JustifyOrAlign{kw.Center}},
-		{"left", pr.JustifyOrAlign{kw.Left}},
-		{"right", pr.JustifyOrAlign{kw.Right}},
-		{"start", pr.JustifyOrAlign{kw.Start}},
-		{"end", pr.JustifyOrAlign{kw.End}},
-		{"flex-start", pr.JustifyOrAlign{kw.FlexStart}},
-		{"flex-end", pr.JustifyOrAlign{kw.FlexEnd}},
-		{"safe center", pr.JustifyOrAlign{kw.Safe, kw.Center}},
-		{"unsafe start", pr.JustifyOrAlign{kw.Unsafe, kw.Start}},
-		{"safe end", pr.JustifyOrAlign{kw.Safe, kw.End}},
-		{"unsafe left", pr.JustifyOrAlign{kw.Unsafe, kw.Left}},
-		{"safe right", pr.JustifyOrAlign{kw.Safe, kw.Right}},
-		{"safe flex-start", pr.JustifyOrAlign{kw.Safe, kw.FlexStart}},
-		{"unsafe flex-start", pr.JustifyOrAlign{kw.Unsafe, kw.FlexStart}},
+		{"normal", pr.JustifyOrAlign{pr.Normal}},
+		{"space-between", pr.JustifyOrAlign{pr.SpaceBetween}},
+		{"space-around", pr.JustifyOrAlign{pr.SpaceAround}},
+		{"space-evenly", pr.JustifyOrAlign{pr.SpaceEvenly}},
+		{"stretch", pr.JustifyOrAlign{pr.Stretch}},
+		{"center", pr.JustifyOrAlign{pr.Center}},
+		{"left", pr.JustifyOrAlign{pr.Left}},
+		{"right", pr.JustifyOrAlign{pr.Right}},
+		{"start", pr.JustifyOrAlign{pr.Start}},
+		{"end", pr.JustifyOrAlign{pr.End}},
+		{"flex-start", pr.JustifyOrAlign{pr.FlexStart}},
+		{"flex-end", pr.JustifyOrAlign{pr.FlexEnd}},
+		{"safe center", pr.JustifyOrAlign{pr.Safe, pr.Center}},
+		{"unsafe start", pr.JustifyOrAlign{pr.Unsafe, pr.Start}},
+		{"safe end", pr.JustifyOrAlign{pr.Safe, pr.End}},
+		{"unsafe left", pr.JustifyOrAlign{pr.Unsafe, pr.Left}},
+		{"safe right", pr.JustifyOrAlign{pr.Safe, pr.Right}},
+		{"safe flex-start", pr.JustifyOrAlign{pr.Safe, pr.FlexStart}},
+		{"unsafe flex-start", pr.JustifyOrAlign{pr.Unsafe, pr.FlexStart}},
 	} {
 		assertValidDict(t, fmt.Sprintf("justify-content: %s", test.css), map[pr.KnownProp]pr.DeclaredValue{
 			pr.PJustifyContent: test.value,
@@ -1328,32 +1327,32 @@ func TestJustifyItems(t *testing.T) {
 		css   string
 		value pr.JustifyOrAlign
 	}{
-		{"normal", pr.JustifyOrAlign{kw.Normal}},
-		{"stretch", pr.JustifyOrAlign{kw.Stretch}},
-		{"baseline", pr.JustifyOrAlign{kw.First, kw.Baseline}},
-		{"first baseline", pr.JustifyOrAlign{kw.First, kw.Baseline}},
-		{"last baseline", pr.JustifyOrAlign{kw.Last, kw.Baseline}},
-		{"baseline last", pr.JustifyOrAlign{kw.Baseline, kw.Last}},
-		{"center", pr.JustifyOrAlign{kw.Center}},
-		{"self-start", pr.JustifyOrAlign{kw.SelfStart}},
-		{"self-end", pr.JustifyOrAlign{kw.SelfEnd}},
-		{"start", pr.JustifyOrAlign{kw.Start}},
-		{"end", pr.JustifyOrAlign{kw.End}},
-		{"left", pr.JustifyOrAlign{kw.Left}},
-		{"right", pr.JustifyOrAlign{kw.Right}},
-		{"flex-start", pr.JustifyOrAlign{kw.FlexStart}},
-		{"flex-end", pr.JustifyOrAlign{kw.FlexEnd}},
-		{"safe center", pr.JustifyOrAlign{kw.Safe, kw.Center}},
-		{"unsafe start", pr.JustifyOrAlign{kw.Unsafe, kw.Start}},
-		{"safe end", pr.JustifyOrAlign{kw.Safe, kw.End}},
-		{"unsafe self-start", pr.JustifyOrAlign{kw.Unsafe, kw.SelfStart}},
-		{"safe self-end", pr.JustifyOrAlign{kw.Safe, kw.SelfEnd}},
-		{"safe flex-start", pr.JustifyOrAlign{kw.Safe, kw.FlexStart}},
-		{"unsafe flex-start", pr.JustifyOrAlign{kw.Unsafe, kw.FlexStart}},
-		{"legacy", pr.JustifyOrAlign{kw.Legacy}},
-		{"legacy left", pr.JustifyOrAlign{kw.Legacy, kw.Left}},
-		{"left legacy", pr.JustifyOrAlign{kw.Left, kw.Legacy}},
-		{"legacy center", pr.JustifyOrAlign{kw.Legacy, kw.Center}},
+		{"normal", pr.JustifyOrAlign{pr.Normal}},
+		{"stretch", pr.JustifyOrAlign{pr.Stretch}},
+		{"baseline", pr.JustifyOrAlign{pr.First, pr.Baseline}},
+		{"first baseline", pr.JustifyOrAlign{pr.First, pr.Baseline}},
+		{"last baseline", pr.JustifyOrAlign{pr.Last, pr.Baseline}},
+		{"baseline last", pr.JustifyOrAlign{pr.Baseline, pr.Last}},
+		{"center", pr.JustifyOrAlign{pr.Center}},
+		{"self-start", pr.JustifyOrAlign{pr.SelfStart}},
+		{"self-end", pr.JustifyOrAlign{pr.SelfEnd}},
+		{"start", pr.JustifyOrAlign{pr.Start}},
+		{"end", pr.JustifyOrAlign{pr.End}},
+		{"left", pr.JustifyOrAlign{pr.Left}},
+		{"right", pr.JustifyOrAlign{pr.Right}},
+		{"flex-start", pr.JustifyOrAlign{pr.FlexStart}},
+		{"flex-end", pr.JustifyOrAlign{pr.FlexEnd}},
+		{"safe center", pr.JustifyOrAlign{pr.Safe, pr.Center}},
+		{"unsafe start", pr.JustifyOrAlign{pr.Unsafe, pr.Start}},
+		{"safe end", pr.JustifyOrAlign{pr.Safe, pr.End}},
+		{"unsafe self-start", pr.JustifyOrAlign{pr.Unsafe, pr.SelfStart}},
+		{"safe self-end", pr.JustifyOrAlign{pr.Safe, pr.SelfEnd}},
+		{"safe flex-start", pr.JustifyOrAlign{pr.Safe, pr.FlexStart}},
+		{"unsafe flex-start", pr.JustifyOrAlign{pr.Unsafe, pr.FlexStart}},
+		{"legacy", pr.JustifyOrAlign{pr.Legacy}},
+		{"legacy left", pr.JustifyOrAlign{pr.Legacy, pr.Left}},
+		{"left legacy", pr.JustifyOrAlign{pr.Left, pr.Legacy}},
+		{"legacy center", pr.JustifyOrAlign{pr.Legacy, pr.Center}},
 	} {
 		assertValidDict(t, fmt.Sprintf("justify-items: %s", test.css), map[pr.KnownProp]pr.DeclaredValue{
 			pr.PJustifyItems: test.value,
@@ -1382,31 +1381,31 @@ func TestJustifySelf(t *testing.T) {
 		css   string
 		value pr.JustifyOrAlign
 	}{
-		{"auto", pr.JustifyOrAlign{kw.Auto}},
-		{"normal", pr.JustifyOrAlign{kw.Normal}},
-		{"stretch", pr.JustifyOrAlign{kw.Stretch}},
-		{"baseline", pr.JustifyOrAlign{kw.First, kw.Baseline}},
-		{"first baseline", pr.JustifyOrAlign{kw.First, kw.Baseline}},
-		{"last baseline", pr.JustifyOrAlign{kw.Last, kw.Baseline}},
-		{"baseline last", pr.JustifyOrAlign{kw.Baseline, kw.Last}},
-		{"center", pr.JustifyOrAlign{kw.Center}},
-		{"self-start", pr.JustifyOrAlign{kw.SelfStart}},
-		{"self-end", pr.JustifyOrAlign{kw.SelfEnd}},
-		{"start", pr.JustifyOrAlign{kw.Start}},
-		{"end", pr.JustifyOrAlign{kw.End}},
-		{"left", pr.JustifyOrAlign{kw.Left}},
-		{"right", pr.JustifyOrAlign{kw.Right}},
-		{"flex-start", pr.JustifyOrAlign{kw.FlexStart}},
-		{"flex-end", pr.JustifyOrAlign{kw.FlexEnd}},
-		{"safe center", pr.JustifyOrAlign{kw.Safe, kw.Center}},
-		{"unsafe start", pr.JustifyOrAlign{kw.Unsafe, kw.Start}},
-		{"safe end", pr.JustifyOrAlign{kw.Safe, kw.End}},
-		{"unsafe left", pr.JustifyOrAlign{kw.Unsafe, kw.Left}},
-		{"safe right", pr.JustifyOrAlign{kw.Safe, kw.Right}},
-		{"unsafe self-start", pr.JustifyOrAlign{kw.Unsafe, kw.SelfStart}},
-		{"safe self-end", pr.JustifyOrAlign{kw.Safe, kw.SelfEnd}},
-		{"safe flex-start", pr.JustifyOrAlign{kw.Safe, kw.FlexStart}},
-		{"unsafe flex-start", pr.JustifyOrAlign{kw.Unsafe, kw.FlexStart}},
+		{"auto", pr.JustifyOrAlign{pr.Auto}},
+		{"normal", pr.JustifyOrAlign{pr.Normal}},
+		{"stretch", pr.JustifyOrAlign{pr.Stretch}},
+		{"baseline", pr.JustifyOrAlign{pr.First, pr.Baseline}},
+		{"first baseline", pr.JustifyOrAlign{pr.First, pr.Baseline}},
+		{"last baseline", pr.JustifyOrAlign{pr.Last, pr.Baseline}},
+		{"baseline last", pr.JustifyOrAlign{pr.Baseline, pr.Last}},
+		{"center", pr.JustifyOrAlign{pr.Center}},
+		{"self-start", pr.JustifyOrAlign{pr.SelfStart}},
+		{"self-end", pr.JustifyOrAlign{pr.SelfEnd}},
+		{"start", pr.JustifyOrAlign{pr.Start}},
+		{"end", pr.JustifyOrAlign{pr.End}},
+		{"left", pr.JustifyOrAlign{pr.Left}},
+		{"right", pr.JustifyOrAlign{pr.Right}},
+		{"flex-start", pr.JustifyOrAlign{pr.FlexStart}},
+		{"flex-end", pr.JustifyOrAlign{pr.FlexEnd}},
+		{"safe center", pr.JustifyOrAlign{pr.Safe, pr.Center}},
+		{"unsafe start", pr.JustifyOrAlign{pr.Unsafe, pr.Start}},
+		{"safe end", pr.JustifyOrAlign{pr.Safe, pr.End}},
+		{"unsafe left", pr.JustifyOrAlign{pr.Unsafe, pr.Left}},
+		{"safe right", pr.JustifyOrAlign{pr.Safe, pr.Right}},
+		{"unsafe self-start", pr.JustifyOrAlign{pr.Unsafe, pr.SelfStart}},
+		{"safe self-end", pr.JustifyOrAlign{pr.Safe, pr.SelfEnd}},
+		{"safe flex-start", pr.JustifyOrAlign{pr.Safe, pr.FlexStart}},
+		{"unsafe flex-start", pr.JustifyOrAlign{pr.Unsafe, pr.FlexStart}},
 	} {
 		assertValidDict(t, fmt.Sprintf("justify-self: %s", test.css), map[pr.KnownProp]pr.DeclaredValue{
 			pr.PJustifySelf: test.value,

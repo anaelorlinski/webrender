@@ -480,7 +480,7 @@ type backgroundProps struct {
 	clip       string
 	origin     string
 	size       pr.Size
-	position   pr.Center
+	position   pr.CenterPos
 }
 
 func (b backgroundProps) add(name string) error {
@@ -588,7 +588,7 @@ func expandBackground(baseURL string, shortand pr.Shortand, tokens []Token) (out
 				continue
 			}
 
-			var position pr.Center
+			var position pr.CenterPos
 			start := len(tokens)
 			if start > 4 {
 				start = 4

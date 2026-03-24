@@ -479,12 +479,16 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 	fc.fm.SetQuery(newQuery(style.FontDescription))
 
 	// segment the input text, with proper lang and size
+	dir := di.DirectionLTR
+	if style.Direction == pr.Rtl {
+		dir = di.DirectionRTL
+	}
 	inputs := fc.inputSeg.Split(shaping.Input{
 		Text:      text,
 		RunEnd:    len(text),
 		Language:  lang,
 		Size:      floatToFixed(style.FontDescription.Size),
-		Direction: di.DirectionLTR, // default, will be overriden
+		Direction: dir, // default, will be overriden
 	}, fc.fm)
 
 	// TODO: lazy iterator

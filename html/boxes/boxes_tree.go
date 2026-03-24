@@ -213,7 +213,7 @@ func (*InlineLevelBox) RemoveDecoration(box *BoxFields, start, end bool) {
 	if box.Style.GetBoxDecorationBreak() == "clone" {
 		return
 	}
-	ltr := box.Style.GetDirection() == "ltr"
+	ltr := box.Style.GetDirection() == pr.Ltr
 	if start {
 		side := SRight
 		if ltr {
@@ -326,14 +326,14 @@ func (b *TableBox) AllChildren() []Box {
 	return out
 }
 
-func (b *TableBox) Translate(box Box, dx, dy pr.Float, ignoreFloats bool) {
+func (b *TableBox) Translate(dx, dy pr.Float, ignoreFloats bool) {
 	if dx == 0 && dy == 0 {
 		return
 	}
 	for index, position := range b.ColumnPositions {
 		b.ColumnPositions[index] = position + dx
 	}
-	b.BoxFields.Translate(box, dx, dy, ignoreFloats)
+	defaultTranslate(b, dx, dy, ignoreFloats)
 }
 
 func (b *TableBox) PageValues() (pr.Page, pr.Page) {

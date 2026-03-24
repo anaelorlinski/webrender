@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	kw "github.com/benoitkugler/webrender/css/properties/keywords"
 	"github.com/benoitkugler/webrender/css/validation"
 	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/text"
@@ -26,7 +25,7 @@ import (
 var (
 	// These are unspecified, other than 'thin' <='medium' <= 'thick'.
 	// Values are in pixels.
-	borderWidthKeywords = map[pr.Tag]pr.Float{
+	borderWidthKeywords = map[pr.Keyword]pr.Float{
 		pr.Thin:   1,
 		pr.Medium: 3,
 		pr.Thick:  5,
@@ -191,7 +190,7 @@ func backgroundImage(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssPrope
 					gradient.ColorStops[j] = cl
 				}
 			}
-			gradient.Center = centers(computer, []pr.Center{gradient.Center})[0]
+			gradient.Center = centers(computer, []pr.CenterPos{gradient.Center})[0]
 			if gradient.Size.IsExplicit() {
 				l := _lengthOrPercentageTuple2(computer, gradient.Size.Explicit.ToSlice())
 				gradient.Size.Explicit = pr.Point{l[0], l[1]}
@@ -206,7 +205,7 @@ func backgroundImage(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssPrope
 func centers(computer *ComputedStyle, value pr.Centers) pr.Centers {
 	out := make(pr.Centers, len(value))
 	for index, v := range value {
-		out[index] = pr.Center{
+		out[index] = pr.CenterPos{
 			OriginX: v.OriginX,
 			OriginY: v.OriginY,
 			Pos: pr.Point{
@@ -225,7 +224,7 @@ func backgroundPosition(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssPr
 }
 
 func objectPosition(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) pr.CssProperty {
-	value := _value.(pr.Center)
+	value := _value.(pr.CenterPos)
 	return centers(computer, pr.Centers{value})[0]
 }
 
@@ -693,15 +692,15 @@ func display(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) pr.
 	float_ := computer.specified.Float
 	position := computer.specified.Position
 	if (!position.Bool && (position.String == "absolute" || position.String == "fixed")) || float_ != "none" || computer.isRootElement() {
-		if value == (pr.Display{Outside: kw.InlineTable}) {
-			return pr.Display{Outside: kw.Block, Inside: kw.Table}
+		if value == (pr.Display{Outside: pr.InlineTable}) {
+			return pr.Display{Outside: pr.Block, Inside: pr.Table}
 		} else if d := value.Outside; value.Inside == 0 && value.ListItem == 0 && d.HasTablePrefix() {
-			return pr.Display{Outside: kw.Block, Inside: kw.Flow}
-		} else if d == kw.Inline {
-			if value.Has(kw.ListItem) {
-				return pr.Display{Outside: kw.Block, Inside: kw.Flow, ListItem: kw.ListItem}
+			return pr.Display{Outside: pr.Block, Inside: pr.Flow}
+		} else if d == pr.Inline {
+			if value.Has(pr.ListItem) {
+				return pr.Display{Outside: pr.Block, Inside: pr.Flow, ListItem: pr.ListItem}
 			} else {
-				return pr.Display{Outside: kw.Block, Inside: kw.Flow}
+				return pr.Display{Outside: pr.Block, Inside: pr.Flow}
 			}
 		}
 	}

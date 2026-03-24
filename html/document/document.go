@@ -107,7 +107,7 @@ type Link struct {
 	//   or not at all.
 	// - "attachment": `target` is an absolute URL and points
 	//   to a resource to attach to the document.
-	Type pr.Tag
+	Type pr.Keyword
 
 	Target string
 

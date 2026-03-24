@@ -33,12 +33,12 @@ func (abs *AbsolutePlaceholder) setLaidOutBox(newBox Box) {
 	abs.layoutDone = true
 }
 
-func (abs *AbsolutePlaceholder) Translate(box Box, dx, dy pr.Float, ignoreFloats bool) {
+func (abs *AbsolutePlaceholder) Translate(dx, dy pr.Float, ignoreFloats bool) {
 	if dx == 0 && dy == 0 {
 		return
 	}
 	if abs.layoutDone {
-		abs.AliasBox.Translate(box, dx, dy, ignoreFloats)
+		abs.AliasBox.Translate(dx, dy, ignoreFloats)
 	} else {
 		// Descendants do not have a position yet.
 		abs.AliasBox.Box().PositionX += dx
@@ -64,7 +64,7 @@ func _absoluteWidth(box_ Box, context *layoutContext, containingBlock containing
 	// https://www.w3.org/TR/CSS2/visudet.html#abs-replaced-width
 	box := box_.Box()
 
-	ltr := box.Style.ParentStyle() == nil || box.Style.ParentStyle().GetDirection() == "ltr"
+	ltr := box.Style.ParentStyle() == nil || box.Style.ParentStyle().GetDirection() == pr.Ltr
 	paddingsBorders := box.PaddingLeft.V() + box.PaddingRight.V() + box.BorderLeftWidth.V() + box.BorderRightWidth.V()
 
 	marginL := box.MarginLeft
@@ -272,7 +272,7 @@ func absoluteBlock(context *layoutContext, box_ Box, containingBlock block, fixe
 		translateY -= newBox.Box().Height.V()
 	}
 
-	newBox.Translate(newBox, translateX, translateY, false)
+	newBox.Translate(translateX, translateY, false)
 
 	return newBox, bl.resumeAt
 }
@@ -346,7 +346,7 @@ func absoluteReplaced(box_ Box, containingBlock block) Box {
 	box := box_.Box()
 	cbX, cbY, cbWidth, cbHeight := containingBlock.X, containingBlock.Y, containingBlock.Width, containingBlock.Height
 
-	ltr := box.Style.ParentStyle() == nil || box.Style.ParentStyle().GetDirection() == "ltr"
+	ltr := box.Style.ParentStyle() == nil || box.Style.ParentStyle().GetDirection() == pr.Ltr
 
 	// https://www.w3.org/TR/CSS21/visudet.html#abs-replaced-width
 	if box.Left == pr.AutoF && box.Right == pr.AutoF {

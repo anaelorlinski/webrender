@@ -14,7 +14,6 @@ import (
 	"golang.org/x/net/html/atom"
 
 	"github.com/benoitkugler/webrender/css/parser"
-	kw "github.com/benoitkugler/webrender/css/properties/keywords"
 	"github.com/benoitkugler/webrender/html/tree"
 
 	pr "github.com/benoitkugler/webrender/css/properties"
@@ -99,7 +98,7 @@ type Box interface {
 	Box() *BoxFields
 	Copy() Box
 	AllChildren() []Box
-	Translate(box Box, dx, dy pr.Float, ignoreFloats bool)
+	Translate(dx, dy pr.Float, ignoreFloats bool)
 	RemoveDecoration(box *BoxFields, isStart, isEnd bool)
 	PageValues() (pr.Page, pr.Page)
 }
@@ -210,7 +209,7 @@ type BoxFields struct {
 	Baseline       pr.MaybeFloat
 	ComputedHeight pr.MaybeFloat
 	ContentHeight  pr.Float
-	VerticalAlign  pr.Tag
+	VerticalAlign  pr.Keyword
 
 	// For table cells, [true] when no children is either floated or in normal flow
 	Empty bool
@@ -349,9 +348,9 @@ func (box *BoxFields) GetWrappedTable() TableBoxITF {
 	return nil
 }
 
-// Translate changes the box’s position.
+// defaultTranslate changes the box’s position.
 // Also update the children’s positions accordingly.
-func (BoxFields) Translate(box Box, dx, dy pr.Float, ignoreFloats bool) {
+func defaultTranslate(box Box, dx, dy pr.Float, ignoreFloats bool) {
 	if dx == 0 && dy == 0 {
 		return
 	}
@@ -359,7 +358,7 @@ func (BoxFields) Translate(box Box, dx, dy pr.Float, ignoreFloats bool) {
 	box.Box().PositionY += dy
 	for _, child := range box.AllChildren() {
 		if !(ignoreFloats && child.Box().IsFloated()) {
-			child.Translate(child, dx, dy, ignoreFloats)
+			child.Translate(dx, dy, ignoreFloats)
 		}
 	}
 }
@@ -568,7 +567,7 @@ func EstablishesFormattingContext(box_ Box) bool {
 		box.IsColumn ||
 		(BlockContainerT.IsInstance(box_) && !BlockT.IsInstance(box_)) ||
 		(BlockT.IsInstance(box_) && box.Style.GetOverflow() != "visible") ||
-		box.Style.GetDisplay().Has(kw.FlowRoot))
+		box.Style.GetDisplay().Has(pr.FlowRoot))
 }
 
 // Start and end page values for named pages

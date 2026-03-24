@@ -109,7 +109,7 @@ func findFloatPosition(context *layoutContext, box_ Box, containingBlock *bo.Box
 	if L := len(context.excludedShapes.list); L != 0 {
 		highestY := (context.excludedShapes.list)[L-1].PositionY
 		if box.PositionY < highestY {
-			box_.Translate(box_, 0, highestY-box.PositionY, false)
+			box_.Translate(0, highestY-box.PositionY, false)
 		}
 	}
 
@@ -122,7 +122,7 @@ func findFloatPosition(context *layoutContext, box_ Box, containingBlock *bo.Box
 		positionX += availableWidth - box.MarginWidth()
 	}
 
-	box_.Translate(box_, positionX-box.PositionX, positionY-box.PositionY, false)
+	box_.Translate(positionX-box.PositionX, positionY-box.PositionY, false)
 
 	return box_
 }
@@ -251,7 +251,7 @@ func avoidCollisions(context *layoutContext, box_ Box, containingBlock *bo.BoxFi
 	// The x-position of the box depends on its type.
 	positionX = maxLeftBound
 	if box.Style.GetFloat() == "none" {
-		if containingBlock.Style.GetDirection() == "rtl" {
+		if containingBlock.Style.GetDirection() == pr.Rtl {
 			if bo.LineT.IsInstance(box_) {
 				// The position of the line is the position of the cursor, at
 				// the right bound.

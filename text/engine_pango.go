@@ -418,6 +418,13 @@ func firstLineMetrics(firstLine *pango.LayoutLine, text []rune, layout *TextLayo
 	}
 }
 
+func pangoDirection(dir pr.Keyword) pango.Direction {
+	if dir == pr.Rtl {
+		return pango.DIRECTION_RTL
+	}
+	return pango.DIRECTION_LTR
+}
+
 // TextLayoutPango wraps a pango.Layout object
 type TextLayoutPango struct {
 	Style   *TextStyle
@@ -471,6 +478,7 @@ func (p *TextLayoutPango) setup(fonts FontConfiguration, style *TextStyle) {
 	fontmap := fonts.(*FontConfigurationPango).fontmap
 	pc := pango.NewContext(fontmap)
 	pc.SetRoundGlyphPositions(false)
+	pc.SetBaseDir(pangoDirection(style.Direction))
 
 	var lang pango.Language
 	if flo := style.FontLanguageOverride; (flo != fontLanguageOverride{}) {

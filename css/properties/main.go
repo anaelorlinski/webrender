@@ -74,8 +74,7 @@ func (v VarData) IsNone() bool {
 	return v.Name == "" && v.Default == nil
 }
 
-// KnownProp efficiently encode a known CSS property
-type KnownProp uint8
+const NbProperties = nbProperties
 
 func (p KnownProp) String() string { return propsNames[p] }
 

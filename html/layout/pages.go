@@ -589,7 +589,7 @@ func marginBoxContentLayout(context *layoutContext, mBox *bo.MarginBox) Box {
 			offset /= 2
 		}
 		for _, child := range box.Children {
-			child.Translate(child, 0, offset, false)
+			child.Translate(0, offset, false)
 		}
 	}
 	return newBox_
@@ -786,7 +786,7 @@ func (context *layoutContext) makePage(rootBox bo.BlockLevelBoxITF, pageType uti
 		context, footnoteArea, -pr.Inf, nil, &footnoteArea.Page.BoxFields,
 		true, &positionedBoxes, &positionedBoxes, nil, false, -1)
 	footnoteArea = tmpBox.(*bo.FootnoteAreaBox)
-	footnoteArea.Translate(footnoteArea, 0, -footnoteArea.MarginHeight(), false)
+	footnoteArea.Translate(0, -footnoteArea.MarginHeight(), false)
 
 	for _, placeholder := range positionedBoxes {
 		if placeholder.Box().Style.GetPosition().String == "fixed" {
@@ -1025,8 +1025,6 @@ func updatePageGroups(pageGroups *[]pageGroup, resumeAt tree.ResumeStack, nextPa
 			return nextPage.Page
 		}
 	}
-
-	return ""
 }
 
 // Return one laid out page without margin boxes.
@@ -1047,7 +1045,7 @@ func (context *layoutContext) remakePage(index int, pageGroups *[]pageGroup, roo
 	case "left", "right":
 		nextPageSide = tmp.NextPage.Break
 	case "recto", "verso":
-		directionLtr := rootBox.Box().Style.GetDirection() == "ltr"
+		directionLtr := rootBox.Box().Style.GetDirection() == pr.Ltr
 		breakVerso := tmp.NextPage.Break == "verso"
 		nextPageSide = "left"
 		if directionLtr != breakVerso {

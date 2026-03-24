@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	pa "github.com/benoitkugler/webrender/css/parser"
-	"github.com/benoitkugler/webrender/css/properties/keywords"
 )
 
 // ------------- Top levels types, implementing CssProperty ------------
@@ -16,7 +15,7 @@ type StringSet struct {
 
 type Images []Image
 
-type Centers []Center
+type Centers []CenterPos
 
 type Sizes []Size
 
@@ -43,7 +42,7 @@ type SContent struct {
 }
 
 type Display struct {
-	Outside, Inside, ListItem keywords.Keyword
+	Outside, Inside, ListItem Keyword
 }
 
 // Decorations zero value means "none"
@@ -89,7 +88,7 @@ type IntStrings []IntString
 type Quotes struct {
 	Open  Strings
 	Close Strings
-	Tag   Tag
+	Tag   Keyword
 }
 
 type ContentProperties []ContentProperty
@@ -121,13 +120,13 @@ func (ft FontFeature) String() string {
 type FontFeatures []FontFeature
 
 // JustifyOrAlign stores properties for 'justify-*' or 'align-*'
-type JustifyOrAlign [2]keywords.Keyword
+type JustifyOrAlign [2]Keyword
 
-func (ja JustifyOrAlign) Has(kw keywords.Keyword) bool { return ja[0] == kw || ja[1] == kw }
+func (ja JustifyOrAlign) Has(kw Keyword) bool { return ja[0] == kw || ja[1] == kw }
 
 // Intersects returns true if at least one value in [kws]
 // is also in the list.
-func (ja JustifyOrAlign) Intersects(kws ...keywords.Keyword) bool {
+func (ja JustifyOrAlign) Intersects(kws ...Keyword) bool {
 	for _, kw := range kws {
 		if ja.Has(kw) {
 			return true
@@ -140,12 +139,12 @@ type Page string
 
 // Dimension or "auto" or "cover" or "contain"
 type Size struct {
-	Tag    Tag
+	Tag    Keyword
 	Width  TaggedDim
 	Height TaggedDim
 }
 
-type Center struct {
+type CenterPos struct {
 	OriginX string
 	OriginY string
 	Pos     Point
@@ -170,7 +169,7 @@ type NamedString struct {
 
 type TaggedString struct {
 	S   string
-	Tag Tag
+	Tag Keyword
 }
 
 func (ts TaggedString) IsNone() bool { return ts.S == "" && ts.Tag == 0 }
@@ -189,7 +188,7 @@ type IntString struct {
 
 type TaggedInt struct {
 	I   int
-	Tag Tag
+	Tag Keyword
 }
 
 type IntNamedString struct {
@@ -275,7 +274,7 @@ func (gai *GridAutoIter) Next() GridDims {
 type GridLine struct {
 	Ident string
 	Val   int
-	Tag   Tag // Auto, Span or 0
+	Tag   Keyword // Auto, Span or 0
 }
 
 func (gl GridLine) IsCustomIdent() bool { return gl.Val == 0 && gl.Tag == 0 }
@@ -292,7 +291,7 @@ type GridTemplateAreas [][]string
 func (gt GridTemplateAreas) IsNone() bool { return len(gt) == 0 }
 
 type GridTemplate struct {
-	Tag Tag
+	Tag Keyword
 	// Every even value is a [GridNames]
 	Names []GridSpec
 }
@@ -409,7 +408,7 @@ func (d Dimension) Tagged() TaggedDim { return TaggedDim{Dimension: d} }
 
 type TaggedDim struct {
 	Dimension
-	Tag Tag
+	Tag Keyword
 }
 
 type BoolString struct {
@@ -478,7 +477,7 @@ type RadialGradient struct {
 	ColorStops ColorsStops
 	Shape      string
 	Size       GradientSize
-	Center     Center
+	Center     CenterPos
 	Repeating  bool
 }
 
@@ -486,8 +485,8 @@ func (v BoolString) IsNone() bool {
 	return v == BoolString{}
 }
 
-func (v Center) IsNone() bool {
-	return v == Center{}
+func (v CenterPos) IsNone() bool {
+	return v == CenterPos{}
 }
 
 func (v IntString) IsNone() bool {
@@ -580,7 +579,7 @@ func (v Size) IsNone() bool {
 }
 
 func (v RadialGradient) IsNone() bool {
-	return v.ColorStops == nil && v.Shape == "" && v.Size == GradientSize{} && v.Center == Center{} && !v.Repeating
+	return v.ColorStops == nil && v.Shape == "" && v.Size == GradientSize{} && v.Center == CenterPos{} && !v.Repeating
 }
 
 func (v SContentProp) IsNone() bool {
@@ -605,6 +604,7 @@ func (v GridDims) IsNone() bool {
 
 // method tags
 
+func (Keyword) isCssProperty()           {}
 func (TaggedString) isCssProperty()      {}
 func (TaggedInt) isCssProperty()         {}
 func (TaggedDim) isCssProperty()         {}
@@ -612,7 +612,7 @@ func (Display) isCssProperty()           {}
 func (BoolString) isCssProperty()        {}
 func (SFloatStrings) isCssProperty()     {}
 func (SBoolFloat) isCssProperty()        {}
-func (Center) isCssProperty()            {}
+func (CenterPos) isCssProperty()         {}
 func (Centers) isCssProperty()           {}
 func (Color) isCssProperty()             {}
 func (ContentProperties) isCssProperty() {}
@@ -649,6 +649,7 @@ func (GridLine) isCssProperty()          {}
 func (GridTemplateAreas) isCssProperty() {}
 func (GridTemplate) isCssProperty()      {}
 
+func (Keyword) isDeclaredValue()           {}
 func (TaggedString) isDeclaredValue()      {}
 func (TaggedInt) isDeclaredValue()         {}
 func (TaggedDim) isDeclaredValue()         {}
@@ -656,7 +657,7 @@ func (Display) isDeclaredValue()           {}
 func (BoolString) isDeclaredValue()        {}
 func (SFloatStrings) isDeclaredValue()     {}
 func (SBoolFloat) isDeclaredValue()        {}
-func (Center) isDeclaredValue()            {}
+func (CenterPos) isDeclaredValue()         {}
 func (Centers) isDeclaredValue()           {}
 func (Color) isDeclaredValue()             {}
 func (ContentProperties) isDeclaredValue() {}

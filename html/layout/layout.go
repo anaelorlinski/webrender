@@ -75,11 +75,11 @@ func initializePageMaker(context *layoutContext, rootBox bo.BoxFields) {
 	case "left":
 		rightPage = false
 	case "recto":
-		rightPage = rootBox.Style.GetDirection() == "ltr"
+		rightPage = rootBox.Style.GetDirection() == pr.Ltr
 	case "verso":
-		rightPage = rootBox.Style.GetDirection() == "rtl"
+		rightPage = rootBox.Style.GetDirection() == pr.Rtl
 	default:
-		rightPage = rootBox.Style.GetDirection() == "ltr"
+		rightPage = rootBox.Style.GetDirection() == pr.Ltr
 	}
 	pv, _ := rootBox.PageValues()
 	nextPage := tree.PageBreak{Break: "any", Page: pv}

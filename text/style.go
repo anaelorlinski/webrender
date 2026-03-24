@@ -104,6 +104,9 @@ type TextStyle struct {
 	WordSpacing   pr.Fl
 	LetterSpacing pr.Fl // 0 for 'normal'
 	TabSize       TabSize
+
+	// overall direction, as defined by the 'direction' CSS prop: either [pr.Ltr] or [pr.Rtl]
+	Direction pr.Keyword
 }
 
 // If ignoreSpacing is true, 'word-spacing' and 'letter-spacing' are
@@ -144,6 +147,8 @@ func NewTextStyle(style pr.StyleAccessor, ignoreSpacing bool) *TextStyle {
 
 	out.FontFeatures = getFontFeatures(style)
 
+	out.Direction = style.GetDirection()
+
 	return &out
 }
 
@@ -168,6 +173,8 @@ type styleKey struct {
 	WordSpacing   pr.Fl
 	LetterSpacing pr.Fl // 0 for 'normal'
 	TabSize       TabSize
+
+	Direction pr.Keyword
 }
 
 func (ts *TextStyle) key() styleKey {
@@ -187,6 +194,7 @@ func (ts *TextStyle) key() styleKey {
 		ts.WordSpacing,
 		ts.LetterSpacing,
 		ts.TabSize,
+		ts.Direction,
 	}
 }
 
