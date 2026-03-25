@@ -308,9 +308,6 @@ func (InlineTableBox) isInlineTableBox()  {}
 func (InlineTableBox) isBlockLevelBox()   {}
 func (InlineTableBox) isParentBox()       {}
 func (InlineTableBox) isTableBox()        {}
-func (b *InlineTableBox) Translate(dx, dy pr.Float, ignoreFloats bool) {
-	defaultTranslate(b, dx, dy, ignoreFloats)
-}
 
 func InlineTableBoxAnonymousFrom(parent Box, children []Box) *InlineTableBox {
 	style := tree.ComputedFromCascaded(nil, nil, parent.Box().Style, nil)

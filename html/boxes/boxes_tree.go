@@ -330,8 +330,8 @@ func (b *TableBox) Translate(dx, dy pr.Float, ignoreFloats bool) {
 	if dx == 0 && dy == 0 {
 		return
 	}
-	for index, position := range b.ColumnPositions {
-		b.ColumnPositions[index] = position + dx
+	for index := range b.ColumnPositions {
+		b.ColumnPositions[index] += dx
 	}
 	defaultTranslate(b, dx, dy, ignoreFloats)
 }

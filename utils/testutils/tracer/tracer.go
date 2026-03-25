@@ -74,6 +74,8 @@ func (t Tracer) DumpTree(box boxes.Box, context string) {
 		t.print(strings.Repeat(" ", indent) + line)
 		if tb, ok := box.(*boxes.TextBox); ok {
 			t.print(fmt.Sprintf("%q", tb.TextS()))
+		} else if table, ok := box.(boxes.TableBoxITF); ok {
+			t.print(fmt.Sprintf("ColumnPositions: %v", table.Table().ColumnPositions))
 		}
 
 		for _, child := range box.Box().Children {

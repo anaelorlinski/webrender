@@ -176,16 +176,13 @@ func TestLeaderCrash(t *testing.T) {
 func TestDebug(t *testing.T) {
 	input := `
 	<style>
-        @font-face {src: url(../resources_test/weasyprint.otf); font-family: weasyprint}
-        @page { size: 15px 5px }
-        body { font-family: weasyprint; font-size: 2px; line-height: 1;
-               color: lime }
+        @page { size: 20px 10px; margin: 1px }
+        body { text-align: right; font-size: 0 }
+        table { display: inline-table; width: 11px }
+        td { border: 1px red solid; width: 4px; height: 3px }
       </style>
-      <div style="direction: rtl">
-        <img style="float: left" src="../resources_test/pattern.png">
-        <img style="float: right" src="../resources_test/blue.jpg">
-        <span>a</span>
-      </div>
+      <table style="table-layout: fixed; border-collapse: collapse">
+        <tr><td></td><td></td></tr>
   `
 
 	doc, err := tree.NewHTML(utils.InputString(input), baseUrl, nil, "")

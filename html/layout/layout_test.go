@@ -556,3 +556,41 @@ func TestCrashSplitFirstLine(t *testing.T) {
 	`
 	_ = renderPages(t, input)
 }
+
+func TestDebug(t *testing.T) {
+	renderOnePage(t, `
+	<style>
+    @page { size: 28px }
+    table { margin: 1px; padding: 1px; border-spacing: 1px;
+            border: 1px solid transparent }
+    td { width: 2px; height: 2px; padding: 1px; border: 1px solid transparent }
+      
+	   body { direction: rtl; }
+      table { border: 2px solid #00f; table-layout: fixed;
+                border-collapse: collapse; }
+      td { border-color: #ff7f7f }
+  </style>
+  <table>
+    <colgroup class=colgroup>
+      <col></col>
+      <col></col>
+    </colgroup>
+    <col></col>
+    <tbody id=tbody>
+      <tr>
+        <td></td>
+        <td rowspan=2></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td colspan=2></td>
+        <td></td>
+      </tr>
+    </tbody>
+    <tr>
+      <td></td>
+      <td></td>
+    </tr>
+  </table>
+  `)
+}

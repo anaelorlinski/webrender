@@ -518,16 +518,11 @@ func (ctx drawContext) drawCollapsedBorders(table *bo.TableBox) {
 		panic(fmt.Sprintf("expected same gridWidth and columnPositions length, got %d, %d", gridWidth, len(columnPositions)))
 	}
 
-	// Add the end of the last column, but make a copy from the table attr.
-	if table.Style.GetDirection() == pr.Ltr {
-		columnPositions = append(columnPositions, columnPositions[len(columnPositions)-1]+columnWidths[len(columnWidths)-1])
-	} else {
-		columnPositions = append([]pr.Float{columnPositions[0] + columnWidths[0]}, columnPositions...)
-	}
-
+	verticalBorders, horizontalBorders := table.CollapsedBorderGrid.Vertical, table.CollapsedBorderGrid.Horizontal
+	// Add the end of the last column.
+	columnPositions = append(columnPositions, columnPositions[len(columnPositions)-1]+columnWidths[len(columnWidths)-1])
 	// Add the end of the last row.
 	rowPositions = append(rowPositions, rowPositions[len(rowPositions)-1]+rowHeights[len(rowHeights)-1])
-	verticalBorders, horizontalBorders := table.CollapsedBorderGrid.Vertical, table.CollapsedBorderGrid.Horizontal
 
 	headerRows := 0
 	if table.Children[0].Box().IsHeader {
@@ -619,35 +614,26 @@ func (ctx drawContext) drawCollapsedBorders(table *bo.TableBox) {
 		posY := rowPositions[y]
 		shiftBefore := halfMaxWidth(verticalBorders, [2][2]int{{y - 1, x}, {y, x}}, true)
 		shiftAfter := halfMaxWidth(verticalBorders, [2][2]int{{y - 1, x + 1}, {y, x + 1}}, true)
-		var posX1, posX2 pr.Float
-		if table.Style.GetDirection() == pr.Ltr {
-			posX1 = columnPositions[x] - shiftBefore
-			posX2 = columnPositions[x+1] + shiftAfter
-		} else {
-			posX1 = columnPositions[x+1] - shiftAfter
-			posX2 = columnPositions[x] + shiftBefore
-		}
+		posX1 := columnPositions[x] - shiftBefore
+		posX2 := columnPositions[x+1] + shiftAfter
 		segments = append(segments, segment{
 			Border: border, side: top,
 			borderBox: pr.Rectangle{posX1, posY, posX2 - posX1, 0},
 		})
 	}
 
-	for x := 0; x < gridWidth; x++ {
+	for x := range gridWidth {
 		addHorizontal(x, 0)
 	}
-	for y := 0; y < gridHeight; y++ {
+	for y := range gridHeight {
 		addVertical(0, y)
-		for x := 0; x < gridWidth; x++ {
+		for x := range gridWidth {
 			addVertical(x+1, y)
 			addHorizontal(x, y+1)
 		}
 	}
 
 	// Sort bigger scores last (painted later, on top)
-	// Since the number of different scores is expected to be small compared
-	// to the number of segments, there should be little changes and Timsort
-	// should be closer to O(n) than O(n * log(n))
 	sort.SliceStable(segments, func(i, j int) bool {
 		return segments[i].Border.Score.Lower(segments[j].Border.Score)
 	})

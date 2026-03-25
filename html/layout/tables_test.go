@@ -2,6 +2,7 @@ package layout
 
 import (
 	"fmt"
+	"math"
 	"strings"
 	"testing"
 
@@ -9,6 +10,26 @@ import (
 	bo "github.com/benoitkugler/webrender/html/boxes"
 	tu "github.com/benoitkugler/webrender/utils/testutils"
 )
+
+func TestTables11(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+
+	page := renderOnePage(t, `
+	<style>
+        @page { size: 20px 10px; margin: 1px }
+        body { text-align: right; font-size: 0 }
+        table { display: inline-table; width: 11px }
+        td { border: 1px red solid; width: 4px; height: 3px }
+      </style>
+      <table style="table-layout: fixed; border-collapse: collapse">
+        <tr><td></td><td></td></tr>`)
+	html := unpack1(page)
+	body := unpack1(html)
+	line := unpack1(body)
+	wrapper := unpack1(line)
+	table := unpack1(wrapper).(*bo.InlineTableBox)
+	tu.AssertEqual(t, table.ColumnPositions, []pr.Float{8.5, 13.5})
+}
 
 // Tests for layout of tables.
 
@@ -1315,9 +1336,6 @@ func TestLayoutTableAuto40(t *testing.T) {
 	// Regression test for #368
 	// Check that white-space is used for the shrink-to-fit algorithm
 	page := renderOnePage(t, `
-      <style>
-        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
-      </style>
       <table style="width: 0">
         <td style="font-family: weasyprint; white-space: nowrap">a a</td>
       </table>
@@ -1362,13 +1380,13 @@ func TestLayoutTableAuto41(t *testing.T) {
 func TestLayoutTableAuto42(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 
-	// Cell width as percentage in auto-width table
+	// Cell width as percentage in auto-width table.
 	page := renderOnePage(t, `
-      <table>
+     <table style="font-family: weasyprint">
         <tbody>
             <tr>
-              <td style="width: 70px">a a a a a a a a</td>
-              <td style="width: 30%">a a a a a a a a</td>
+              <td style="width: 70px">aaa</td>
+              <td style="width: 25%">aaa</td>
             </tr>
         </tbody>
       </table>
@@ -1380,9 +1398,9 @@ func TestLayoutTableAuto42(t *testing.T) {
 	rowGroup := unpack1(table)
 	row := unpack1(rowGroup)
 	td1, td2 := unpack2(row)
-	tu.AssertEqual(t, td1.Box().Width, Fl(70))
-	tu.AssertEqual(t, td2.Box().Width, Fl(30))
-	tu.AssertEqual(t, table.Box().Width, Fl(100))
+	tu.AssertEqual(t, td2.Box().Width, Fl(16*3))     // Percentage column is set to max-width
+	tu.AssertEqual(t, td1.Box().Width, Fl((16*3)*3)) // Pixel column constraint is ignored
+	tu.AssertEqual(t, table.Box().Width, Fl((16*3)*4))
 }
 
 func TestLayoutTableAuto43(t *testing.T) {
@@ -1628,6 +1646,66 @@ func TestLayoutTableAuto50(t *testing.T) {
 	}
 	td21 := unpack1(row2)
 	tu.AssertEqual(t, td21.Box().Width, Fl(240)) // 15 * fontSize
+}
+
+func TestLayoutTableAuto_51(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+
+	// Regression test for #2174.
+	page := renderOnePage(t, `
+      <table style="font-family: weasyprint; width: 100px">
+        <tr>
+          <td style="width: 29.9999%">a</td>
+          <td style="width: 70%">a</td>
+        </tr>
+      </table>
+    `)
+	html := unpack1(page)
+	body := unpack1(html)
+	tableWrapper := unpack1(body)
+	table := unpack1(tableWrapper)
+	rowGroup := unpack1(table)
+	row_1 := unpack1(rowGroup)
+	td_1, td_2 := unpack2(row_1)
+	tu.Assert(t, math.Abs(float64(td_1.Box().Width.V())-30) < 0.1)
+	tu.Assert(t, math.Abs(float64(td_2.Box().Width.V())-70) < 0.1)
+}
+
+func TestLayoutTableAuto_52(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+
+	// Regression test for #2325.
+	page := renderOnePage(t, `
+      <style>
+        @page { size: 20px }
+      </style>
+      <table style="font-family: weasyprint; border-spacing: 1px;
+                    font-size: 2px; line-height: 1">
+        <tr>
+          <td><img src=pattern.png></td>
+          <td>
+            <span>foo</span>,
+            <span>foo</span>,
+            <span>foo</span>
+          </td>
+        </tr>
+      </table>
+    `)
+	html := unpack1(page)
+	body := unpack1(html)
+	tableWrapper := unpack1(body)
+	table := unpack1(tableWrapper)
+	rowGroup := unpack1(table)
+	row := unpack1(rowGroup)
+	td_1, td_2 := unpack2(row)
+	tu.AssertEqual(t, table.Box().Width, pr.Float(20))
+	tu.AssertEqual(t, tableWrapper.Box().PositionX, pr.Float(0))
+	tu.AssertEqual(t, table.Box().PositionX, pr.Float(0))
+	tu.AssertEqual(t, td_1.Box().PositionX, pr.Float(1))                                // spacing
+	tu.AssertEqual(t, td_1.Box().Width, pr.Float(4))                                    // image width
+	tu.AssertEqual(t, td_2.Box().PositionX, td_1.Box().Width.V()+2*1)                   // 2 * spacing
+	tu.AssertEqual(t, td_2.Box().Width, table.Box().Width.V()-td_1.Box().Width.V()-3*1) // 3 * spacing
+	tu.AssertEqual(t, td_2.Box().Height, pr.Float(3*2))                                 // 3 lines * line height
 }
 
 func TestExplicitWidthTablePercentRtl(t *testing.T) {

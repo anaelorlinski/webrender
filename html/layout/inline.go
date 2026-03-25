@@ -1413,7 +1413,6 @@ func textAlign(context *layoutContext, line *bo.LineBox, availableWidth pr.Float
 	if line.Width.V() >= availableWidth {
 		return 0
 	}
-
 	align := line.Style.GetTextAlignAll()
 	if last {
 		alignLast := line.Style.GetTextAlignLast()
@@ -1437,7 +1436,8 @@ func textAlign(context *layoutContext, line *bo.LineBox, availableWidth pr.Float
 	}
 
 	offset := availableWidth - line.Width.V()
-	if align == "justify" {
+	switch align {
+	case "justify":
 		if spaceCollapse {
 			// Justification of texts where white space is not collapsing is
 			// - forbidden by CSS 2, and
@@ -1445,15 +1445,12 @@ func textAlign(context *layoutContext, line *bo.LineBox, availableWidth pr.Float
 			justifyLine(context, line, offset)
 		}
 		return 0
-	}
-	if align == "center" {
+	case "center":
 		return offset / 2
-	} else if align == "end" {
+	case "end":
 		return offset
-	} else {
-		logger.WarningLogger.Printf("align should be center or right, got %s", align)
-		return 0
 	}
+	panic(fmt.Sprintf("align should be 'justify', 'center' or 'end', got %s", align))
 }
 
 func justifyLine(context *layoutContext, line *bo.LineBox, extraWidth pr.Float) {

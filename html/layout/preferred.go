@@ -712,13 +712,13 @@ outerLoop:
 
 		if minContent > columnsMinContent+spacing {
 			excessWidth := minContent - (columnsMinContent + spacing)
-			distributeExcessWidth(context, zippedGrid, excessWidth, minContentWidths,
+			distributeExcessWidth(zippedGrid, excessWidth, minContentWidths,
 				constrainedness, intrinsicPercentages, maxContentWidths, columnSlice)
 		}
 
 		if maxContent > columnsMaxContent+spacing {
 			excessWidth := maxContent - (columnsMaxContent + spacing)
-			distributeExcessWidth(context, zippedGrid, excessWidth, maxContentWidths,
+			distributeExcessWidth(zippedGrid, excessWidth, maxContentWidths,
 				constrainedness, intrinsicPercentages, maxContentWidths, columnSlice)
 		}
 	}

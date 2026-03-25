@@ -59,6 +59,10 @@ def should_generate_anonymous_from(class_: type) -> bool:
     return (class_.__name__ not in ABSTRACT_TYPES) and has_default_anonymous_from_method(class_)
 
 
+def is_instance_table(class_: type) -> bool:
+    return c.__name__ == "TableBox" or "TableBox" in resolve_ancestors(class_)
+
+
 """ Generates the interface for the given box class """
 
 
@@ -104,7 +108,7 @@ def get_itf_and_type_code(class_: type) -> str:
             itf_code += f"""func({class_name}) is{ancestor}() {{}}
             """
 
-        if class_name != "TableBox":
+        if not is_instance_table(class_):
             itf_code += f"""func (b *{class_name}) Translate(dx, dy pr.Float, ignoreFloats bool) {{ defaultTranslate(b, dx, dy, ignoreFloats) }}
             """
 

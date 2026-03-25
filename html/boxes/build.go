@@ -1360,6 +1360,9 @@ func collapseTableBorders(table TableBoxITF, gridWidth, gridHeight int) BorderGr
 
 	weakNullBorder := Border{Score: Score{0, 0, styleScores["none"]}, Style: "none", Width: 0, Color: transparent}
 
+	// Borders are always stored left to right, top to bottom.
+	// verticalBorders has size gridHeigth x gridWidth+1
+	// horizontalBorders has size gridHeight+1 x gridWidth
 	verticalBorders, horizontalBorders := make([][]Border, gridHeight), make([][]Border, gridHeight+1)
 	for y := range horizontalBorders {
 		l1, l2 := make([]Border, gridWidth+1), make([]Border, gridWidth)
@@ -1404,19 +1407,34 @@ func collapseTableBorders(table TableBoxITF, gridWidth, gridHeight int) BorderGr
 		}
 	}
 
+	direction := table.Box().Style.GetDirection()
+
 	setBorders := func(box Box, x, y, w, h int) {
 		style := box.Box().Style
-		for yy := y; yy < y+h; yy++ {
-			setOneBorder(verticalBorders, style, left, x, yy)
-			setOneBorder(verticalBorders, style, right, x+w, yy)
-		}
-		for xx := x; xx < x+w; xx++ {
-			setOneBorder(horizontalBorders, style, top, xx, y)
-			setOneBorder(horizontalBorders, style, bottom, xx, y+h)
+
+		// x and y are logical (possibly rtl), but borders are graphical (always ltr).
+		if direction == pr.Ltr {
+			for yy := y; yy < y+h; yy++ {
+				setOneBorder(verticalBorders, style, left, x, yy)
+				setOneBorder(verticalBorders, style, right, x+w, yy)
+			}
+			for xx := x; xx < x+w; xx++ {
+				setOneBorder(horizontalBorders, style, top, xx, y)
+				setOneBorder(horizontalBorders, style, bottom, xx, y+h)
+			}
+		} else {
+			for yy := y; yy < y+h; yy++ {
+				setOneBorder(verticalBorders, style, left, (gridWidth+1)-1-w-x, yy)
+				setOneBorder(verticalBorders, style, right, (gridWidth+1)-1-x, yy)
+			}
+			for xx := -1 - x; xx > -1-x-w; xx-- {
+				setOneBorder(horizontalBorders, style, top, (gridWidth)+xx, y)
+				setOneBorder(horizontalBorders, style, bottom, (gridWidth)+xx, y+h)
+			}
 		}
 	}
 
-	// The order is important here:
+	// Set cell borders. The order is important here:
 	// "A style set on a cell wins over one on a row, which wins over a
 	//  row group, column, column group and, lastly, table"
 	// See https://www.w3.org/TR/CSS21/tables.html#border-conflict-resolution
@@ -1427,24 +1445,34 @@ func collapseTableBorders(table TableBoxITF, gridWidth, gridHeight int) BorderGr
 		for _, row := range rowGroup.Box().Children {
 			for _, _cell := range row.Box().Children {
 				cell := _cell.Box()
-				// No border inside of a cell with rowspan || colspan
-				for xx := cell.GridX + 1; xx < cell.GridX+cell.Colspan; xx++ {
-					for yy := gridY; yy < gridY+cell.Rowspan; yy++ {
+				// Force null border inside of a cell with rowspan or colspan.
+				gridX, colspan, rowspan := cell.GridX, cell.Colspan, cell.Rowspan
+				var verticalXRange, horizontalXRange [3]int
+				if direction == pr.Ltr {
+					verticalXRange = [3]int{gridX + 1, gridX + colspan, 1}
+					horizontalXRange = [3]int{gridX, gridX + colspan, 1}
+				} else {
+					verticalXRange = [3]int{(gridWidth + 1) - 2 - gridX, (gridWidth + 1) - 1 - gridX - colspan, -1}
+					horizontalXRange = [3]int{(gridWidth) - 1 - gridX, (gridWidth) - 1 - gridX - colspan, -1}
+				}
+				for xx := verticalXRange[0]; xx != verticalXRange[1]; xx += verticalXRange[2] {
+					for yy := gridY; yy < gridY+rowspan; yy++ {
 						verticalBorders[yy][xx] = strongNullBorder
 					}
 				}
-				for xx := cell.GridX; xx < cell.GridX+cell.Colspan; xx++ {
-					for yy := gridY + 1; yy < gridY+cell.Rowspan; yy++ {
+				for xx := horizontalXRange[0]; xx != horizontalXRange[1]; xx += horizontalXRange[2] {
+					for yy := gridY + 1; yy < gridY+rowspan; yy++ {
 						horizontalBorders[yy][xx] = strongNullBorder
 					}
 				}
-				// The cell’s own borders
-				setBorders(_cell, cell.GridX, gridY, cell.Colspan, cell.Rowspan)
+				// Set cell border.
+				setBorders(_cell, gridX, gridY, colspan, rowspan)
 			}
 			gridY += 1
 		}
 	}
 
+	// Set row borders.
 	gridY = 0
 	for _, rowGroup := range table.Box().Children {
 		for _, row := range rowGroup.Box().Children {
@@ -1453,6 +1481,7 @@ func collapseTableBorders(table TableBoxITF, gridWidth, gridHeight int) BorderGr
 		}
 	}
 
+	// Set row group borders.
 	gridY = 0
 	for _, rowGroup := range table.Box().Children {
 		rowspan := len(rowGroup.Box().Children)
@@ -1460,21 +1489,24 @@ func collapseTableBorders(table TableBoxITF, gridWidth, gridHeight int) BorderGr
 		gridY += rowspan
 	}
 
+	// Set column borders.
 	for _, columnGroup := range table.Table().ColumnGroups {
 		for _, column := range columnGroup.Children {
 			setBorders(column, column.Box().GridX, 0, 1, gridHeight)
 		}
 	}
 
+	// Set column group group borders.
 	for _, columnGroup := range table.Table().ColumnGroups {
 		setBorders(columnGroup, columnGroup.GridX, 0, columnGroup.span(), gridHeight)
 	}
 
+	// Set table borders.
 	setBorders(table, 0, 0, gridWidth, gridHeight)
 
-	// Now that all conflicts are resolved, set transparent borders of
-	// the correct widths on each box. The actual border grid will be
-	// painted separately.
+	// Now that all conflicts are resolved, set transparent borders of the
+	// correct widths on each box. The actual border grid will be painted
+	// separately.
 	setBorderUsedWidth := func(box Box, side pr.KnownProp, twiceWidth utils.Fl) {
 		box_, value := box.Box(), pr.Float(twiceWidth/2)
 		switch side {
@@ -1496,9 +1528,12 @@ func collapseTableBorders(table TableBoxITF, gridWidth, gridHeight int) BorderGr
 		setBorderUsedWidth(box, left, 0)
 	}
 
-	maxVerticalWidth := func(x, y, h int) utils.Fl {
+	maxVerticalWidth := func(x, y1, y2 int) utils.Fl {
+		if x < 0 {
+			x = gridWidth + 1 + x
+		}
 		var max utils.Fl
-		for _, gridRow := range verticalBorders[y : y+h] {
+		for _, gridRow := range verticalBorders[y1:y2] {
 			width := gridRow[x].Width
 			if width > max {
 				max = width
@@ -1507,9 +1542,17 @@ func collapseTableBorders(table TableBoxITF, gridWidth, gridHeight int) BorderGr
 		return max
 	}
 
-	maxHorizontalWidth := func(x, y, w int) utils.Fl {
+	// x2 = -1 means "None"
+	maxHorizontalWidth := func(x1, y, x2 int) utils.Fl {
+		list := horizontalBorders[y]
+		if x1 < 0 {
+			x1 = len(list) + x1
+		}
+		if x2 < 0 {
+			x2 = len(list) + x2
+		}
 		var max utils.Fl
-		for _, _s := range horizontalBorders[y][x : x+w] {
+		for _, _s := range list[x1:x2] {
 			width := _s.Width
 			if width > max {
 				max = width
@@ -1525,10 +1568,28 @@ func collapseTableBorders(table TableBoxITF, gridWidth, gridHeight int) BorderGr
 			removeBorders(row)
 			for _, _cell := range row.Box().Children {
 				cell := _cell.Box()
-				setBorderUsedWidth(_cell, top, maxHorizontalWidth(cell.GridX, gridY, cell.Colspan))
-				setBorderUsedWidth(_cell, bottom, maxHorizontalWidth(cell.GridX, gridY+cell.Rowspan, cell.Colspan))
-				setBorderUsedWidth(_cell, left, maxVerticalWidth(cell.GridX, gridY, cell.Rowspan))
-				setBorderUsedWidth(_cell, right, maxVerticalWidth(cell.GridX+cell.Colspan, gridY, cell.Rowspan))
+				x, y := cell.GridX, gridY
+				colspan, rowspan := cell.Colspan, cell.Rowspan
+				var topW, bottomW, leftW, rightW pr.Fl
+				if direction == pr.Ltr {
+					topW = maxHorizontalWidth(x, y, x+colspan)
+					bottomW = maxHorizontalWidth(x, y+rowspan, x+colspan)
+					leftW = maxVerticalWidth(x, y, y+rowspan)
+					rightW = maxVerticalWidth(x+colspan, y, y+rowspan)
+				} else {
+					y2 := -x // -x or None
+					if y2 == 0 {
+						y2 = gridWidth
+					}
+					topW = maxHorizontalWidth(-colspan-x, y, y2)
+					bottomW = maxHorizontalWidth(-colspan-x, y+rowspan, y2)
+					leftW = maxVerticalWidth(-1-colspan-x, y, y+rowspan)
+					rightW = maxVerticalWidth(-1-x, y, y+rowspan)
+				}
+				setBorderUsedWidth(_cell, top, topW)
+				setBorderUsedWidth(_cell, bottom, bottomW)
+				setBorderUsedWidth(_cell, left, leftW)
+				setBorderUsedWidth(_cell, right, rightW)
 			}
 			gridY += 1
 		}
