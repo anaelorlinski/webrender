@@ -738,11 +738,11 @@ func (s *AnonymousStyle) GetTextTransform() pr.String {
 }
 func (s *AnonymousStyle) SetTextTransform(v pr.String) { s.propsCache.setKnown(pr.PTextTransform, v) }
 
-func (s *ComputedStyle) GetWhiteSpace() pr.String  { return s.Get(pr.PWhiteSpace.Key()).(pr.String) }
-func (s *ComputedStyle) SetWhiteSpace(v pr.String) { s.propsCache.setKnown(pr.PWhiteSpace, v) }
+func (s *ComputedStyle) GetWhiteSpace() pr.Keyword  { return s.Get(pr.PWhiteSpace.Key()).(pr.Keyword) }
+func (s *ComputedStyle) SetWhiteSpace(v pr.Keyword) { s.propsCache.setKnown(pr.PWhiteSpace, v) }
 
-func (s *AnonymousStyle) GetWhiteSpace() pr.String  { return s.Get(pr.PWhiteSpace.Key()).(pr.String) }
-func (s *AnonymousStyle) SetWhiteSpace(v pr.String) { s.propsCache.setKnown(pr.PWhiteSpace, v) }
+func (s *AnonymousStyle) GetWhiteSpace() pr.Keyword  { return s.Get(pr.PWhiteSpace.Key()).(pr.Keyword) }
+func (s *AnonymousStyle) SetWhiteSpace(v pr.Keyword) { s.propsCache.setKnown(pr.PWhiteSpace, v) }
 
 func (s *ComputedStyle) GetWordBreak() pr.String  { return s.Get(pr.PWordBreak.Key()).(pr.String) }
 func (s *ComputedStyle) SetWordBreak(v pr.String) { s.propsCache.setKnown(pr.PWordBreak, v) }

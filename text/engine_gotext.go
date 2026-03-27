@@ -526,8 +526,8 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 
 	// now we can wrap the runs
 	config := shaping.WrapConfig{
-		Direction:                     outputs[0].Direction, // overall direction of the text, deduced from the first runes
-		BreakPolicy:                   shaping.Never,        // mimic the default pango behavior
+		Direction:                     dir,           // overall direction of the text, deduced from the first runes
+		BreakPolicy:                   shaping.Never, // mimic the default pango behavior
 		DisableTrailingWhitespaceTrim: !spaceCollapse,
 	}
 	if allowWordBreak {
@@ -568,8 +568,6 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 		lastRun.RecalculateAll()
 		wLine.TrimmedTrailingWhitespace = 0 // not to interfere with latter space handling
 	}
-
-	firstLineRTL := line[0].Direction.Progression() == di.TowardTopLeft
 
 	// sort the line by visual order
 	sort.Slice(line, func(i, j int) bool { return line[i].VisualIndex < line[j].VisualIndex })
@@ -628,11 +626,14 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 		Layout:       TextLayoutGotext{text: text[:firstLineLength], Style: style, Line: outLine},
 		Length:       firstLineLength,
 		ResumeAt:     resumeAt,
-		FirstLineRTL: firstLineRTL,
+		FirstLineRTL: style.Direction == pr.Rtl,
 		Width:        fixedToFloat(width),
 		Height:       height,
 		Baseline:     top,
 	}
+
+	fmt.Println(fc.fm.FontLocation(line[0].Face.Font))
+	fmt.Println(fc.fm.FontLocation(line[1].Face.Font))
 
 	fc.textLayoutCache[key] = out
 

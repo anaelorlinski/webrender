@@ -15,4 +15,4 @@ require (
 
 require github.com/benoitkugler/pstokenizer v1.0.1 // indirect
 
-// replace github.com/go-text/typesetting => ../../go-text/typesetting
+replace github.com/go-text/typesetting => ../../go-text/typesetting

@@ -363,8 +363,8 @@ func inlineLineWidths(context *layoutContext, box_ Box, outer, isLineStart,
 		} else if isTextBox {
 			// Text box, split into lines.
 			whiteSpace := textBox.Style.GetWhiteSpace()
-			spaceCollapse := whiteSpace == "normal" || whiteSpace == "nowrap" || whiteSpace == "pre-line"
-			textWrap := whiteSpace == "normal" || whiteSpace == "pre-wrap" || whiteSpace == "pre-line"
+			spaceCollapse := whiteSpace == pr.Normal || whiteSpace == pr.Nowrap || whiteSpace == pr.PreLine
+			textWrap := whiteSpace == pr.Normal || whiteSpace == pr.PreWrap || whiteSpace == pr.PreLine
 			if skipStack == nil {
 				skip = 0
 			} else {
@@ -935,7 +935,7 @@ func trailingWhitespaceSize(context *layoutContext, box Box) pr.Float {
 	if !ok || len(textBox.Text) == 0 {
 		// There’s no text in last child.
 		return 0
-	} else if ws := box.Box().Style.GetWhiteSpace(); !(ws == "normal" || ws == "nowrap" || ws == "pre-line") {
+	} else if ws := box.Box().Style.GetWhiteSpace(); !(ws == pr.Normal || ws == pr.Nowrap || ws == pr.PreLine) {
 		// Spaces don’t collapse.
 		return 0
 	} else if box.Box().Style.GetFontSize() == pr.FToV(0) {

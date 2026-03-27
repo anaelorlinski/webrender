@@ -292,7 +292,7 @@ func skipFirstWhitespace(box Box, skipStack tree.ResumeStack) (tree.ResumeStack,
 			// Starting a the end of the TextBox, no text to see: Continue
 			return nil, true
 		}
-		if whiteSpace == "normal" || whiteSpace == "nowrap" || whiteSpace == "pre-line" {
+		if whiteSpace == pr.Normal || whiteSpace == pr.Nowrap || whiteSpace == pr.PreLine {
 			for index < length && text[index] == ' ' {
 				index += 1
 			}
@@ -343,7 +343,7 @@ func removeLastWhitespace(context *layoutContext, line *bo.LineBox) {
 		box = ch[len(ch)-1]
 	}
 	textBox, ok := box.(*bo.TextBox)
-	if ws := box.Box().Style.GetWhiteSpace(); !(ok && (ws == "normal" || ws == "nowrap" || ws == "pre-line")) {
+	if ws := box.Box().Style.GetWhiteSpace(); !(ok && (ws == pr.Normal || ws == pr.Nowrap || ws == pr.PreLine)) {
 		return
 	}
 	newText := text.TrimSuffix(textBox.Text, ' ')
@@ -367,6 +367,7 @@ func removeLastWhitespace(context *layoutContext, line *bo.LineBox) {
 
 	// RTL line, the trailing space is at the left of the box. We have to translate the
 	// box to align the stripped text with the right edge of the box.
+	fmt.Println(newText, textBox.FirstLineIsRTL)
 	if textBox.FirstLineIsRTL {
 		for _, child := range line.Children {
 			child.Translate(-spaceWidth, 0, true)
@@ -905,7 +906,7 @@ func splitInlineBox(context *layoutContext, box_ Box, positionX, maxX, bottomSpa
 			lastLetter = ' '
 		} else if lastLetter == letterFalse {
 			lastLetter = ' ' // no-break space
-		} else if box.Style.GetWhiteSpace() == "pre" || box.Style.GetWhiteSpace() == "nowrap" {
+		} else if box.Style.GetWhiteSpace() == pr.Pre || box.Style.GetWhiteSpace() == pr.Nowrap {
 			canBreak = pr.False
 		}
 		if canBreak == nil {
@@ -1421,7 +1422,7 @@ func textAlign(context *layoutContext, line *bo.LineBox, availableWidth pr.Float
 		}
 	}
 	ws := line.Style.GetWhiteSpace()
-	spaceCollapse := ws == "normal" || ws == "nowrap" || ws == "pre-line"
+	spaceCollapse := ws == pr.Normal || ws == pr.Nowrap || ws == pr.PreLine
 
 	if align == "left" || align == "right" {
 		if (align == "left") != (line.Style.GetDirection() == pr.Rtl) { // xor
@@ -1535,7 +1536,7 @@ func isPhantomLinebox(linebox *bo.BoxFields) bool {
 func canBreakInside(ctx *layoutContext, box Box) pr.MaybeBool {
 	// See https://www.w3.org/TR/css-text-3/#white-space-property
 	ws := box.Box().Style.GetWhiteSpace()
-	textWrap := ws == "normal" || ws == "pre-wrap" || ws == "pre-line"
+	textWrap := ws == pr.Normal || ws == pr.PreWrap || ws == pr.PreLine
 	textBox, isTextBox := box.(*bo.TextBox)
 	if bo.AtomicInlineLevelT.IsInstance(box) {
 		return pr.False

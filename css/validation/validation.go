@@ -723,6 +723,15 @@ func getSingleKeyword(tokens []Token) string {
 	return ""
 }
 
+// If `tokens` is a 1-element list of [Ident], return its name.
+// Otherwise return 0.
+func getSingleKeywordT(tokens []Token) pr.Keyword {
+	if len(tokens) == 1 {
+		return getKeywordT(tokens[0])
+	}
+	return 0
+}
+
 // negative  = true, percentage = false
 func getLength(token Token, negative, percentage bool) pr.Dimension {
 	switch token := token.(type) {
@@ -1749,7 +1758,7 @@ func direction(tokens []Token, _ string) pr.CssProperty {
 // @singleKeyword
 // “display“ property validation.
 func display(tokens []Token, _ string) pr.CssProperty {
-	keyword := pr.NewKeyword(getSingleKeyword(tokens))
+	keyword := getSingleKeywordT(tokens)
 	switch keyword {
 	case pr.None, pr.TableCaption, pr.TableRowGroup, pr.TableCell,
 		pr.TableHeaderGroup, pr.TableFooterGroup, pr.TableRow,
@@ -2721,10 +2730,10 @@ func visibility(tokens []Token, _ string) pr.CssProperty {
 // @singleKeyword
 // “white-space“ property validation.
 func whiteSpace(tokens []Token, _ string) pr.CssProperty {
-	keyword := getSingleKeyword(tokens)
+	keyword := getSingleKeywordT(tokens)
 	switch keyword {
-	case "normal", "pre", "nowrap", "pre-wrap", "pre-line":
-		return pr.String(keyword)
+	case pr.Normal, pr.Pre, pr.Nowrap, pr.PreWrap, pr.PreLine:
+		return keyword
 	default:
 		return nil
 	}

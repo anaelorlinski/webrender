@@ -158,6 +158,14 @@ func NewKeyword(s string) Keyword {
 		return TableRowGroup
 	case "unsafe":
 		return Unsafe
+	case "pre":
+		return Pre
+	case "nowrap":
+		return Nowrap
+	case "pre-wrap":
+		return PreWrap
+	case "pre-line":
+		return PreLine
 	default:
 		return 0
 	}
@@ -317,6 +325,14 @@ func (t Keyword) String() string {
 		return "table-row-group"
 	case Unsafe:
 		return "unsafe"
+	case Pre:
+		return "pre"
+	case Nowrap:
+		return "nowrap"
+	case PreWrap:
+		return "pre-wrap"
+	case PreLine:
+		return "pre-line"
 	default:
 		return fmt.Sprintf("unknown keyword %d", t)
 	}

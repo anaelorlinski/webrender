@@ -175,7 +175,7 @@ var InitialValues = Properties{
 	PTextAlignLast:       String("auto"),
 	PTextIndent:          ZeroPixels.Tagged(),
 	PTextTransform:       String("none"),
-	PWhiteSpace:          String("normal"),
+	PWhiteSpace:          Normal,
 	PWordBreak:           String("normal"),
 	PWordSpacing:         TaggedDim{}, // computed value for "normal"
 

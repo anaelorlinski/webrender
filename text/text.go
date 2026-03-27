@@ -1,6 +1,7 @@
 package text
 
 import (
+	"fmt"
 	"math"
 	"strings"
 
@@ -111,10 +112,10 @@ func SplitFirstLine(text []rune, style_ pr.StyleAccessor, context TextLayoutCont
 	maxWidth pr.MaybeFloat, minimum, isLineStart bool,
 ) FirstLine {
 	style := NewTextStyle(style_, false)
-	// fmt.Printf("SplitFirstLine in: %q %v %v %v\n", string(text), text, maxWidth, style_.GetDirection())
+	fmt.Printf("SplitFirstLine in: %q %v %v %v %v\n", string(text), text, maxWidth, style_.GetDirection(), style.Family)
 	out := context.Fonts().splitFirstLine(context.HyphenCache(), text, style, maxWidth, minimum, isLineStart)
-	// fmt.Println("SplitFirstLine out:", out.Length, out.ResumeAt, out.Width, out.FirstLineRTL)
-	// fmt.Println()
+	fmt.Println("SplitFirstLine out:", out.Length, out.ResumeAt, out.Width, out.Height, out.FirstLineRTL)
+	fmt.Println()
 	return out
 }
 

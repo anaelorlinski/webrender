@@ -443,7 +443,7 @@ func markerToBox(element *utils.HTMLNode, state *tree.PageState, parentStyle pr.
 			counterValue := counterValue_[len(counterValue_)-1]
 			if markerText := cs.RenderMarker(style.GetListStyleType(), counterValue); markerText != "" {
 				markerBox := TextBoxAnonymousFrom(box, markerText)
-				markerBox.Box().Style.SetWhiteSpace("pre-wrap")
+				markerBox.Box().Style.SetWhiteSpace(pr.PreWrap)
 				*children = append(*children, markerBox)
 			}
 		}
@@ -742,9 +742,9 @@ outerLoop:
 			textBox := TextBoxAnonymousFrom(parentBox, ld)
 			leaderBox := InlineBoxAnonymousFrom(parentBox, []Box{textBox})
 			// Avoid breaks inside the leader box
-			leaderBox.Style.SetWhiteSpace("pre")
+			leaderBox.Style.SetWhiteSpace(pr.Pre)
 			// Prevent whitespaces from being removed from the text box
-			textBox.Style.SetWhiteSpace("pre")
+			textBox.Style.SetWhiteSpace(pr.Pre)
 			leaderBox.IsLeader = true
 			contentBoxes = append(contentBoxes, leaderBox)
 		}
@@ -1704,8 +1704,8 @@ func ProcessWhitespace(box Box, followingCollapsibleSpace bool) bool {
 		text = lineFeedRe.ReplaceAllString(text, "\n")
 
 		styleWhiteSpace := box_.Style.GetWhiteSpace()
-		newLineCollapse := styleWhiteSpace == "normal" || styleWhiteSpace == "nowrap"
-		spaceCollapse := styleWhiteSpace == "normal" || styleWhiteSpace == "nowrap" || styleWhiteSpace == "pre-line"
+		newLineCollapse := styleWhiteSpace == pr.Normal || styleWhiteSpace == pr.Nowrap
+		spaceCollapse := styleWhiteSpace == pr.Normal || styleWhiteSpace == pr.Nowrap || styleWhiteSpace == pr.PreLine
 
 		if spaceCollapse {
 			// \r characters were removed/converted earlier
@@ -1889,7 +1889,7 @@ func InlineInBlock(box Box) Box {
 			childTextBox, isTextBox := childBox.(*TextBox)
 			st := childBox.Box().Style.GetWhiteSpace()
 			// Sequence of white-space was collapsed to a single space by ProcessWhitespace().
-			if len(newLineChildren) > 0 || !(isTextBox && childTextBox.TextS() == " " && (st == "normal" || st == "nowrap" || st == "pre-line")) {
+			if len(newLineChildren) > 0 || !(isTextBox && childTextBox.TextS() == " " && (st == pr.Normal || st == pr.Nowrap || st == pr.PreLine)) {
 				newLineChildren = append(newLineChildren, childBox)
 			}
 		} else {

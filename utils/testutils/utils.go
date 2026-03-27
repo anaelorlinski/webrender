@@ -19,6 +19,11 @@ func AssertEqual(t *testing.T, got, exp any) {
 	}
 }
 
+func AssertEqualG[T any](t *testing.T, got, exp T) {
+	t.Helper()
+	AssertEqual(t, got, exp)
+}
+
 func AssertNoErr(t *testing.T, err error) {
 	t.Helper()
 	if err != nil {

@@ -13,6 +13,7 @@ import (
 	"github.com/benoitkugler/webrender/text/hyphen"
 	"github.com/benoitkugler/webrender/utils"
 	tu "github.com/benoitkugler/webrender/utils/testutils"
+	"github.com/go-text/typesetting/di"
 	"github.com/go-text/typesetting/fontscan"
 )
 
@@ -333,7 +334,7 @@ func TestLayoutFirstLine(t *testing.T) {
 	newStyle := pr.InitialValues.Copy()
 	newStyle.SetFontFamily(pr.Strings{"weasyprint"})
 	newStyle.SetFontSize(pr.FToV(16))
-	newStyle.SetWhiteSpace("normal")
+	newStyle.SetWhiteSpace(pr.Normal)
 	ts := NewTextStyle(newStyle, false)
 
 	fmt.Println(ts)
@@ -900,4 +901,55 @@ func TestForcedLineBreak(t *testing.T) {
 	tu.AssertEqual(t, lineGotext2.Length, linePango2.Length)
 	tu.AssertEqual(t, lineGotext2.ResumeAt, linePango2.ResumeAt)
 	tu.AssertEqual(t, lineGotext2.Width, linePango2.Width)
+}
+
+func TestSplitRTL(t *testing.T) {
+	fcGotext := NewFontConfigurationGotext(fontmapGotext)
+	fcPango := NewFontConfigurationPango(fontmapPango)
+
+	style := &TextStyle{FontDescription: FontDescription{
+		Style:   FSty_Normal,
+		Weight:  400,
+		Stretch: FStr_Normal,
+		Size:    10,
+	}, Direction: pr.Rtl}
+
+	gotext := fcGotext.wrap([]rune("abc "), style, pr.Inf)
+	pango := wrapPango(fcPango, "abc ", style, nil)
+
+	tu.AssertEqual(t, pango.FirstLineRTL, true)
+	runsPango := pango.Layout.(*TextLayoutPango).Layout.GetLine(0).Runs
+	runP0, runP1 := runsPango.Data, runsPango.Next.Data
+	tu.Assert(t, runP0.Item.Length == 1 && runP1.Item.Length == 3)
+	tu.Assert(t, runP0.Item.Analysis.Level%2 == 1 && runP1.Item.Analysis.Level%2 == 0) // RTL, LTR
+
+	tu.AssertEqual(t, gotext.FirstLineRTL, true)
+	runsGotext := gotext.Layout.(TextLayoutGotext).Line
+	runG0, runG1 := runsGotext[0], runsGotext[1]
+	tu.AssertEqual(t, len(runsGotext), 2)
+	tu.Assert(t, runG0.Runes.Count == 1 && runG1.Runes.Count == 3)
+	tu.Assert(t, runG0.Direction == di.DirectionRTL && runG1.Direction == di.DirectionLTR)
+}
+
+func TestSegmentRTL(t *testing.T) {
+	fcGotext := NewFontConfigurationGotext(fontmapGotext)
+	fcPango := NewFontConfigurationPango(fontmapPango)
+	addWeayprintFont(t, fcGotext)
+	addWeayprintFont(t, fcPango)
+
+	style := &TextStyle{FontDescription: FontDescription{
+		Family:  []string{"weasyprint"},
+		Style:   FSty_Normal,
+		Weight:  400,
+		Stretch: FStr_Normal,
+		Size:    10,
+	}}
+
+	gotext := fcGotext.wrap([]rune("\u200fabc"), style, pr.Inf)
+	pango := wrapPango(fcPango, "\u200fabc", style, nil)
+	runs := gotext.Layout.(TextLayoutGotext).Line
+	tu.Assert(t, len(runs) == 2 && runs[0].Face == runs[1].Face) // dont change for "\u200f"
+	// fmt.Println(gotext.Height, pango.Height)
+	// runs := pango.Layout.(*TextLayoutPango).Layout.GetLine(0).Runs
+	// fmt.Println(runs.Data.Item.Analysis.Font.FaceID(), runs.Next.Data.Item.Analysis.Font.FaceID())
 }

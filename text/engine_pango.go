@@ -493,6 +493,7 @@ func (p *TextLayoutPango) setup(fonts FontConfiguration, style *TextStyle) {
 	fontDesc := getFontDescription(style.FontDescription)
 	p.Layout = *pango.NewLayout(pc)
 	p.Layout.SetFontDescription(&fontDesc)
+	p.Layout.SetAutoDir(false)
 
 	if style.TextDecorationLine != 0 {
 		metrics := pc.GetMetrics(&fontDesc, lang)
@@ -636,9 +637,8 @@ func (fc *FontConfigurationPango) splitFirstLine(hyphenCache map[HyphenDictKey]h
 ) FirstLine {
 	// See https://www.w3.org/TR/css-text-3/#white-space-property
 	var (
-		ws               = style.WhiteSpace
 		textWrap         = style.textWrap()
-		spaceCollapse    = ws == WNormal || ws == WNowrap || ws == WPreLine
+		spaceCollapse    = style.spaceCollapse()
 		originalMaxWidth = maxWidth
 		layout           *TextLayoutPango
 		fontSize         = pr.Float(style.Size)

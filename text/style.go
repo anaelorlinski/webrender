@@ -62,12 +62,12 @@ func (fd FontDescription) binary(dst []byte, includeSize bool) []byte {
 // textWrap returns true if the "white-space" property allows wrapping
 func (ts *TextStyle) textWrap() bool {
 	ws := ts.WhiteSpace
-	return ws == WNormal || ws == WPreWrap || ws == WPreLine
+	return ws == pr.Normal || ws == pr.PreWrap || ws == pr.PreLine
 }
 
 func (ts *TextStyle) spaceCollapse() bool {
 	ws := ts.WhiteSpace
-	return ws == WNormal || ws == WNowrap || ws == WPreLine
+	return ws == pr.Normal || ws == pr.Nowrap || ws == pr.PreLine
 }
 
 // TextStyle exposes the subset of a [pr.Style]
@@ -92,7 +92,7 @@ type TextStyle struct {
 	FontLanguageOverride fontLanguageOverride
 	Lang                 string
 
-	WhiteSpace   Whitespace
+	WhiteSpace   pr.Keyword
 	OverflowWrap OverflowWrap
 	WordBreak    WordBreak
 
@@ -127,7 +127,7 @@ func NewTextStyle(style pr.StyleAccessor, ignoreSpacing bool) *TextStyle {
 
 	out.TextDecorationLine = style.GetTextDecorationLine()
 
-	out.WhiteSpace = newWhiteSpace(style.GetWhiteSpace())
+	out.WhiteSpace = style.GetWhiteSpace()
 	out.OverflowWrap = newOverflowWrap(style.GetOverflowWrap())
 	out.WordBreak = newWordBreak(style.GetWordBreak())
 
@@ -161,7 +161,7 @@ type styleKey struct {
 	FontLanguageOverride fontLanguageOverride
 	Lang                 string
 
-	WhiteSpace   Whitespace
+	WhiteSpace   pr.Keyword
 	OverflowWrap OverflowWrap
 	WordBreak    WordBreak
 
@@ -427,36 +427,6 @@ func newWordBreak(w pr.String) WordBreak {
 		return WBBreakAll
 	default:
 		return WBNormal
-	}
-}
-
-type Whitespace uint8
-
-const (
-	WNormal Whitespace = iota
-	WNowrap
-	WPre
-	WPreWrap
-	WPreLine
-	WBreakSpaces
-)
-
-func newWhiteSpace(w pr.String) Whitespace {
-	switch w {
-	case "", "normal":
-		return WNormal
-	case "nowrap":
-		return WNowrap
-	case "pre":
-		return WPre
-	case "pre-wrap":
-		return WPreWrap
-	case "pre-line":
-		return WPreLine
-	case "break-spaces":
-		return WBreakSpaces
-	default:
-		return WNormal
 	}
 }
 

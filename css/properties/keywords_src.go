@@ -94,4 +94,10 @@ const (
 	TableRow
 	TableRowGroup
 	Unsafe
+
+	// white space
+	Pre
+	Nowrap
+	PreWrap
+	PreLine
 )

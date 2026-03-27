@@ -216,8 +216,8 @@ func (s Properties) SetTextIndent(v TaggedDim) { s[PTextIndent] = v }
 func (s Properties) GetTextTransform() String  { return s[PTextTransform].(String) }
 func (s Properties) SetTextTransform(v String) { s[PTextTransform] = v }
 
-func (s Properties) GetWhiteSpace() String  { return s[PWhiteSpace].(String) }
-func (s Properties) SetWhiteSpace(v String) { s[PWhiteSpace] = v }
+func (s Properties) GetWhiteSpace() Keyword  { return s[PWhiteSpace].(Keyword) }
+func (s Properties) SetWhiteSpace(v Keyword) { s[PWhiteSpace] = v }
 
 func (s Properties) GetWordBreak() String  { return s[PWordBreak].(String) }
 func (s Properties) SetWordBreak(v String) { s[PWordBreak] = v }
@@ -780,8 +780,8 @@ type StyleAccessor interface {
 	GetTextTransform() String
 	SetTextTransform(v String)
 
-	GetWhiteSpace() String
-	SetWhiteSpace(v String)
+	GetWhiteSpace() Keyword
+	SetWhiteSpace(v Keyword)
 
 	GetWordBreak() String
 	SetWordBreak(v String)
