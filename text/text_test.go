@@ -285,9 +285,10 @@ func TestHeightAndBaseline(t *testing.T) {
 	newStyle.SetFontFamily(families)
 
 	newStyle.SetFontSize(pr.FToV(36))
-	ct := textContextPango()
+	// ct := textContextPango()
+	ct := textContextGotext()
 
-	fc := NewFontConfigurationPango(fontmapPango)
+	// fc := NewFontConfigurationPango(fontmapPango)
 	for _, desc := range []validation.FontFaceDescriptors{
 		{Src: []pr.TaggedString{{Tag: pr.External, S: "https://fonts.gstatic.com/s/googlesans/v36/4UaGrENHsxJlGDuGo1OIlL3Owps.ttf"}}, FontFamily: "Google Sans", FontStyle: "normal", FontWeight: pr.IntString{String: "", Int: 400}},
 		{Src: []pr.TaggedString{{Tag: pr.External, S: "https://fonts.gstatic.com/s/googlesans/v36/4UabrENHsxJlGDuGo1OIlLU94YtzCwM.ttf"}}, FontFamily: "Google Sans", FontStyle: "normal", FontWeight: pr.IntString{String: "", Int: 500}},
@@ -300,7 +301,7 @@ func TestHeightAndBaseline(t *testing.T) {
 		{Src: []pr.TaggedString{{Tag: pr.External, S: "https://fonts.gstatic.com/s/worksans/v13/QGY_z_wNahGAdqQ43RhVcIgYT2Xz5u32K3vXBi8Jow.ttf"}}, FontFamily: "Work Sans", FontStyle: "normal", FontWeight: pr.IntString{String: "", Int: 500}},
 		{Src: []pr.TaggedString{{Tag: pr.External, S: "https://fonts.gstatic.com/s/worksans/v13/QGY_z_wNahGAdqQ43RhVcIgYT2Xz5u32K5fQBi8Jow.ttf"}}, FontFamily: "Work Sans", FontStyle: "normal", FontWeight: pr.IntString{String: "", Int: 600}},
 	} {
-		fc.AddFontFace(desc, utils.DefaultUrlFetcher)
+		ct.fc.AddFontFace(desc, utils.DefaultUrlFetcher)
 	}
 
 	spi := SplitFirstLine([]rune("Go 1.17 Release Notes"), newStyle, ct, pr.Float(595), false, true)

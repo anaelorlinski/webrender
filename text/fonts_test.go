@@ -210,6 +210,9 @@ func TestResolveFont(t *testing.T) {
 }
 
 func TestMetricsLinuxFonts(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("linux is required")
+	}
 	fcPango := &FontConfigurationPango{fontmap: fontmapPango}
 	fcGotext := NewFontConfigurationGotext(fontmapGotext)
 
