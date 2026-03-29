@@ -296,19 +296,19 @@ func system(tokens []Token, _ string, out *csDescriptors) error {
 }
 
 // match a String, Ident, or a valid url
-func stringIdentOrUrl(token Token, baseUrl string) (pr.NamedString, bool) {
+func stringIdentOrUrl(token Token, baseUrl string) (pr.StringOrURL, bool) {
 	switch token := token.(type) {
 	case pa.String:
-		return pr.NamedString{Name: "string", String: token.Value}, true
+		return pr.StringOrURL{IsURL: 1, String: token.Value}, true
 	case pa.Ident:
-		return pr.NamedString{Name: "string", String: string(token.Value)}, true
+		return pr.StringOrURL{IsURL: 1, String: string(token.Value)}, true
 	default:
 		url, _, _ := getUrl(token, baseUrl)
 		if !url.IsNone() {
-			return pr.NamedString{Name: "url", String: url.S}, true
+			return pr.StringOrURL{IsURL: 2, String: url.S}, true
 		}
 	}
-	return pr.NamedString{}, false
+	return pr.StringOrURL{}, false
 }
 
 // “negative“ descriptor validation.
@@ -317,7 +317,7 @@ func negative(tokens []Token, baseUrl string, out *csDescriptors) error {
 		return ErrInvalidValue
 	}
 
-	var values []pr.NamedString
+	var values []pr.StringOrURL
 	for len(tokens) != 0 {
 		var token Token
 		token, tokens = tokens[len(tokens)-1], tokens[:len(tokens)-1]
@@ -327,7 +327,7 @@ func negative(tokens []Token, baseUrl string, out *csDescriptors) error {
 	}
 
 	if len(values) == 1 {
-		values = append(values, pr.NamedString{Name: "string", String: ""})
+		values = append(values, pr.StringOrURL{IsURL: 1, String: ""})
 	}
 
 	if len(values) == 2 {
@@ -352,15 +352,15 @@ func suffix(tokens []Token, baseUrl string, out *csDescriptors) (err error) {
 }
 
 // “prefix“ && “suffix“ descriptors validation.
-func _prefixSuffix(tokens []Token, baseUrl string) (pr.NamedString, error) {
+func _prefixSuffix(tokens []Token, baseUrl string) (pr.StringOrURL, error) {
 	if len(tokens) != 1 {
-		return pr.NamedString{}, ErrInvalidValue
+		return pr.StringOrURL{}, ErrInvalidValue
 	}
 	token := tokens[0]
 	if p, ok := stringIdentOrUrl(token, baseUrl); ok {
 		return p, nil
 	}
-	return pr.NamedString{}, ErrInvalidValue
+	return pr.StringOrURL{}, ErrInvalidValue
 }
 
 // @descriptor("counter-style")
@@ -437,7 +437,7 @@ func pad_(tokens []Token, baseUrl string) (out pr.IntNamedString, err error) {
 			}
 		default:
 			if p, ok := stringIdentOrUrl(token, baseUrl); ok {
-				out.NamedString = p
+				out.StringOrURL = p
 				hasSymbol = true
 			}
 		}
