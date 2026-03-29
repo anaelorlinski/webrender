@@ -37,7 +37,7 @@ func (ss Strings) Intersects(values ...string) bool {
 }
 
 type SContent struct {
-	String   string
+	String   string // may be a custom ident
 	Contents ContentProperties
 }
 
@@ -58,7 +58,7 @@ const (
 // Union return the union of  [s] and [other]
 func (dec Decorations) Union(other Decorations) Decorations { return dec | other }
 
-type Transforms []SDimensions
+type Transforms []Transform
 
 type Values []TaggedDim
 
@@ -78,8 +78,19 @@ type CounterStyleID struct {
 	Symbols Strings
 }
 
-type SDimensions struct {
-	String     string
+type TransformKind uint8
+
+const (
+	_ TransformKind = iota
+	Rotate
+	Skew
+	Translate
+	Scale
+	Matrix
+)
+
+type Transform struct {
+	Kind       TransformKind
 	Dimensions Dimensions
 }
 
@@ -585,9 +596,7 @@ func (v SContentProp) IsNone() bool {
 	return v.String == "" && v.ContentProperty.IsNone()
 }
 
-func (v SDimensions) IsNone() bool {
-	return v.String == "" && v.Dimensions == nil
-}
+func (v Transform) IsNone() bool { return v.Kind == 0 && v.Dimensions == nil }
 
 func (v IntNamedString) IsNone() bool {
 	return v == IntNamedString{}

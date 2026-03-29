@@ -3950,10 +3950,10 @@ func blockEllipsis_(tokens []Token) (out pr.TaggedString, ok bool) {
 	return
 }
 
-func transformFunction(token Token) (pr.SDimensions, error) {
+func transformFunction(token Token) (pr.Transform, error) {
 	name, args := pa.ParseFunction(token)
 	if name == "" {
-		return pr.SDimensions{}, ErrInvalidValue
+		return pr.Transform{}, ErrInvalidValue
 	}
 
 	lengths, values := make([]pr.Dimension, len(args)), make([]pr.Dimension, len(args))
@@ -3974,50 +3974,50 @@ func transformFunction(token Token) (pr.SDimensions, error) {
 		switch name {
 		case "rotate":
 			if notNone && angle != 0 {
-				return pr.SDimensions{String: "rotate", Dimensions: []pr.Dimension{pr.FToD(pr.Fl(angle))}}, nil
+				return pr.Transform{Kind: pr.Rotate, Dimensions: []pr.Dimension{pr.FToD(pr.Fl(angle))}}, nil
 			}
 		case "skewx", "skew":
 			if notNone && angle != 0 {
-				return pr.SDimensions{String: "skew", Dimensions: []pr.Dimension{pr.FToD(pr.Fl(angle)), pr.ZeroPixels}}, nil
+				return pr.Transform{Kind: pr.Skew, Dimensions: []pr.Dimension{pr.FToD(pr.Fl(angle)), pr.ZeroPixels}}, nil
 			}
 		case "skewy":
 			if notNone && angle != 0 {
-				return pr.SDimensions{String: "skew", Dimensions: []pr.Dimension{pr.ZeroPixels, pr.FToD(pr.Fl(angle))}}, nil
+				return pr.Transform{Kind: pr.Skew, Dimensions: []pr.Dimension{pr.ZeroPixels, pr.FToD(pr.Fl(angle))}}, nil
 			}
 		case "translatex", "translate":
 			if !length.IsNone() {
-				return pr.SDimensions{String: "translate", Dimensions: []pr.Dimension{length, pr.ZeroPixels}}, nil
+				return pr.Transform{Kind: pr.Translate, Dimensions: []pr.Dimension{length, pr.ZeroPixels}}, nil
 			}
 		case "translatey":
 			if !length.IsNone() {
-				return pr.SDimensions{String: "translate", Dimensions: []pr.Dimension{pr.ZeroPixels, length}}, nil
+				return pr.Transform{Kind: pr.Translate, Dimensions: []pr.Dimension{pr.ZeroPixels, length}}, nil
 			}
 		case "scalex":
 			if number, ok := args[0].(pa.Number); ok {
-				return pr.SDimensions{String: "scale", Dimensions: []pr.Dimension{pr.FToD(number.ValueF), pr.FToD(1.)}}, nil
+				return pr.Transform{Kind: pr.Scale, Dimensions: []pr.Dimension{pr.FToD(number.ValueF), pr.FToD(1.)}}, nil
 			}
 		case "scaley":
 			if number, ok := args[0].(pa.Number); ok {
-				return pr.SDimensions{String: "scale", Dimensions: []pr.Dimension{pr.FToD(1.), pr.FToD(number.ValueF)}}, nil
+				return pr.Transform{Kind: pr.Scale, Dimensions: []pr.Dimension{pr.FToD(1.), pr.FToD(number.ValueF)}}, nil
 			}
 		case "scale":
 			if number, ok := args[0].(pa.Number); ok {
-				return pr.SDimensions{String: "scale", Dimensions: []pr.Dimension{pr.FToD(number.ValueF), pr.FToD(number.ValueF)}}, nil
+				return pr.Transform{Kind: pr.Scale, Dimensions: []pr.Dimension{pr.FToD(number.ValueF), pr.FToD(number.ValueF)}}, nil
 			}
 		}
 	case 2:
 		if name == "scale" && isAllNumber {
-			return pr.SDimensions{String: name, Dimensions: values}, nil
+			return pr.Transform{Kind: pr.Scale, Dimensions: values}, nil
 		}
 		if name == "translate" && isAllLengths {
-			return pr.SDimensions{String: name, Dimensions: lengths}, nil
+			return pr.Transform{Kind: pr.Translate, Dimensions: lengths}, nil
 		}
 	case 6:
 		if name == "matrix" && isAllNumber {
-			return pr.SDimensions{String: name, Dimensions: values}, nil
+			return pr.Transform{Kind: pr.Matrix, Dimensions: values}, nil
 		}
 	}
-	return pr.SDimensions{}, ErrInvalidValue
+	return pr.Transform{}, ErrInvalidValue
 }
 
 func maxLines(tokens []Token, _ string) pr.CssProperty {

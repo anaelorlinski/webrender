@@ -950,7 +950,7 @@ func transforms(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) 
 	value := _value.(pr.Transforms)
 	result := make(pr.Transforms, len(value))
 	for index, tr := range value {
-		if tr.String == "translate" {
+		if tr.Kind == pr.Translate {
 			tr.Dimensions = _lengthOrPercentageTuple2(computer, tr.Dimensions)
 		}
 		result[index] = tr

@@ -53,29 +53,29 @@ func getMatrix(box_ Box) (mt.Transform, bool) {
 
 	matrix := mt.New(1, 0, 0, 1, originX, originY)
 	for _, t := range trans {
-		name, args := t.String, t.Dimensions
+		name, args := t.Kind, t.Dimensions
 		// The length of args depends on `name`, see package validation for details.
 		rightMat := mt.Identity()
 		switch name {
-		case "scale":
+		case pr.Scale:
 			sx, sy := toF(args[0]), toF(args[1])
 			rightMat.Scale(sx, sy)
-		case "rotate":
+		case pr.Rotate:
 			angle := toF(args[0])
 			rightMat.Rotate(angle)
-		case "translate":
+		case pr.Translate:
 			translateX, translateY := args[0], args[1]
 			rightMat.Translate(
 				fl(pr.ResolvePercentage(translateX.Tagged(), borderWidth).V()),
 				fl(pr.ResolvePercentage(translateY.Tagged(), borderHeight).V()),
 			)
-		case "skew":
+		case pr.Skew:
 			rightMat.Skew(toF(args[0]), toF(args[1]))
-		case "matrix":
+		case pr.Matrix:
 			rightMat = mt.New(toF(args[0]), toF(args[1]), toF(args[2]),
 				toF(args[3]), toF(args[4]), toF(args[5]))
 		default:
-			panic(fmt.Sprintf("unexpected name for CSS transform property : %s", name))
+			panic(fmt.Sprintf("unexpected name for CSS transform property : %d", name))
 		}
 		matrix.RightMultBy(rightMat) // same as matrix = mt.Mul(matrix, rightMat)
 	}

@@ -284,21 +284,21 @@ func TestTransforms(t *testing.T) {
 	}))
 	assertValidDict(t, "transform: translate(6px) rotate(90deg)", toValidated(pr.Properties{
 		pr.PTransform: pr.Transforms{
-			{String: "translate", Dimensions: []pr.Dimension{{Value: 6, Unit: pr.Px}, {Value: 0, Unit: pr.Px}}},
-			{String: "rotate", Dimensions: []pr.Dimension{pr.FToD(math.Pi / 2)}},
+			{Kind: pr.Translate, Dimensions: []pr.Dimension{{Value: 6, Unit: pr.Px}, {Value: 0, Unit: pr.Px}}},
+			{Kind: pr.Rotate, Dimensions: []pr.Dimension{pr.FToD(math.Pi / 2)}},
 		},
 	}))
 	assertValidDict(t, "transform: translate(-4px, 0)", toValidated(pr.Properties{
-		pr.PTransform: pr.Transforms{{String: "translate", Dimensions: []pr.Dimension{{Value: -4, Unit: pr.Px}, {Value: 0, Unit: pr.Scalar}}}},
+		pr.PTransform: pr.Transforms{{Kind: pr.Translate, Dimensions: []pr.Dimension{{Value: -4, Unit: pr.Px}, {Value: 0, Unit: pr.Scalar}}}},
 	}))
 	assertValidDict(t, "transform: translate(6px, 20%)", toValidated(pr.Properties{
-		pr.PTransform: pr.Transforms{{String: "translate", Dimensions: []pr.Dimension{{Value: 6, Unit: pr.Px}, {Value: 20, Unit: pr.Perc}}}},
+		pr.PTransform: pr.Transforms{{Kind: pr.Translate, Dimensions: []pr.Dimension{{Value: 6, Unit: pr.Px}, {Value: 20, Unit: pr.Perc}}}},
 	}))
 	assertValidDict(t, "transform: translate(6px 20%)", toValidated(pr.Properties{
-		pr.PTransform: pr.Transforms{{String: "translate", Dimensions: []pr.Dimension{{Value: 6, Unit: pr.Px}, {Value: 20, Unit: pr.Perc}}}},
+		pr.PTransform: pr.Transforms{{Kind: pr.Translate, Dimensions: []pr.Dimension{{Value: 6, Unit: pr.Px}, {Value: 20, Unit: pr.Perc}}}},
 	}))
 	assertValidDict(t, "transform: scale(2)", toValidated(pr.Properties{
-		pr.PTransform: pr.Transforms{{String: "scale", Dimensions: []pr.Dimension{pr.FToD(2), pr.FToD(2)}}},
+		pr.PTransform: pr.Transforms{{Kind: pr.Scale, Dimensions: []pr.Dimension{pr.FToD(2), pr.FToD(2)}}},
 	}))
 	capt.AssertNoLogs(t)
 	assertInvalid(t, "transform: lipsumize(6px)", "invalid")
