@@ -96,6 +96,9 @@ func parseSourceCode(sourceFile string) ([]constD, error) {
 func kebabCase(s string) string {
 	var out strings.Builder
 	for i, r := range s {
+		if r == '_' {
+			continue
+		}
 		if i != 0 && unicode.IsUpper(r) {
 			out.WriteRune('-')
 		}

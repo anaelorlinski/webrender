@@ -166,6 +166,10 @@ func NewKeyword(s string) Keyword {
 		return PreWrap
 	case "pre-line":
 		return PreLine
+	case "string":
+		return String_
+	case "url":
+		return Url
 	default:
 		return 0
 	}
@@ -333,6 +337,10 @@ func (t Keyword) String() string {
 		return "pre-wrap"
 	case PreLine:
 		return "pre-line"
+	case String_:
+		return "string"
+	case Url:
+		return "url"
 	default:
 		return fmt.Sprintf("unknown keyword %d", t)
 	}

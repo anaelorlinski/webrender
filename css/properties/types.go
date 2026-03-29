@@ -172,10 +172,10 @@ type ContentProperty struct {
 	Type string
 }
 
-type StringOrURL struct {
-	String string
-	IsURL  uint8 // 1 for string, 2 for URL
-}
+// type StringOrURL struct {
+// 	S     string
+// 	IsURL uint8 // 1 for string, 2 for URL
+// }
 
 type TaggedString struct {
 	S   string
@@ -202,7 +202,7 @@ type TaggedInt struct {
 }
 
 type IntNamedString struct {
-	StringOrURL
+	TaggedString
 	Int int
 }
 
@@ -512,10 +512,6 @@ func (v Marks) IsNone() bool {
 	return v == Marks{}
 }
 
-func (v StringOrURL) IsNone() bool {
-	return v == StringOrURL{}
-}
-
 func (v CounterStyleID) IsNone() bool {
 	return v.Type == "" && v.Name == "" && v.Symbols == nil
 }
@@ -629,7 +625,6 @@ func (IntString) isCssProperty()         {}
 func (Marks) isCssProperty()             {}
 func (JustifyOrAlign) isCssProperty()    {}
 func (Decorations) isCssProperty()       {}
-func (StringOrURL) isCssProperty()       {}
 func (CounterStyleID) isCssProperty()    {}
 func (Page) isCssProperty()              {}
 func (Point) isCssProperty()             {}
@@ -675,7 +670,6 @@ func (Limits) isDeclaredValue()            {}
 func (Marks) isDeclaredValue()             {}
 func (JustifyOrAlign) isDeclaredValue()    {}
 func (Decorations) isDeclaredValue()       {}
-func (StringOrURL) isDeclaredValue()       {}
 func (CounterStyleID) isDeclaredValue()    {}
 func (Page) isDeclaredValue()              {}
 func (Point) isDeclaredValue()             {}

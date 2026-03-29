@@ -65,20 +65,20 @@ func (c CounterStyle) resolveCounterStyle(counterStyle pr.CounterStyleID, previo
 		var out CounterStyleDescriptors
 		if counterType == "string" {
 			out.System = CounterStyleSystem{"", "cyclic", -1}
-			out.Symbols = []pr.StringOrURL{{IsURL: 1, String: counterStyle.Name}}
-			out.Suffix = pr.StringOrURL{IsURL: 1, String: ""}
+			out.Symbols = []pr.TaggedString{{Tag: pr.String_, S: counterStyle.Name}}
+			out.Suffix = pr.TaggedString{Tag: pr.String_, S: ""}
 		} else if counterType == "symbols()" {
 			out.System = CounterStyleSystem{"", counterStyle.Name, -1}
 			if counterStyle.Name == "fixed" {
 				out.System.Number = 1
 			}
 			for _, argument := range counterStyle.Symbols {
-				out.Symbols = append(out.Symbols, pr.StringOrURL{IsURL: 1, String: argument})
+				out.Symbols = append(out.Symbols, pr.TaggedString{Tag: pr.String_, S: argument})
 			}
-			out.Suffix = pr.StringOrURL{IsURL: 1, String: " "}
+			out.Suffix = pr.TaggedString{Tag: pr.String_, S: " "}
 		}
-		out.Negative = [2]pr.StringOrURL{{IsURL: 1, String: "-"}, {IsURL: 1, String: ""}}
-		out.Prefix = pr.StringOrURL{IsURL: 1, String: ""}
+		out.Negative = [2]pr.TaggedString{{Tag: pr.String_, S: "-"}, {Tag: pr.String_, S: ""}}
+		out.Prefix = pr.TaggedString{Tag: pr.String_, S: ""}
 		out.Range.Auto = true
 		out.Fallback = "decimal"
 		return &out
@@ -171,8 +171,8 @@ func (c CounterStyle) renderValue(counterValue int, counter *CounterStyleDescrip
 	isNegative := counterValue < 0
 	if isNegative {
 		vs := counter.Negative
-		if vs == ([2]pr.StringOrURL{}) {
-			vs = [2]pr.StringOrURL{{IsURL: 1, String: "-"}, {IsURL: 1, String: ""}}
+		if vs == ([2]pr.TaggedString{}) {
+			vs = [2]pr.TaggedString{{Tag: pr.String_, S: "-"}, {Tag: pr.String_, S: ""}}
 		}
 		negativePrefix, negativeSuffix = symbol(vs[0]), symbol(vs[1])
 		useNegative = system == "symbolic" || system == "alphabetic" || system == "numeric" || system == "additive"
@@ -231,7 +231,7 @@ func (c CounterStyle) renderValue(counterValue int, counter *CounterStyleDescrip
 		padDifference -= len(negativePrefix) + len(negativeSuffix)
 	}
 	if padDifference > 0 {
-		initial = strings.Repeat(symbol(pad.StringOrURL), padDifference) + initial
+		initial = strings.Repeat(symbol(pad.TaggedString), padDifference) + initial
 	}
 
 	// Step 5
@@ -243,15 +243,15 @@ func (c CounterStyle) renderValue(counterValue int, counter *CounterStyleDescrip
 	return initial
 }
 
-func symbol(value pr.StringOrURL) string {
-	if value.IsURL == 1 {
-		return value.String
+func symbol(value pr.TaggedString) string {
+	if value.Tag == pr.String_ {
+		return value.S
 	}
 	return ""
 }
 
 // Implement the algorithm for `type: repeating`.
-func repeating(symbols []pr.StringOrURL, value int) (string, bool) {
+func repeating(symbols []pr.TaggedString, value int) (string, bool) {
 	if len(symbols) == 0 {
 		return "", false
 	}
@@ -259,7 +259,7 @@ func repeating(symbols []pr.StringOrURL, value int) (string, bool) {
 }
 
 // Implement the algorithm for `type: non-repeating`.
-func nonRepeating(symbols []pr.StringOrURL, firstValue, value int) (string, bool) {
+func nonRepeating(symbols []pr.TaggedString, firstValue, value int) (string, bool) {
 	L := len(symbols)
 	value -= firstValue
 	if 0 <= value && value < L {
@@ -269,7 +269,7 @@ func nonRepeating(symbols []pr.StringOrURL, firstValue, value int) (string, bool
 }
 
 // Implement the algorithm for `type: symbolic`.
-func symbolic(symbols []pr.StringOrURL, value int) (string, bool) {
+func symbolic(symbols []pr.TaggedString, value int) (string, bool) {
 	if len(symbols) == 0 {
 		return "", false
 	}
@@ -280,7 +280,7 @@ func symbolic(symbols []pr.StringOrURL, value int) (string, bool) {
 }
 
 // Implement the algorithm for `type: alphabetic`.
-func alphabetic(symbols []pr.StringOrURL, value int) (string, bool) {
+func alphabetic(symbols []pr.TaggedString, value int) (string, bool) {
 	L := len(symbols)
 	if L < 2 {
 		return "", false
@@ -296,7 +296,7 @@ func alphabetic(symbols []pr.StringOrURL, value int) (string, bool) {
 }
 
 // Implement the algorithm for `type: numeric`.
-func numeric(symbols []pr.StringOrURL, value int) (string, bool) {
+func numeric(symbols []pr.TaggedString, value int) (string, bool) {
 	if value == 0 {
 		return symbol(symbols[0]), true
 	}
@@ -319,7 +319,7 @@ func additive(symbols []pr.IntNamedString, value int) (string, bool) {
 	if value == 0 {
 		for _, vs := range symbols {
 			if vs.Int == 0 {
-				return symbol(vs.StringOrURL), true
+				return symbol(vs.TaggedString), true
 			}
 		}
 	}
@@ -329,7 +329,7 @@ func additive(symbols []pr.IntNamedString, value int) (string, bool) {
 	var parts []string
 	for _, vs := range symbols {
 		repetitions := value / vs.Int
-		parts = append(parts, strings.Repeat(symbol(vs.StringOrURL), repetitions))
+		parts = append(parts, strings.Repeat(symbol(vs.TaggedString), repetitions))
 		value -= vs.Int * repetitions
 		if value == 0 {
 			return strings.Join(parts, ""), true
@@ -352,7 +352,7 @@ func (c CounterStyle) RenderMarker(counterName pr.CounterStyleID, counterValue i
 	prefix := symbol(counter.Prefix)
 	suffix := counter.Suffix
 	if suffix.IsNone() {
-		suffix = pr.StringOrURL{IsURL: 1, String: ". "}
+		suffix = pr.TaggedString{Tag: pr.String_, S: ". "}
 	}
 	suffixS := symbol(suffix)
 
@@ -361,13 +361,13 @@ func (c CounterStyle) RenderMarker(counterName pr.CounterStyleID, counterValue i
 }
 
 type CounterStyleDescriptors struct {
-	Negative        [2]pr.StringOrURL
-	Prefix          pr.StringOrURL
-	Suffix          pr.StringOrURL
+	Negative        [2]pr.TaggedString
+	Prefix          pr.TaggedString
+	Suffix          pr.TaggedString
 	Fallback        string
 	System          CounterStyleSystem
 	Pad             pr.IntNamedString
-	Symbols         []pr.StringOrURL
+	Symbols         []pr.TaggedString
 	AdditiveSymbols []pr.IntNamedString
 	Range           pr.OptionalRanges
 }
@@ -405,7 +405,7 @@ func (desc *CounterStyleDescriptors) fallback() string {
 
 // complete the fields of `desc` with those taken from `src`
 func (desc *CounterStyleDescriptors) merge(src CounterStyleDescriptors) {
-	if desc.Negative == ([2]pr.StringOrURL{}) {
+	if desc.Negative == ([2]pr.TaggedString{}) {
 		desc.Negative = src.Negative
 	}
 	if desc.System == (CounterStyleSystem{}) {

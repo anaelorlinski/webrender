@@ -100,4 +100,7 @@ const (
 	Nowrap
 	PreWrap
 	PreLine
+
+	String_
+	Url
 )
