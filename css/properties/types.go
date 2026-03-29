@@ -63,7 +63,7 @@ type Transforms []Transform
 type Values []TaggedDim
 
 type SIntStrings struct {
-	String string
+	K      Keyword
 	Values IntStrings
 }
 
@@ -532,9 +532,7 @@ func (v SContent) IsNone() bool {
 	return v.String == "" && v.Contents == nil
 }
 
-func (v SIntStrings) IsNone() bool {
-	return v.String == "" && v.Values == nil
-}
+func (v SIntStrings) IsNone() bool { return v.K == 0 && v.Values == nil }
 
 func (v SStrings) IsNone() bool {
 	return v.String == "" && v.Strings == nil

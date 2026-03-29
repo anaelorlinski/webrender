@@ -247,7 +247,7 @@ var InitialValues = Properties{
 	// Means "none", but allow `display: list-item` to increment the
 	// list-item counter. If we ever have a way for authors to query
 	// computed values (JavaScript?), this value should serialize to "none".
-	PCounterIncrement:  SIntStrings{String: "auto"},
+	PCounterIncrement:  SIntStrings{K: Auto},
 	PCounterReset:      SIntStrings{Values: IntStrings{}}, // parsed value for "none"
 	PCounterSet:        SIntStrings{Values: IntStrings{}}, // parsed value for "none"
 	PListStyleImage:    Image(NoneImage{}),

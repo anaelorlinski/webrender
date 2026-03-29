@@ -392,7 +392,7 @@ func standardizePageBasedCounters(style pr.ElementStyle, pseudoType string) {
 	for _, propname := range [...]pr.KnownProp{pr.PCounterSet, pr.PCounterReset, pr.PCounterIncrement} {
 		key := pr.PropKey{KnownProp: propname}
 		prop := style.Get(key).(pr.SIntStrings)
-		if prop.String == "auto" {
+		if prop.K == pr.Auto {
 			style.Set(key, pr.SIntStrings{Values: pr.IntStrings{}})
 			continue
 		}

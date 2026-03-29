@@ -916,7 +916,7 @@ func UpdateCounters(state *tree.PageState, style pr.ElementStyle) {
 	}
 
 	counterIncrement := style.GetCounterIncrement()
-	if counterIncrement.String == "auto" {
+	if counterIncrement.K == pr.Auto {
 		// "auto" is the initial value but is not valid in stylesheet:
 		// there was no counter-increment declaration for this element.
 		// (Or the winning value was "initial".)
