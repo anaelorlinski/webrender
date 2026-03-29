@@ -266,10 +266,10 @@ func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.TaggedDim, 
 	refY := positioningHeight - imageHeight
 	positionX := pr.ResolvePercentage(positionX_.Tagged(), refX)
 	positionY := pr.ResolvePercentage(positionY_.Tagged(), refY)
-	if originX == "right" {
+	if originX == pr.Right {
 		positionX = refX - positionX.V()
 	}
-	if originY == "bottom" {
+	if originY == pr.Bottom {
 		positionY = refY - positionY.V()
 	}
 

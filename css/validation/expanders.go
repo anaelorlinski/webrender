@@ -815,13 +815,14 @@ func _expandPageBreakBeforeAfter(_ string, name pr.Shortand, tokens []Token) (ou
 		newName = pr.PBreakAfter
 	}
 	keyword := getSingleKeyword(tokens)
-	if keyword == "auto" || keyword == "left" || keyword == "right" || keyword == "avoid" {
+	switch keyword {
+	case "auto", "left", "right", "avoid":
 		out = append(out, namedTokens{name: newName, tokens: tokens})
-	} else if keyword == "always" {
+	case "always":
 		out = append(out, namedTokens{name: newName, tokens: []Token{
 			pa.NewIdent("page", tokens[0].Pos()),
 		}})
-	} else {
+	default:
 		return nil, ErrInvalidValue
 	}
 	return out, nil

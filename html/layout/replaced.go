@@ -113,10 +113,10 @@ func LayoutReplacedBox(box_ bo.ReplacedBoxITF) (drawWidth, drawHeight, positionX
 
 	positionX = pr.ResolvePercentage(positionX_.Tagged(), refX).V()
 	positionY = pr.ResolvePercentage(positionY_.Tagged(), refY).V()
-	if originX == "right" {
+	if originX == pr.Right {
 		positionX = refX - positionX
 	}
-	if originY == "bottom" {
+	if originY == pr.Bottom {
 		positionY = refY - positionY
 	}
 

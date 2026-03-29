@@ -145,9 +145,8 @@ type Size struct {
 }
 
 type CenterPos struct {
-	OriginX string
-	OriginY string
-	Pos     Point
+	OriginX, OriginY Keyword
+	Pos              Point
 }
 
 type Color pa.Color

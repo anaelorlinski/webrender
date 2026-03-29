@@ -46,7 +46,7 @@ var InitialValues = Properties{
 	PBackgroundImage:      Images{NoneImage{}},
 	PBackgroundOrigin:     Strings{"padding-box"},
 	PBackgroundPosition: Centers{
-		CenterPos{OriginX: "left", OriginY: "top", Pos: Point{Dimension{Unit: Perc}, Dimension{Unit: Perc}}},
+		{OriginX: Left, OriginY: Top, Pos: Point{Dimension{Unit: Perc}, Dimension{Unit: Perc}}},
 	},
 	PBackgroundRepeat:  Repeats{{"repeat", "repeat"}},
 	PBackgroundSize:    Sizes{Size{Width: TaggedDim{Tag: Auto}, Height: TaggedDim{Tag: Auto}}},
@@ -151,7 +151,7 @@ var InitialValues = Properties{
 	PImageRendering:   String("auto"),
 	PImageOrientation: SBoolFloat{String: "from-image"},
 	PObjectFit:        String("fill"),
-	PObjectPosition: CenterPos{OriginX: "left", OriginY: "top", Pos: Point{
+	PObjectPosition: CenterPos{OriginX: Left, OriginY: Top, Pos: Point{
 		Dimension{Value: 50, Unit: Perc}, Dimension{Value: 50, Unit: Perc},
 	}},
 

@@ -284,10 +284,10 @@ func (rg RadialGradient) Layout(width, height pr.Float) backend.GradientLayout {
 	originX, centerX_, originY, centerY_ := rg.center.OriginX, rg.center.Pos[0], rg.center.OriginY, rg.center.Pos[1]
 	centerX := pr.ResolvePercentage(centerX_.Tagged(), width).V()
 	centerY := pr.ResolvePercentage(centerY_.Tagged(), height).V()
-	if originX == "right" {
+	if originX == pr.Right {
 		centerX = width - centerX
 	}
-	if originY == "bottom" {
+	if originY == pr.Bottom {
 		centerY = height - centerY
 	}
 

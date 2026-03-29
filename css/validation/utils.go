@@ -89,7 +89,7 @@ func getImage(_token Token, baseUrl string) (pr.Image, error) {
 		if result.IsNone() {
 			result.shape = "ellipse"
 			result.size = pr.GradientSize{Keyword: "farthest-corner"}
-			result.position = pr.CenterPos{OriginX: "left", OriginY: "top", Pos: pr.Point{fiftyPercent, fiftyPercent}}
+			result.position = pr.CenterPos{OriginX: pr.Left, OriginY: pr.Top, Pos: pr.Point{fiftyPercent, fiftyPercent}}
 			result.colorStops = arguments
 		}
 		if len(result.colorStops) > 0 {
@@ -217,8 +217,8 @@ func parseRadialGradientParameters(arguments [][]Token) radialGradientParameters
 	}
 	if position.IsNone() {
 		out.position = pr.CenterPos{
-			OriginX: "left",
-			OriginY: "top",
+			OriginX: pr.Left,
+			OriginY: pr.Top,
 			Pos:     pr.Point{fiftyPercent, fiftyPercent},
 		}
 	}
@@ -382,26 +382,26 @@ func parsePosition(tokens []Token) pr.CenterPos {
 	center := parse2dPosition(tokens)
 	if !center.IsNone() {
 		return pr.CenterPos{
-			OriginX: "left",
-			OriginY: "top",
+			OriginX: pr.Left,
+			OriginY: pr.Top,
 			Pos:     center,
 		}
 	}
 
 	if len(tokens) == 4 {
-		keyword1 := getKeyword(tokens[0])
-		keyword2 := getKeyword(tokens[2])
+		keyword1 := getKeywordT(tokens[0])
+		keyword2 := getKeywordT(tokens[2])
 		length1 := getLength(tokens[1], true, true)
 		length2 := getLength(tokens[3], true, true)
 		if !length1.IsNone() && !length2.IsNone() {
-			if (keyword1 == "left" || keyword1 == "right") && (keyword2 == "top" || keyword2 == "bottom") {
+			if (keyword1 == pr.Left || keyword1 == pr.Right) && (keyword2 == pr.Top || keyword2 == pr.Bottom) {
 				return pr.CenterPos{
 					OriginX: keyword1,
 					OriginY: keyword2,
 					Pos:     pr.Point{length1, length2},
 				}
 			}
-			if (keyword2 == "left" || keyword2 == "right") && (keyword1 == "top" || keyword1 == "bottom") {
+			if (keyword2 == pr.Left || keyword2 == pr.Right) && (keyword1 == pr.Top || keyword1 == pr.Bottom) {
 				return pr.CenterPos{
 					OriginX: keyword2,
 					OriginY: keyword1,
@@ -413,31 +413,31 @@ func parsePosition(tokens []Token) pr.CenterPos {
 
 	if len(tokens) == 3 {
 		length := getLength(tokens[2], true, true)
-		var keyword, otherKeyword string
+		var keyword, otherKeyword pr.Keyword
 		if !length.IsNone() {
-			keyword = getKeyword(tokens[1])
-			otherKeyword = getKeyword(tokens[0])
+			keyword = getKeywordT(tokens[1])
+			otherKeyword = getKeywordT(tokens[0])
 		} else {
 			length = getLength(tokens[1], true, true)
-			otherKeyword = getKeyword(tokens[2])
-			keyword = getKeyword(tokens[0])
+			otherKeyword = getKeywordT(tokens[2])
+			keyword = getKeywordT(tokens[0])
 		}
 
 		if !length.IsNone() {
 			switch otherKeyword {
-			case "center":
+			case pr.Center:
 				switch keyword {
-				case "top", "bottom":
-					return pr.CenterPos{OriginX: "left", OriginY: keyword, Pos: pr.Point{fiftyPercent, length}}
-				case "left", "right":
-					return pr.CenterPos{OriginX: keyword, OriginY: "top", Pos: pr.Point{length, fiftyPercent}}
+				case pr.Top, pr.Bottom:
+					return pr.CenterPos{OriginX: pr.Left, OriginY: keyword, Pos: pr.Point{fiftyPercent, length}}
+				case pr.Left, pr.Right:
+					return pr.CenterPos{OriginX: keyword, OriginY: pr.Top, Pos: pr.Point{length, fiftyPercent}}
 				}
-			case "top", "bottom":
-				if keyword == "left" || keyword == "right" {
+			case pr.Top, pr.Bottom:
+				if keyword == pr.Left || keyword == pr.Right {
 					return pr.CenterPos{OriginX: keyword, OriginY: otherKeyword, Pos: pr.Point{length, zeroPercent}}
 				}
-			case "left", "right":
-				if keyword == "top" || keyword == "bottom" {
+			case pr.Left, pr.Right:
+				if keyword == pr.Top || keyword == pr.Bottom {
 					return pr.CenterPos{OriginX: otherKeyword, OriginY: keyword, Pos: pr.Point{zeroPercent, length}}
 				}
 			}

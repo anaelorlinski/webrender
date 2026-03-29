@@ -216,65 +216,65 @@ func TestBackground(t *testing.T) {
 		pr.PBackgroundColor:      pr.Inherit,
 	})
 	assertBackground(t, "top", toValidated(pr.Properties{
-		pr.PBackgroundPosition: pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 50, Unit: pr.Perc}, pr.Dimension{Value: 0, Unit: pr.Perc}}}},
+		pr.PBackgroundPosition: pr.Centers{{OriginX: pr.Left, OriginY: pr.Top, Pos: pr.Point{pr.Dimension{Value: 50, Unit: pr.Perc}, pr.Dimension{Value: 0, Unit: pr.Perc}}}},
 	}))
 	assertBackground(t, "top right", toValidated(pr.Properties{
-		pr.PBackgroundPosition: pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 100, Unit: pr.Perc}, pr.Dimension{Value: 0, Unit: pr.Perc}}}},
+		pr.PBackgroundPosition: pr.Centers{{OriginX: pr.Left, OriginY: pr.Top, Pos: pr.Point{pr.Dimension{Value: 100, Unit: pr.Perc}, pr.Dimension{Value: 0, Unit: pr.Perc}}}},
 	}))
 	assertBackground(t, "top right 20px", toValidated(pr.Properties{
-		pr.PBackgroundPosition: pr.Centers{{OriginX: "right", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 20, Unit: pr.Px}, pr.Dimension{Value: 0, Unit: pr.Perc}}}},
+		pr.PBackgroundPosition: pr.Centers{{OriginX: pr.Right, OriginY: pr.Top, Pos: pr.Point{pr.Dimension{Value: 20, Unit: pr.Px}, pr.Dimension{Value: 0, Unit: pr.Perc}}}},
 	}))
 	assertBackground(t, "top 1% right 20px", toValidated(pr.Properties{
-		pr.PBackgroundPosition: pr.Centers{{OriginX: "right", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 20, Unit: pr.Px}, pr.Dimension{Value: 1, Unit: pr.Perc}}}},
+		pr.PBackgroundPosition: pr.Centers{{OriginX: pr.Right, OriginY: pr.Top, Pos: pr.Point{pr.Dimension{Value: 20, Unit: pr.Px}, pr.Dimension{Value: 1, Unit: pr.Perc}}}},
 	}))
 	assertBackground(t, "top no-repeat", toValidated(pr.Properties{
 		pr.PBackgroundRepeat:   pr.Repeats{{"no-repeat", "no-repeat"}},
-		pr.PBackgroundPosition: pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 50, Unit: pr.Perc}, pr.Dimension{Value: 0, Unit: pr.Perc}}}},
+		pr.PBackgroundPosition: pr.Centers{{OriginX: pr.Left, OriginY: pr.Top, Pos: pr.Point{pr.Dimension{Value: 50, Unit: pr.Perc}, pr.Dimension{Value: 0, Unit: pr.Perc}}}},
 	}))
 	assertBackground(t, "top right no-repeat", toValidated(pr.Properties{
 		pr.PBackgroundRepeat:   pr.Repeats{{"no-repeat", "no-repeat"}},
-		pr.PBackgroundPosition: pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 100, Unit: pr.Perc}, pr.Dimension{Value: 0, Unit: pr.Perc}}}},
+		pr.PBackgroundPosition: pr.Centers{{OriginX: pr.Left, OriginY: pr.Top, Pos: pr.Point{pr.Dimension{Value: 100, Unit: pr.Perc}, pr.Dimension{Value: 0, Unit: pr.Perc}}}},
 	}))
 	assertBackground(t, "top right 20px no-repeat", toValidated(pr.Properties{
 		pr.PBackgroundRepeat:   pr.Repeats{{"no-repeat", "no-repeat"}},
-		pr.PBackgroundPosition: pr.Centers{{OriginX: "right", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 20, Unit: pr.Px}, pr.Dimension{Value: 0, Unit: pr.Perc}}}},
+		pr.PBackgroundPosition: pr.Centers{{OriginX: pr.Right, OriginY: pr.Top, Pos: pr.Point{pr.Dimension{Value: 20, Unit: pr.Px}, pr.Dimension{Value: 0, Unit: pr.Perc}}}},
 	}))
 	assertBackground(t, "top 1% right 20px no-repeat", toValidated(pr.Properties{
 		pr.PBackgroundRepeat:   pr.Repeats{{"no-repeat", "no-repeat"}},
-		pr.PBackgroundPosition: pr.Centers{{OriginX: "right", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 20, Unit: pr.Px}, pr.Dimension{Value: 1, Unit: pr.Perc}}}},
+		pr.PBackgroundPosition: pr.Centers{{OriginX: pr.Right, OriginY: pr.Top, Pos: pr.Point{pr.Dimension{Value: 20, Unit: pr.Px}, pr.Dimension{Value: 1, Unit: pr.Perc}}}},
 	}))
 	assertBackground(t, "url(bar) #f00 repeat-y center left fixed", toValidated(pr.Properties{
 		pr.PBackgroundColor:      pr.NewColor(1, 0, 0, 1),
 		pr.PBackgroundImage:      pr.Images{pr.UrlImage("https://weasyprint.org/foo/bar")},
 		pr.PBackgroundRepeat:     pr.Repeats{{"no-repeat", "repeat"}},
 		pr.PBackgroundAttachment: pr.Strings{"fixed"},
-		pr.PBackgroundPosition:   pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 0, Unit: pr.Perc}, pr.Dimension{Value: 50, Unit: pr.Perc}}}},
+		pr.PBackgroundPosition:   pr.Centers{{OriginX: pr.Left, OriginY: pr.Top, Pos: pr.Point{pr.Dimension{Value: 0, Unit: pr.Perc}, pr.Dimension{Value: 50, Unit: pr.Perc}}}},
 	}))
 	assertBackground(t, "#00f 10% 200px", toValidated(pr.Properties{
 		pr.PBackgroundColor:    pr.NewColor(0, 0, 1, 1),
-		pr.PBackgroundPosition: pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 10, Unit: pr.Perc}, pr.Dimension{Value: 200, Unit: pr.Px}}}},
+		pr.PBackgroundPosition: pr.Centers{{OriginX: pr.Left, OriginY: pr.Top, Pos: pr.Point{pr.Dimension{Value: 10, Unit: pr.Perc}, pr.Dimension{Value: 200, Unit: pr.Px}}}},
 	}))
 	assertBackground(t, "right 78px fixed", toValidated(pr.Properties{
 		pr.PBackgroundAttachment: pr.Strings{"fixed"},
-		pr.PBackgroundPosition:   pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 100, Unit: pr.Perc}, pr.Dimension{Value: 78, Unit: pr.Px}}}},
+		pr.PBackgroundPosition:   pr.Centers{{OriginX: pr.Left, OriginY: pr.Top, Pos: pr.Point{pr.Dimension{Value: 100, Unit: pr.Perc}, pr.Dimension{Value: 78, Unit: pr.Px}}}},
 	}))
 	assertBackground(t, "center / cover red", toValidated(pr.Properties{
 		pr.PBackgroundSize:     pr.Sizes{{Tag: pr.Cover}},
-		pr.PBackgroundPosition: pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 50, Unit: pr.Perc}, pr.Dimension{Value: 50, Unit: pr.Perc}}}},
+		pr.PBackgroundPosition: pr.Centers{{OriginX: pr.Left, OriginY: pr.Top, Pos: pr.Point{pr.Dimension{Value: 50, Unit: pr.Perc}, pr.Dimension{Value: 50, Unit: pr.Perc}}}},
 		pr.PBackgroundColor:    pr.NewColor(1, 0, 0, 1),
 	}))
 	assertBackground(t, "center / auto red", toValidated(pr.Properties{
 		pr.PBackgroundSize:     pr.Sizes{{Width: pr.TagToV(pr.Auto), Height: pr.TagToV(pr.Auto)}},
-		pr.PBackgroundPosition: pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 50, Unit: pr.Perc}, pr.Dimension{Value: 50, Unit: pr.Perc}}}},
+		pr.PBackgroundPosition: pr.Centers{{OriginX: pr.Left, OriginY: pr.Top, Pos: pr.Point{pr.Dimension{Value: 50, Unit: pr.Perc}, pr.Dimension{Value: 50, Unit: pr.Perc}}}},
 		pr.PBackgroundColor:    pr.NewColor(1, 0, 0, 1),
 	}))
 	assertBackground(t, "center / 42px", toValidated(pr.Properties{
 		pr.PBackgroundSize:     pr.Sizes{{Width: pr.Dimension{Value: 42, Unit: pr.Px}.Tagged(), Height: pr.TagToV(pr.Auto)}},
-		pr.PBackgroundPosition: pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 50, Unit: pr.Perc}, pr.Dimension{Value: 50, Unit: pr.Perc}}}},
+		pr.PBackgroundPosition: pr.Centers{{OriginX: pr.Left, OriginY: pr.Top, Pos: pr.Point{pr.Dimension{Value: 50, Unit: pr.Perc}, pr.Dimension{Value: 50, Unit: pr.Perc}}}},
 	}))
 	assertBackground(t, "center / 7% 4em", toValidated(pr.Properties{
 		pr.PBackgroundSize:     pr.Sizes{{Width: pr.Dimension{Value: 7, Unit: pr.Perc}.Tagged(), Height: pr.Dimension{Value: 4, Unit: pr.Em}.Tagged()}},
-		pr.PBackgroundPosition: pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 50, Unit: pr.Perc}, pr.Dimension{Value: 50, Unit: pr.Perc}}}},
+		pr.PBackgroundPosition: pr.Centers{{OriginX: pr.Left, OriginY: pr.Top, Pos: pr.Point{pr.Dimension{Value: 50, Unit: pr.Perc}, pr.Dimension{Value: 50, Unit: pr.Perc}}}},
 	}))
 	assertBackground(t, "red content-box", toValidated(pr.Properties{
 		pr.PBackgroundColor:  pr.NewColor(1, 0, 0, 1),
@@ -290,8 +290,8 @@ func TestBackground(t *testing.T) {
 		pr.PBackgroundColor: pr.NewColor(0, 0, 0, 0),
 		pr.PBackgroundImage: pr.Images{pr.UrlImage("https://weasyprint.org/foo/bar"), pr.NoneImage{}},
 		pr.PBackgroundPosition: pr.Centers{
-			{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 50, Unit: pr.Perc}, pr.Dimension{Value: 50, Unit: pr.Perc}}},
-			{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 0, Unit: pr.Perc}, pr.Dimension{Value: 0, Unit: pr.Perc}}},
+			{OriginX: pr.Left, OriginY: pr.Top, Pos: pr.Point{pr.Dimension{Value: 50, Unit: pr.Perc}, pr.Dimension{Value: 50, Unit: pr.Perc}}},
+			{OriginX: pr.Left, OriginY: pr.Top, Pos: pr.Point{pr.Dimension{Value: 0, Unit: pr.Perc}, pr.Dimension{Value: 0, Unit: pr.Perc}}},
 		},
 		pr.PBackgroundRepeat: pr.Repeats{{"repeat", "repeat"}, {"no-repeat", "no-repeat"}},
 	}))
