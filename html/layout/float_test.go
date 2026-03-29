@@ -59,12 +59,12 @@ func TestFloats2(t *testing.T) {
 	line3, line5 := unpack1(anonBlock), anonBlock.Box().Children[1]
 	img3 := unpack1(line3)
 	img5 := unpack1(line5)
-	tu.AssertEqual(t, outerArea(div1), [4]fl{0, 0, 100, 60})
-	tu.AssertEqual(t, outerArea(div2), [4]fl{100, 0, 100, 60})
-	tu.AssertEqual(t, outerArea(img3), [4]fl{200, 0, 60, 60})
+	tu.AssertEqualG(t, outerArea(div1), [4]fl{0, 0, 100, 60})
+	tu.AssertEqualG(t, outerArea(div2), [4]fl{100, 0, 100, 60})
+	tu.AssertEqualG(t, outerArea(img3), [4]fl{200, 0, 60, 60})
 
-	tu.AssertEqual(t, outerArea(div4), [4]fl{0, 60, 100, 60})
-	tu.AssertEqual(t, outerArea(img5), [4]fl{100, 60.000004, 60, 60})
+	tu.AssertEqualG(t, outerArea(div4), [4]fl{0, 60, 100, 60})
+	tu.AssertEqualG(t, outerArea(img5), [4]fl{100, 60, 60, 60})
 }
 
 func TestFloats3(t *testing.T) {

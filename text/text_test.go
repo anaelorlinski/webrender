@@ -933,9 +933,7 @@ func TestSplitRTL(t *testing.T) {
 
 func TestSegmentRTL(t *testing.T) {
 	fcGotext := NewFontConfigurationGotext(fontmapGotext)
-	fcPango := NewFontConfigurationPango(fontmapPango)
 	addWeayprintFont(t, fcGotext)
-	addWeayprintFont(t, fcPango)
 
 	style := &TextStyle{FontDescription: FontDescription{
 		Family:  []string{"weasyprint"},
@@ -946,10 +944,7 @@ func TestSegmentRTL(t *testing.T) {
 	}}
 
 	gotext := fcGotext.wrap([]rune("\u200fabc"), style, pr.Inf)
-	pango := wrapPango(fcPango, "\u200fabc", style, nil)
 	runs := gotext.Layout.(TextLayoutGotext).Line
 	tu.Assert(t, len(runs) == 2 && runs[0].Face == runs[1].Face) // dont change for "\u200f"
-	// fmt.Println(gotext.Height, pango.Height)
-	// runs := pango.Layout.(*TextLayoutPango).Layout.GetLine(0).Runs
-	// fmt.Println(runs.Data.Item.Analysis.Font.FaceID(), runs.Next.Data.Item.Analysis.Font.FaceID())
+	tu.AssertEqualG(t, gotext.Height, 10)
 }

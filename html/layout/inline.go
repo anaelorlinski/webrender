@@ -367,7 +367,6 @@ func removeLastWhitespace(context *layoutContext, line *bo.LineBox) {
 
 	// RTL line, the trailing space is at the left of the box. We have to translate the
 	// box to align the stripped text with the right edge of the box.
-	fmt.Println(newText, textBox.FirstLineIsRTL)
 	if textBox.FirstLineIsRTL {
 		for _, child := range line.Children {
 			child.Translate(-spaceWidth, 0, true)

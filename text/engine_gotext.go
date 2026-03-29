@@ -632,9 +632,6 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 		Baseline:     top,
 	}
 
-	fmt.Println(fc.fm.FontLocation(line[0].Face.Font))
-	fmt.Println(fc.fm.FontLocation(line[1].Face.Font))
-
 	fc.textLayoutCache[key] = out
 
 	return out
