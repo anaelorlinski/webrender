@@ -137,7 +137,7 @@ func (f *FontConfigurationGotext) loadOneFont(url pr.TaggedString, ruleDescripto
 	f.fm.AddFace(font.NewFace(ft), fontscan.Location{File: key}, desc)
 
 	if url.Tag == pr.External {
-		f.fontsContent[url.S] = content
+		f.fontsContent[key] = content
 	}
 
 	// track the font features to apply
