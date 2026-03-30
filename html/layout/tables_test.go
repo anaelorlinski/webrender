@@ -943,7 +943,7 @@ func TestLayoutTableAuto20(t *testing.T) {
 	td1, td2, td3 := unpack3(row)
 	tu.AssertEqual(t, td1.Box().Width, Fl(50))
 	tu.AssertEqual(t, td2.Box().Width, Fl(30))
-	tu.AssertEqual(t, td3.Box().Width, Fl(120.00001))
+	tu.AssertEqual(t, td3.Box().Width, Fl(120))
 	tu.AssertEqual(t, table.Box().Width, Fl(200))
 }
 

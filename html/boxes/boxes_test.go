@@ -37,8 +37,8 @@ var (
 
 //  Test that the "before layout" box tree is correctly constructed.
 
-func fakeHTML(html *tree.HTML) *tree.HTML {
-	html.UAStyleSheet = fonts.UAStylesheet
+func fakeHTML(html *tree.HTML, baseURL string) *tree.HTML {
+	html.UAStyleSheet = fonts.UAStylesheet(baseURL)
 	return html
 }
 
@@ -48,10 +48,12 @@ func parseBase(t testing.TB, content utils.ContentInput, baseUrl string) (*utils
 	t.Helper()
 
 	html, err := tree.NewHTML(content, baseUrl, utils.DefaultUrlFetcher, "")
-	if err != nil {
-		t.Fatalf("parsing HTML failed: %s", err)
-	}
-	document := fakeHTML(html)
+	tu.AssertNoErr(t, err)
+
+	baseUrlFonts, err := utils.PathToURL("../../resources_test/")
+	tu.AssertNoErr(t, err)
+
+	document := fakeHTML(html, baseUrlFonts)
 	cs := make(counters.CounterStyle)
 	style := tree.GetAllComputedStyles(document, nil, false, nil, cs, nil, nil, false, nil)
 	imgFetcher := func(url string, forcedMimeType string, orientation pr.SBoolFloat) images.Image {
@@ -518,7 +520,11 @@ func testPageStyle(t *testing.T, data pageStyleData) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	document = fakeHTML(document)
+
+	baseUrl, err := utils.PathToURL("../../resources_test")
+	tu.AssertNoErr(t, err)
+
+	document = fakeHTML(document, baseUrl)
 	styleFor := tree.GetAllComputedStyles(document, nil, false, nil, nil, nil, nil, false, nil)
 
 	// Force the generation of the style for this page type as it"s generally
@@ -587,9 +593,7 @@ func TestImages2(t *testing.T) {
 
 	result := parseAndBuildExt(t, `<p><img src=pattern.png alt="No baseUrl">`, "")
 	logs := cp.Logs()
-	if L := len(logs); L != 1 {
-		t.Fatalf("expected one log, got %d", L)
-	}
+	tu.AssertEqualG(t, len(logs), 1)
 	if !strings.Contains(logs[0], "Relative URI reference without a base URI") {
 		t.Fatal(logs[0])
 	}

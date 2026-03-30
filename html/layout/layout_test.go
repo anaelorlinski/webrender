@@ -26,7 +26,7 @@ func renderPages(t *testing.T, htmlContent string, css ...tree.CSS) []*bo.PageBo
 	if err != nil {
 		t.Fatal(err)
 	}
-	doc.UAStyleSheet = fonts.UAStylesheet
+	doc.UAStyleSheet = fonts.UAStylesheet(baseUrl)
 	return Layout(doc, css, false, fonts.FontConfig)
 }
 
@@ -558,16 +558,26 @@ func TestCrashSplitFirstLine(t *testing.T) {
 }
 
 func TestDebug(t *testing.T) {
-	renderOnePage(t, `
-	 <style>
-        @page { background: white; size: 9px }
-        body { font-family: weasyprint; color: blue; font-size: 1px }
-        p { background: red; line-height: 1; width: 7em; margin: 1em }
-      </style>
-      <!-- &#8207 forces Unicode RTL direction for the following chars -->
-      <p style="direction: rtl"> abc </p>
-      <p style="direction: rtl"> &#8207;abc </p>
-      <p style="direction: ltr"> abc </p>
-      <p style="direction: ltr"> &#8207;abc </p>
+	renderPages(t, `
+	<style>
+            @page {
+                size: 16px 2px;
+            }
+            body {
+                color: red;
+                font-family: weasyprint;
+                font-size: 2px;
+                line-height: 1;
+            }
+            div.split {
+                color: blue;
+                left: 0;
+                position: absolute;
+                top: 0;
+                width: 4px;
+            }
+        </style>
+        <div class="split">aa aa</div>
+        <div>bbbbbb bbb</div>
   `)
 }

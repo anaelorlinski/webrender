@@ -14,9 +14,6 @@ import (
 	"github.com/go-text/typesetting/fontscan"
 )
 
-// UAStylesheet is a lightweight style sheet
-var UAStylesheet tree.CSS
-
 const (
 	fontmapCachePango  = "../../text/testdata/cache.fc"
 	fontmapCacheGotext = "../../text/testdata"
@@ -28,8 +25,6 @@ const (
 var FontConfig text.FontConfiguration
 
 func init() {
-	var err error
-
 	if useGoText {
 		fontmapGotext := fontscan.NewFontMap(log.Default())
 		err := fontmapGotext.UseSystemFonts(fontmapCacheGotext)
@@ -38,9 +33,9 @@ func init() {
 		}
 		FontConfig = text.NewFontConfigurationGotext(fontmapGotext)
 	} else {
-		// // this command has to run once
+		// this command has to run once
 		// fmt.Println("Scanning fonts...")
-		// _, err = fc.ScanAndCache(fontmapCachePango)
+		// _, err := fc.ScanAndCache(fontmapCachePango)
 		// if err != nil {
 		// 	panic(err)
 		// }
@@ -51,10 +46,21 @@ func init() {
 		FontConfig = text.NewFontConfigurationPango(fcfonts.NewFontMap(fc.Standard.Copy(), fs))
 	}
 
-	baseUrl, _ := utils.PathToURL("../../resources_test/")
+	// baseUrl, err := utils.PathToURL("../../resources_test/")
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	UAStylesheet, err = tree.NewCSSExt(utils.InputString(resourcestest.TestUACSS), baseUrl, FontConfig)
+	// UAStylesheet, err = tree.NewCSSExt(utils.InputString(resourcestest.TestUACSS), baseUrl, FontConfig)
+	// if err != nil {
+	// 	panic(fmt.Sprintf("invalid embedded stylesheet: %s", err))
+	// }
+}
+
+func UAStylesheet(baseURL string) tree.CSS {
+	out, err := tree.NewCSSExt(utils.InputString(resourcestest.TestUACSS), baseURL, FontConfig)
 	if err != nil {
 		panic(fmt.Sprintf("invalid embedded stylesheet: %s", err))
 	}
+	return out
 }

@@ -168,29 +168,31 @@ func TestLeaderCrash(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	doc.UAStyleSheet = fonts.UAStylesheet
+	doc.UAStyleSheet = fonts.UAStylesheet(".")
 	finalDoc := Render(doc, nil, true, fc)
 	finalDoc.Write(tracer.NewDrawerNoOp(), 4./30, nil)
 }
 
 func TestDebug(t *testing.T) {
 	input := `
-	<style>
-        @page { size: 20px 10px; margin: 1px }
-        body { text-align: right; font-size: 0 }
-        table { display: inline-table; width: 11px }
-        td { border: 1px red solid; width: 4px; height: 3px }
+     <style>
+        @page { background: white; size: 9px }
+        body { font-family: weasyprint; color: blue; font-size: 1px }
+        p { background: red; line-height: 1; width: 7em; margin: 1em }
       </style>
-      <table style="table-layout: fixed; border-collapse: collapse">
-        <tr><td></td><td></td></tr>
+      <!-- &#8207 forces Unicode RTL direction for the following chars -->
+      <p style="direction: rtl"> abc </p>
+      <p style="direction: rtl"> &#8207;abc </p>
+      <p style="direction: ltr"> abc </p>
+      <p style="direction: ltr"> &#8207;abc </p>
   `
 
-	doc, err := tree.NewHTML(utils.InputString(input), baseUrl, nil, "")
+	parsedHTML, err := tree.NewHTML(utils.InputString(input), baseUrl, nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	doc.UAStyleSheet = fonts.UAStylesheet
-	finalDoc := Render(doc, nil, true, fc)
+	parsedHTML.UAStyleSheet = fonts.UAStylesheet(baseUrl)
+	finalDoc := Render(parsedHTML, nil, false, fc)
 	finalDoc.Write(tracer.NewDrawerFile("/tmp/drawer_go.txt"), 4./30, nil)
 }
 

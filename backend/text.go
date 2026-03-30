@@ -37,9 +37,10 @@ type GID = uint32
 
 // TextGlyph stores a glyph and it's position
 type TextGlyph struct {
+	Glyph GID
+
 	Kerning  int // normalized by FontSize
-	Glyph    GID
-	Offset   Fl // normalized by FontSize
+	Offset   Fl  // normalized by FontSize
 	Rise     Fl
 	XAdvance Fl // how much to move before drawing, used for emojis
 

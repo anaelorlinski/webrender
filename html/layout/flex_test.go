@@ -759,7 +759,7 @@ func TestFlexItemPercentage(t *testing.T) {
 	body := unpack1(html)
 	flex := unpack1(body)
 	flexItem := unpack1(flex)
-	tu.AssertEqual(t, flexItem.Box().Height, Fl(15.000004))
+	tu.AssertEqual(t, flexItem.Box().Height, Fl(15))
 }
 
 func TestFlexUndefinedPercentageHeightMultipleLines(t *testing.T) {

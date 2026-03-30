@@ -24,7 +24,7 @@ func AssertEqualG[T any](t *testing.T, got, exp T) {
 	AssertEqual(t, got, exp)
 }
 
-func AssertNoErr(t *testing.T, err error) {
+func AssertNoErr(t testing.TB, err error) {
 	t.Helper()
 	if err != nil {
 		t.Fatalf("unexpected error %s", err)

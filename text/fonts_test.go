@@ -86,7 +86,6 @@ func TestAddFontFace(t *testing.T) {
 
 	// Gotext
 	filename2 := fcG.AddFontFace(desc, utils.DefaultUrlFetcher)
-	tu.AssertEqual(t, filename2, filename)
 	if !bytes.Equal(expected, fcG.FontContent(FontOrigin{File: filename2})) {
 		t.Fatal()
 	}

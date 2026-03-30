@@ -3,6 +3,7 @@ package draw
 import (
 	"bytes"
 	"fmt"
+	"slices"
 
 	"github.com/benoitkugler/webrender/backend"
 	pr "github.com/benoitkugler/webrender/css/properties"
@@ -26,7 +27,6 @@ func (f *gotextFont) Origin() text.FontOrigin { return text.FontOrigin(f.id) }
 func (f *gotextFont) Description() backend.FontDescription {
 	extents, _ := f.face.FontHExtents()
 	meta := f.face.Describe()
-	upem := float32(f.face.Upem())
 
 	out := backend.FontDescription{
 		Family: meta.Family,
@@ -35,8 +35,8 @@ func (f *gotextFont) Description() backend.FontDescription {
 		Weight: int(meta.Aspect.Weight),
 	}
 	if f.size != 0 {
-		out.Ascent = extents.Ascender * upem / utils.Fl(f.size)
-		out.Descent = extents.Descender * upem / utils.Fl(f.size)
+		out.Ascent = extents.Ascender * 1000 / utils.Fl(f.size)
+		out.Descent = extents.Descender * 1000 / utils.Fl(f.size)
 	}
 
 	out.IsOpentype = true
@@ -131,6 +131,7 @@ func (ctx Context) createFirstLineGotext(layout text.TextLayoutGotext,
 			backendFont := &gotextFont{face, location, run.Size.Round()}
 			outFont = ctx.Output.AddFont(backendFont, content)
 
+			lastFont = face.Font
 			lastFontChars = outFont
 
 			outRun := backend.TextRun{Font: backendFont}
@@ -139,9 +140,11 @@ func (ctx Context) createFirstLineGotext(layout text.TextLayoutGotext,
 
 		runDst := &output.Runs[len(output.Runs)-1]
 
-		runDst.Glyphs = make([]backend.TextGlyph, len(run.Glyphs))
+		currentL := len(runDst.Glyphs)
+		nextL := currentL + len(run.Glyphs)
+		runDst.Glyphs = slices.Grow(runDst.Glyphs, len(run.Glyphs))[0:nextL]
 		for i, glyphInfo := range run.Glyphs {
-			outGlyph := &runDst.Glyphs[i]
+			outGlyph := &runDst.Glyphs[currentL+i]
 			width := fixedToFloat(glyphInfo.Advance)
 			glyph := glyphInfo.GlyphID
 
@@ -161,26 +164,26 @@ func (ctx Context) createFirstLineGotext(layout text.TextLayoutGotext,
 				x1, y1, x2, y2 := extents.XBearing, -extents.YBearing-extents.Height,
 					extents.XBearing+extents.Width, -extents.YBearing
 				if int(x1) < outFont.Bbox[0] {
-					outFont.Bbox[0] = int(x1 / fontSize)
+					outFont.Bbox[0] = int(x1 * 1000 / fontSize)
 				}
 				if int(y1) < outFont.Bbox[1] {
-					outFont.Bbox[1] = int(y1 / fontSize)
+					outFont.Bbox[1] = int(y1 * 1000 / fontSize)
 				}
 				if int(x2) > outFont.Bbox[2] {
-					outFont.Bbox[2] = int(x2 / fontSize)
+					outFont.Bbox[2] = int(x2 * 1000 / fontSize)
 				}
 				if int(y2) > outFont.Bbox[3] {
-					outFont.Bbox[3] = int(y2 / fontSize)
+					outFont.Bbox[3] = int(y2 * 1000 / fontSize)
 				}
 				outFont.Extents[outGlyph.Glyph] = backend.GlyphExtents{
-					Width:  int(extents.Width / fontSize),
-					Y:      int(extents.YBearing / fontSize),
-					Height: int(extents.Height / fontSize),
+					Width:  int(extents.Width / 1024 * 1000),
+					Y:      int(extents.YBearing / 1024 * 1000),
+					Height: int(extents.Height / 1024 * 1000),
 				}
 			}
 
 			// Kerning, word spacing, letter spacing
-			outGlyph.Kerning = int(pr.Fl(outFont.Extents[outGlyph.Glyph].Width) - width/fontSize + outGlyph.Offset)
+			outGlyph.Kerning = int(pr.Fl(outFont.Extents[outGlyph.Glyph].Width) - width*1000/fontSize + outGlyph.Offset)
 
 			// Mapping between glyphs and characters
 			outGlyph.TextOffset, outGlyph.TextLength = glyphInfo.TextIndex(), glyphInfo.RunesCount()

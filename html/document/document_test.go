@@ -261,10 +261,11 @@ func TestAssertBookmarks(t *testing.T) {
 
 func renderHTML(t *testing.T, html string, baseUrl string, round bool) Document {
 	doc, err := tree.NewHTML(utils.InputString(html), baseUrl, nil, "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	doc.UAStyleSheet = fonts.UAStylesheet // fakeHTML
+	tu.AssertNoErr(t, err)
+
+	baseUrlFonts, err := utils.PathToURL("../../resources_test/")
+	tu.AssertNoErr(t, err)
+	doc.UAStyleSheet = fonts.UAStylesheet(baseUrlFonts) // fakeHTML
 
 	document := Render(doc, nil, false, fc)
 	if round {

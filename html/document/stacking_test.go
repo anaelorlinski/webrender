@@ -21,7 +21,7 @@ func renderPages(t *testing.T, htmlContent string) []*bo.PageBox {
 	if err != nil {
 		t.Fatal(err)
 	}
-	doc.UAStyleSheet = fonts.UAStylesheet // fakeHTML
+	doc.UAStyleSheet = fonts.UAStylesheet(baseUrl) // fakeHTML
 	return layout.Layout(doc, nil, false, fc)
 }
 

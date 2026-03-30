@@ -59,7 +59,7 @@ func NewFontConfigurationGotext(fm *fontscan.FontMap) *FontConfigurationGotext {
 // AddFontFace load a font file from an external source, using
 // the given [urlFetcher], which must be valid.
 //
-// It returns the file name of the loaded file.
+// It returns the key of the loaded file.
 func (f *FontConfigurationGotext) AddFontFace(ruleDescriptors validation.FontFaceDescriptors, urlFetcher utils.UrlFetcher) string {
 	for _, url := range ruleDescriptors.Src {
 		if url.S == "" {
@@ -71,7 +71,7 @@ func (f *FontConfigurationGotext) AddFontFace(ruleDescriptors validation.FontFac
 
 		filename, err := f.loadOneFont(url, ruleDescriptors, urlFetcher)
 		if err != nil {
-			logger.WarningLogger.Println(err)
+			logger.WarningLogger.Printf("AddFonfFace: %s\n", err)
 			continue
 		}
 
@@ -143,7 +143,7 @@ func (f *FontConfigurationGotext) loadOneFont(url pr.TaggedString, ruleDescripto
 	// track the font features to apply
 	f.fontsFeatures[ft] = getFontFaceFeatures(ruleDescriptors)
 
-	return url.S, nil
+	return key, nil
 }
 
 func (f *FontConfigurationGotext) FontLocation(font *font.Font) fontscan.Location {
@@ -162,7 +162,7 @@ func (f *FontConfigurationGotext) FontContent(font FontOrigin) []byte {
 
 	b, err := os.ReadFile(font.File)
 	if err != nil {
-		logger.WarningLogger.Println(err)
+		logger.WarningLogger.Println("FontContent:", err)
 	}
 	// cache the result to avoid loading the same file over and over
 	f.fontsContent[font.File] = b

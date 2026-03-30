@@ -167,7 +167,7 @@ func (f *FontConfigurationPango) AddFontFace(ruleDescriptors validation.FontFace
 
 		filename, err := f.loadOneFont(url, ruleDescriptors, urlFetcher)
 		if err != nil {
-			logger.WarningLogger.Println(err)
+			logger.WarningLogger.Println("AddFontFace", err)
 			continue
 		}
 
