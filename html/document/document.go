@@ -525,14 +525,7 @@ func (d *Document) Write(target backend.Document, zoom pr.Fl, attachments []back
 	target.SetBookmarks(d.makeBookmarkTree())
 
 	// Set document information
-	target.SetTitle(d.Metadata.Title)
-	target.SetDescription(d.Metadata.Description)
-	target.SetCreator(d.Metadata.Generator)
-	target.SetAuthors(d.Metadata.Authors)
-	target.SetKeywords(d.Metadata.Keywords)
-	target.SetProducer(utils.VersionString)
-	target.SetDateCreation(d.Metadata.Created)
-	target.SetDateModification(d.Metadata.Modified)
+	target.SetMetadata(utils.VersionString, d.Metadata)
 }
 
 func (d *Document) embedFileAnnotations(pagedLinks [][]Link, context backend.Document) {

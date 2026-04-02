@@ -1,7 +1,7 @@
 package backend
 
 import (
-	"time"
+	"github.com/benoitkugler/webrender/utils"
 )
 
 type Anchor struct {
@@ -46,16 +46,7 @@ type Document interface {
 	// `fileID` will be passed to `OutputPage.AddFileAnnotation`
 	EmbedFile(fileID string, a Attachment)
 
-	// Metadatas
-
-	SetTitle(title string)
-	SetDescription(description string)
-	SetCreator(creator string)
-	SetAuthors(authors []string)
-	SetKeywords(keywords []string)
-	SetProducer(producer string)
-	SetDateCreation(d time.Time)
-	SetDateModification(d time.Time)
+	SetMetadata(producer string, meta utils.DocumentMetadata)
 
 	// SetBookmarks setup the document outline
 	SetBookmarks(root []BookmarkNode)

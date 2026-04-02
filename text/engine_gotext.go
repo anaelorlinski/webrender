@@ -526,7 +526,7 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 
 	// now we can wrap the runs
 	config := shaping.WrapConfig{
-		Direction:                     dir,           // overall direction of the text, deduced from the first runes
+		Direction:                     dir,           // overall direction of the text
 		BreakPolicy:                   shaping.Never, // mimic the default pango behavior
 		DisableTrailingWhitespaceTrim: !spaceCollapse,
 	}
@@ -589,8 +589,7 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 	}
 
 	// copy the line, owned by lineWrapper
-	outLine := make(shaping.Line, len(line))
-	copy(outLine, line)
+	outLine := slices.Clone(line)
 
 	var (
 		width fixed.Int26_6
@@ -619,6 +618,12 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 		// weasyprint puts the collapsed space on the line...
 		if (width + wLine.TrimmedTrailingWhitespace) <= mw {
 			width += wLine.TrimmedTrailingWhitespace
+			// in RTL direction, the collapsed char must be expanded again
+			// Note that the line is already sorted in visual order
+			if dir.Progression() == di.TowardTopLeft {
+				glyphs := outLine[0].Glyphs
+				glyphs[0].Advance += wLine.TrimmedTrailingWhitespace
+			}
 		}
 	}
 

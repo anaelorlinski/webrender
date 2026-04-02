@@ -5,11 +5,11 @@ import (
 	"io"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/benoitkugler/webrender/backend"
 	"github.com/benoitkugler/webrender/css/parser"
 	"github.com/benoitkugler/webrender/matrix"
+	"github.com/benoitkugler/webrender/utils"
 )
 
 // implements a logging backend, used for debugging
@@ -61,36 +61,8 @@ func (dr Drawer) EmbedFile(id string, a backend.Attachment) {
 	dr.println("EmbedFile :")
 }
 
-func (dr Drawer) SetTitle(title string) {
-	dr.println("SetTitle :")
-}
-
-func (dr Drawer) SetDescription(description string) {
-	dr.println("SetDescription :")
-}
-
-func (dr Drawer) SetCreator(creator string) {
-	dr.println("SetCreator :")
-}
-
-func (dr Drawer) SetAuthors(authors []string) {
-	dr.println("SetAuthors :")
-}
-
-func (dr Drawer) SetKeywords(keywords []string) {
-	dr.println("SetKeywords :")
-}
-
-func (dr Drawer) SetProducer(producer string) {
-	dr.println("SetProducer :")
-}
-
-func (dr Drawer) SetDateCreation(d time.Time) {
-	dr.println("SetDateCreation :")
-}
-
-func (dr Drawer) SetDateModification(d time.Time) {
-	dr.println("SetDateModification :")
+func (dr Drawer) SetMetadata(_ string, _ utils.DocumentMetadata) {
+	dr.println("SetMetadata :")
 }
 
 func (dr Drawer) SetBookmarks([]backend.BookmarkNode) {

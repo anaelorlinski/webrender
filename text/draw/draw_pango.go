@@ -3,6 +3,7 @@ package draw
 import (
 	"bytes"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/benoitkugler/textlayout/fonts"
@@ -137,10 +138,12 @@ func (ctx Context) createFirstLinePango(layout *text.TextLayoutPango,
 		}
 		utf8Positions = append(utf8Positions, offset+glyphItem.Item.Length)
 
-		runDst.Glyphs = make([]backend.TextGlyph, len(glyphString.Glyphs))
 		var prevUtf8Position int
+		currentL := len(runDst.Glyphs)
+		nextL := currentL + len(glyphString.Glyphs)
+		runDst.Glyphs = slices.Grow(runDst.Glyphs, len(glyphString.Glyphs))[0:nextL]
 		for i, glyphInfo := range glyphString.Glyphs {
-			outGlyph := &runDst.Glyphs[i]
+			outGlyph := &runDst.Glyphs[currentL+i]
 			width := glyphInfo.Geometry.Width
 			glyph := glyphInfo.Glyph
 

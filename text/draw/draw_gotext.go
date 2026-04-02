@@ -145,7 +145,7 @@ func (ctx Context) createFirstLineGotext(layout text.TextLayoutGotext,
 		runDst.Glyphs = slices.Grow(runDst.Glyphs, len(run.Glyphs))[0:nextL]
 		for i, glyphInfo := range run.Glyphs {
 			outGlyph := &runDst.Glyphs[currentL+i]
-			width := fixedToFloat(glyphInfo.Advance)
+			gAdvance := fixedToFloat(glyphInfo.Advance)
 			glyph := glyphInfo.GlyphID
 
 			// if glyph == pango.GLYPH_EMPTY || glyph&pango.GLYPH_UNKNOWN_FLAG != 0 {
@@ -183,7 +183,7 @@ func (ctx Context) createFirstLineGotext(layout text.TextLayoutGotext,
 			}
 
 			// Kerning, word spacing, letter spacing
-			outGlyph.Kerning = int(pr.Fl(outFont.Extents[outGlyph.Glyph].Width) - width*1000/fontSize + outGlyph.Offset)
+			outGlyph.Kerning = int(pr.Fl(outFont.Extents[outGlyph.Glyph].Width) - gAdvance*1000/fontSize + outGlyph.Offset)
 
 			// Mapping between glyphs and characters
 			outGlyph.TextOffset, outGlyph.TextLength = glyphInfo.TextIndex(), glyphInfo.RunesCount()
@@ -192,7 +192,7 @@ func (ctx Context) createFirstLineGotext(layout text.TextLayoutGotext,
 			}
 			// advance
 			outGlyph.XAdvance = xAdvance
-			xAdvance += pr.Fl(outFont.Extents[outGlyph.Glyph].Width) + outGlyph.Offset - pr.Fl(outGlyph.Kerning)
+			xAdvance += gAdvance*1000/fontSize + outGlyph.Offset - pr.Fl(outGlyph.Kerning)
 		}
 	}
 

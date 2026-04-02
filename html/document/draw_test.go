@@ -182,9 +182,9 @@ func TestDebug(t *testing.T) {
       </style>
       <!-- &#8207 forces Unicode RTL direction for the following chars -->
       <p style="direction: rtl"> abc </p>
-      <p style="direction: rtl"> &#8207;abc </p>
-      <p style="direction: ltr"> abc </p>
-      <p style="direction: ltr"> &#8207;abc </p>
+      <p style="direction: rtl"> &#8207;def </p>
+      <p style="direction: ltr"> ghi </p>
+      <p style="direction: ltr"> &#8207;jkl </p>
   `
 
 	parsedHTML, err := tree.NewHTML(utils.InputString(input), baseUrl, nil, "")
@@ -193,7 +193,16 @@ func TestDebug(t *testing.T) {
 	}
 	parsedHTML.UAStyleSheet = fonts.UAStylesheet(baseUrl)
 	finalDoc := Render(parsedHTML, nil, false, fc)
-	finalDoc.Write(tracer.NewDrawerFile("/tmp/drawer_go.txt"), 4./30, nil)
+	var rec recordingDrawer
+	finalDoc.Write(&rec, 4./30, nil)
+	for _, text := range rec.texts {
+		for _, runs := range text {
+			fmt.Println(runs.X, runs.Y, runs.Matrix())
+			for _, r := range runs.Runs {
+				fmt.Println(r.Font.Origin(), r.Glyphs)
+			}
+		}
+	}
 }
 
 func BenchmarkRenderAttestation(b *testing.B) {

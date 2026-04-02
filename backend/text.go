@@ -6,8 +6,9 @@ import (
 )
 
 // TextDrawing exposes the positionned text glyphs to draw
-// and the associated font, in a backend independent manner
+// and the associated font, in a backend independent manner.
 type TextDrawing struct {
+	// All the runs should be displayed sequentially
 	Runs []TextRun
 
 	FontSize, ScaleX Fl
@@ -39,9 +40,10 @@ type GID = uint32
 type TextGlyph struct {
 	Glyph GID
 
-	Kerning  int // normalized by FontSize
-	Offset   Fl  // normalized by FontSize
-	Rise     Fl
+	Kerning int // normalized by FontSize
+	Offset  Fl  // normalized by FontSize
+	Rise    Fl
+
 	XAdvance Fl // how much to move before drawing, used for emojis
 
 	// TextDrawing.Text[TextOffset:TextOffset+TextLength]

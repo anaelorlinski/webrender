@@ -9,9 +9,11 @@ import (
 	bo "github.com/benoitkugler/webrender/html/boxes"
 	"github.com/benoitkugler/webrender/html/tree"
 	"github.com/benoitkugler/webrender/logger"
+	"github.com/benoitkugler/webrender/text"
 	"github.com/benoitkugler/webrender/utils"
 	tu "github.com/benoitkugler/webrender/utils/testutils"
 	"github.com/benoitkugler/webrender/utils/testutils/fonts"
+	"golang.org/x/image/math/fixed"
 )
 
 var baseUrl, _ = utils.PathToURL("../../resources_test/")
@@ -555,6 +557,35 @@ func TestCrashSplitFirstLine(t *testing.T) {
 	</body>
 	`
 	_ = renderPages(t, input)
+}
+
+func TestWhitespace(t *testing.T) {
+	input := ` 
+	<style>
+        @page { background: white; size: 9px }
+        body { font-family: weasyprint; color: blue; font-size: 1px }
+        p { background: red; line-height: 1; width: 7em; margin: 1em }
+	</style>
+      <!-- &#8207 forces Unicode RTL direction for the following chars -->
+      <p style="direction: rtl"> abc </p>
+      <p style="direction: rtl"> &#8207;def </p>
+      <p style="direction: ltr"> ghi </p>
+      <p style="direction: ltr"> &#8207;jkl </p>`
+	page := renderOnePage(t, input)
+	linebox := unpack1(unpack1(unpack1(unpack1(page))))
+	layout := unpack1(linebox).(*bo.TextBox).TextLayout
+	switch layout := layout.(type) {
+	case text.TextLayoutGotext:
+		run1, _ := layout.Line[0], layout.Line[1]
+		g := run1.Glyphs[0]
+		tu.AssertEqualG(t, g.GlyphID, 1)
+		tu.AssertEqualG(t, g.Advance, fixed.I(1))
+	case *text.TextLayoutPango:
+		run := layout.Layout.GetLine(0).Runs.Data
+		g := run.Glyphs.Glyphs[0]
+		tu.AssertEqualG(t, g.Glyph, 1)
+		tu.AssertEqualG(t, g.Geometry.Width, 1024)
+	}
 }
 
 func TestDebug(t *testing.T) {
