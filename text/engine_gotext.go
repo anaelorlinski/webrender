@@ -622,7 +622,9 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 			// Note that the line is already sorted in visual order
 			if dir.Progression() == di.TowardTopLeft {
 				glyphs := outLine[0].Glyphs
-				glyphs[0].Advance += wLine.TrimmedTrailingWhitespace
+				if len(glyphs) != 0 {
+					glyphs[0].Advance += wLine.TrimmedTrailingWhitespace
+				}
 			}
 		}
 	}
