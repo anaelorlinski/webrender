@@ -532,6 +532,14 @@ type AnonymousStyle struct {
 	specified pr.SpecifiedAttributes
 }
 
+// NewAnonymousStyle returns a fresh anonymous style inheriting from
+// `parentStyle`. Anonymous styles are used by box generators that
+// create non-element boxes (e.g. ::first-letter children) that should
+// inherit but not match selectors.
+func NewAnonymousStyle(parentStyle pr.ElementStyle) pr.ElementStyle {
+	return newAnonymousStyle(parentStyle)
+}
+
 func newAnonymousStyle(parentStyle pr.ElementStyle) *AnonymousStyle {
 	out := &AnonymousStyle{
 		propsCache:  newPropsCache(),
@@ -1203,8 +1211,9 @@ func parsePageSelectors(rule pa.QualifiedRule) (out []pageSelector) {
 						return nil
 					}
 					types_.Index = pageIndex{
-						A: nthValues[0],
-						B: nthValues[1],
+						A:         nthValues[0],
+						B:         nthValues[1],
+						Specified: true,
 					}
 					if group != nil {
 						var group_ []pa.Token
@@ -1538,44 +1547,50 @@ func resolveVar(computed map[string]pr.RawTokens, token Token, knownVariables ut
 		knownVariables = make(utils.Set)
 	}
 
-	fn := token.(pa.FunctionBlock)
-	if utils.AsciiLower(fn.Name) != "var" {
-		arguments := []Token{}
-		for _, argument := range fn.Arguments {
-			if _, isFunction := argument.(pa.FunctionBlock); isFunction {
-				arguments = append(arguments, resolveVar(computed, argument, knownVariables)...)
+	// var(...) itself: substitute its computed value (or fall back to the
+	// default), resolving any var() nested in that value recursively.
+	if name, args := pa.ParseFunction(token); name == "var" && len(args) != 0 {
+		// first arg is name, next args are default value
+		varNameToken, default_ := args[0], args[1:]
+		variableName := varNameToken.(pa.Ident).Value
+		if knownVariables.Has(variableName) {
+			return nil // endless recursion, returned value is nothing
+		}
+		knownVariables.Add(variableName)
+
+		source := default_
+		if l := computed[variableName]; len(l) != 0 {
+			source = l
+		}
+		computedValue := []Token{}
+		for _, value := range source {
+			if resolved := resolveVar(computed, value, knownVariables); resolved != nil {
+				computedValue = append(computedValue, resolved...)
 			} else {
-				arguments = append(arguments, argument)
+				computedValue = append(computedValue, value)
 			}
 		}
-		token = pa.NewFunctionBlock(token.Pos(), fn.Name, arguments)
-		if resolved := resolveVar(computed, token, knownVariables); len(resolved) != 0 {
-			return resolved
-		}
-		return []Token{token}
+		return computedValue
 	}
 
-	_, args := pa.ParseFunction(token)
-	// first arg is name, next args are default value
-	varNameToken, default_ := args[0], args[1:]
-	variableName := varNameToken.(pa.Ident).Value
-	if knownVariables.Has(variableName) {
-		return nil // endless recursion, returned value is nothing
-	} else {
-		knownVariables.Add(variableName)
+	// Any other compound token (a non-var function, or a parentheses/square/
+	// curly block): resolve var() within each child — flattening the 1:N
+	// expansion of any nested var() — and rebuild the token. Going through
+	// pa.Children/pa.WithChildren means var() inside brackets, or any future
+	// compound type, is handled without adding cases here.
+	if children, ok := pa.Children(token); ok {
+		newArgs := []Token{}
+		for _, argument := range children {
+			// Pass a copy of knownVariables so that cycle-detection
+			// mutations in one sibling don't affect other siblings.
+			if resolved := resolveVar(computed, argument, knownVariables.Copy()); resolved != nil {
+				newArgs = append(newArgs, resolved...)
+			} else {
+				newArgs = append(newArgs, argument)
+			}
+		}
+		return []Token{pa.WithChildren(token, newArgs)}
 	}
 
-	source := default_
-	if l := computed[variableName]; len(l) != 0 {
-		source = l
-	}
-	computedValue := []Token{}
-	for _, value := range source {
-		if resolved := resolveVar(computed, value, knownVariables); resolved != nil {
-			computedValue = append(computedValue, resolved...)
-		} else {
-			computedValue = append(computedValue, value)
-		}
-	}
-	return computedValue
+	return []Token{token}
 }

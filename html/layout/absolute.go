@@ -262,7 +262,9 @@ func absoluteBlock(context *layoutContext, box_ Box, containingBlock block, fixe
 	}
 
 	for _, childPlaceholder := range absoluteBoxes {
-		absoluteLayout(context, childPlaceholder, newBox, fixedBoxes, bottomSpace, skipStack)
+		// Per WP commit ed249da5: don't use absolute parent's skip
+		// stack to render absolute child (related to issue #2134).
+		absoluteLayout(context, childPlaceholder, newBox, fixedBoxes, bottomSpace, nil)
 	}
 
 	if translateBoxWidth {
@@ -322,7 +324,7 @@ func absoluteBoxLayout(context *layoutContext, box Box, cb_ Box, fixedBoxes *[]*
 	resolvePercentages(box, bo.MaybePoint{containingBlock.Width, containingBlock.Height})
 	resolvePositionPercentages(box.Box(), bo.Point{containingBlock.Width, containingBlock.Height})
 
-	context.createBlockFormattingContext()
+	context.createBlockFormattingContext(nil)
 	var (
 		newBox   Box
 		resumeAt tree.ResumeStack

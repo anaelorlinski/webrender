@@ -104,6 +104,12 @@ func ResolvePercentage(value TaggedDim, referTo Float) MaybeFloat {
 		return nil
 	} else if value.Tag == Auto {
 		return AutoF
+	} else if value.Dimension.Math != nil {
+		v, ok := evalDeferredMath(value.Dimension.Math, referTo)
+		if !ok {
+			return Float(0)
+		}
+		return Float(v)
 	} else if value.Unit == Px {
 		return value.Value
 	} else {
@@ -112,4 +118,29 @@ func ResolvePercentage(value TaggedDim, referTo Float) MaybeFloat {
 		}
 		return referTo * value.Value / 100.
 	}
+}
+
+// deferredMathEvaluator is plugged in by the css/validation package via
+// SetDeferredMathEvaluator. It avoids an import cycle (validation imports
+// properties, not the other way around) while letting layout-time code
+// finish a percentage-deferred PendingMath without re-walking the cascade.
+type deferredMathEvaluator func(pm *PendingMath, referTo Fl) (Fl, error)
+
+var deferredEval deferredMathEvaluator
+
+// SetDeferredMathEvaluator registers the layout-time math resolver. It is
+// called once during package initialisation by css/validation.
+func SetDeferredMathEvaluator(f func(pm *PendingMath, referTo Fl) (Fl, error)) {
+	deferredEval = f
+}
+
+func evalDeferredMath(pm *PendingMath, referTo Float) (Fl, bool) {
+	if deferredEval == nil {
+		return 0, false
+	}
+	v, err := deferredEval(pm, Fl(referTo))
+	if err != nil {
+		return 0, false
+	}
+	return v, true
 }

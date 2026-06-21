@@ -64,10 +64,21 @@ func Rotation(radians fl) Transform {
 	return Transform{cos, sin, -sin, cos, 0, 0}
 }
 
-// Skew returns a skew transformation
+// Skew returns a skew transformation. thetax and thetay are angles in
+// radians. The two-argument form skew(thetax, thetay) follows
+// WeasyPrint, which composes skewY first then skewX: a point flows
+// through skewY (mapping (x, y) → (x, tan(thetay)·x + y)) and then
+// skewX (mapping (x, y) → (x + tan(thetax)·y, y)). In our column-vector
+// matrix convention (new_x = A·x + C·y + E; new_y = B·x + D·y + F),
+// the resulting affine is M = M_skewX · M_skewY, which gives
+//   [A=1+tx·ty, B=ty, C=tx, D=1, E=0, F=0]
+// — note the cross-term lives in A (multiplying x), not D. The single-
+// argument forms reduce naturally: skewX(t) has thetay=0 → ty=0 → A=1,
+// C=tx; skewY(t) has thetax=0 → tx=0 → A=1, B=ty.
 func Skew(thetax, thetay fl) Transform {
-	b, c := fl(math.Tan(float64(thetax))), fl(math.Tan(float64(thetay)))
-	return Transform{1, b, c, 1, 0, 0}
+	tx := fl(math.Tan(float64(thetax)))
+	ty := fl(math.Tan(float64(thetay)))
+	return Transform{1 + tx*ty, ty, tx, 1, 0, 0}
 }
 
 // Determinant returns the determinant of the matrix, which is
@@ -146,8 +157,7 @@ func (T Transform) Apply(x, y fl) (outX, outY fl) {
 //
 // 	This changes the matrix in-place.
 func (T *Transform) Translate(tx, ty fl) {
-	T.E += T.A*tx + T.C*ty
-	T.F += T.B*tx + T.D*ty
+	T.RightMultBy(Translation(tx, ty))
 }
 
 // Applies scaling by `sx`, `sy`

@@ -569,6 +569,12 @@ func (s Properties) SetObjectFit(v String) { s[PObjectFit] = v }
 func (s Properties) GetObjectPosition() CenterPos  { return s[PObjectPosition].(CenterPos) }
 func (s Properties) SetObjectPosition(v CenterPos) { s[PObjectPosition] = v }
 
+func (s Properties) GetBoxShadow() Shadows  { return s[PBoxShadow].(Shadows) }
+func (s Properties) SetBoxShadow(v Shadows) { s[PBoxShadow] = v }
+
+func (s Properties) GetTextShadow() Shadows  { return s[PTextShadow].(Shadows) }
+func (s Properties) SetTextShadow(v Shadows) { s[PTextShadow] = v }
+
 type StyleAccessor interface {
 	GetBorderBottomColor() Color
 	SetBorderBottomColor(v Color)
@@ -1124,6 +1130,12 @@ type StyleAccessor interface {
 
 	GetObjectPosition() CenterPos
 	SetObjectPosition(v CenterPos)
+
+	GetBoxShadow() Shadows
+	SetBoxShadow(v Shadows)
+
+	GetTextShadow() Shadows
+	SetTextShadow(v Shadows)
 }
 
 var propsNames = [...]string{
@@ -1312,6 +1324,8 @@ var propsNames = [...]string{
 	PMaskBorderMode:          "mask-border-mode",
 	PObjectFit:               "object-fit",
 	PObjectPosition:          "object-position",
+	PBoxShadow:               "box-shadow",
+	PTextShadow:              "text-shadow",
 }
 
 // PropsFromNames maps CSS property names to internal enum tags.
@@ -1501,4 +1515,6 @@ var PropsFromNames = map[string]KnownProp{
 	"mask-border-mode":           PMaskBorderMode,
 	"object-fit":                 PObjectFit,
 	"object-position":            PObjectPosition,
+	"box-shadow":                 PBoxShadow,
+	"text-shadow":                PTextShadow,
 }

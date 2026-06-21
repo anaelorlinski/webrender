@@ -22,7 +22,12 @@ var (
 	monoFonts = pr.Strings{"DejaVu Sans Mono", "monospace"}
 )
 
-const fontmapCache = "testdata/cache.fc"
+// testFontDir is the directory holding the fonts the test harness scans
+// to build an in-memory fontconfig database. We point at the compositor
+// project's bundled fonts (the same TTFs the compositor ships at
+// runtime) so test font resolution is deterministic and independent of
+// whatever fonts are installed on the host.
+const testFontDir = "../../../internal/fonts"
 
 var (
 	fontmapPango  *fcfonts.FontMap
@@ -144,14 +149,7 @@ var textSamples = [...]string{
 }
 
 func init() {
-	// this command has to run once
-	// fmt.Println("Scanning fonts...")
-	// _, err := fontconfig.ScanAndCache(fontmapCache)
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	fs, err := fontconfig.LoadFontsetFile(fontmapCache)
+	fs, err := fontconfig.Standard.Copy().ScanFontDirectories(testFontDir)
 	if err != nil {
 		panic(err)
 	}
@@ -554,7 +552,7 @@ func wrapPango(fc *FontConfigurationPango, text string, style *TextStyle, maxWid
 	// 		fmt.Println(glyph.Glyph.GID(), glyph.Geometry.Width)
 	// 	}
 	// }
-	return firstLineMetrics(firstLine, []rune(text), layout, resumeIndex, style.spaceCollapse(), style, false, "")
+	return firstLineMetrics(firstLine, []rune(text), layout, resumeIndex, style.SpaceCollapse(), style, false, "")
 }
 
 func assertApprox(t *testing.T, got, exp pr.Float, context string) {
@@ -873,8 +871,8 @@ func TestSpaceHeight(t *testing.T) {
 		Size:    1,
 	}}
 
-	_, exp := fcPango.spaceHeight(style)
-	_, got := fcGotext.spaceHeight(style)
+	_, exp := fcPango.SpaceHeight(style)
+	_, got := fcGotext.SpaceHeight(style)
 	fmt.Println(exp, got)
 }
 

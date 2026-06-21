@@ -54,8 +54,20 @@ func TestTextDecoration(t *testing.T) {
 		pr.PTextDecorationThickness: pr.Inherit,
 	})
 
+	// CSS Text Decoration L4: thickness slot accepts auto/from-font/<length>/<percentage>.
+	assertValidDict(t, "text-decoration: 1px", toValidated(pr.Properties{
+		pr.PTextDecorationThickness: pr.Dimension{Value: 1, Unit: pr.Px}.Tagged(),
+	}))
+	assertValidDict(t, "text-decoration: auto", toValidated(pr.Properties{
+		pr.PTextDecorationThickness: pr.TagToV(pr.Auto),
+	}))
+	assertValidDict(t, "text-decoration: from-font", toValidated(pr.Properties{
+		pr.PTextDecorationThickness: pr.TagToV(pr.FromFont),
+	}))
+
 	assertInvalid(t, "text-decoration: solid solid", "invalid")
 	assertInvalid(t, "text-decoration: red red", "invalid")
+	assertInvalid(t, "text-decoration: 1px 2px", "invalid")
 	assertInvalid(t, "text-decoration: underline none", "invalid")
 	assertInvalid(t, "text-decoration: 1px 100%", "invalid")
 	assertInvalid(t, "text-decoration: none none", "invalid")

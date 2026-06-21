@@ -362,6 +362,12 @@ func (gr gradient) paint(dst backend.Canvas, node *svgNode, opacity Fl, dims dra
 	}
 
 	var laidOutGradient backend.GradientLayout
+	// length is the bbox shorter axis used by the objectBoundingBox path
+	// to pre-scale gradient endpoints into "min-axis pixel" space (so a
+	// single Scaling matrix can fix the longer axis afterward). It is
+	// also used to scale gradientTransform's translate components from
+	// unit space to pre-scaled space when objectBoundingBox is in use.
+	length := min(width, height)
 	mt := matrix.Translation(x, y)
 	switch kind := gr.kind.(type) {
 	case gradientLinear:
@@ -437,7 +443,19 @@ func (gr gradient) paint(dst backend.Canvas, node *svgNode, opacity Fl, dims dra
 
 	if trs := gr.transforms; len(trs) != 0 {
 		mat := aggregateTransforms(trs, dims.fontSize, dims.normalizedDiagonal)
-		mt.LeftMultBy(mat)
+		// gradientTransform applies in the gradient's own coordinate
+		// system, before bbox/userspace mapping. Compose it on the
+		// right (= apply first when reading column-vector style).
+		// For objectBoundingBox the spec says gradientTransform is in
+		// unit (0..1) space; our endpoints have been pre-scaled by
+		// `length`, so scale the translate part to match before
+		// composing — otherwise `translate(0, 0.5)` would shift by
+		// half a pixel rather than half a bbox.
+		if !gr.isUnitsUserSpace {
+			mat.E *= length
+			mat.F *= length
+		}
+		mt.RightMultBy(mat)
 	}
 
 	if laidOutGradient.Kind == "solid" {

@@ -100,6 +100,9 @@ var (
 
 	//go:embed html5_ph.css
 	html5PHCSS string
+
+	//go:embed tests_ua.css
+	testUACSS string
 )
 
 func init() {
@@ -123,6 +126,27 @@ func init() {
 	if err != nil {
 		panic(fmt.Sprintf("invalid embedded stylesheet: %s", err))
 	}
+}
+
+// TestUAStylesheet returns a lightweight UA style sheet used by the layout
+// test suite, parsed against the given baseURL and registering any
+// `@font-face` rules with fontConfig. Fork-only convenience: kept after
+// upstream moved it to `testutils/fonts.UAStylesheet`.
+//
+// Warnings emitted while parsing the stylesheet (e.g. for as-yet-unsupported
+// properties such as `unicode-bidi: isolate`) are suppressed: the
+// stylesheet itself isn't under test, and tests use
+// `tu.CaptureLogs().AssertNoLogs` to assert the *test input* is clean.
+func TestUAStylesheet(baseURL string, fontConfig text.FontConfiguration) CSS {
+	prev := logger.WarningLogger.Writer()
+	logger.WarningLogger.SetOutput(io.Discard)
+	defer logger.WarningLogger.SetOutput(prev)
+
+	out, err := NewCSSExt(utils.InputString(testUACSS), baseURL, fontConfig)
+	if err != nil {
+		panic(fmt.Sprintf("invalid test UA stylesheet: %s", err))
+	}
+	return out
 }
 
 // CSS represents a parsed CSS stylesheet.
@@ -223,10 +247,15 @@ func (m matcher) match(element *html.Node) (out []matchResult) {
 type pageIndex struct {
 	Group string
 	A, B  int
+	// Specified is set when the page selector explicitly used :nth(...).
+	// IsNone must distinguish "no nth() selector at all" from "an+b that
+	// happens to be 0n+0" — the latter is a valid selector that matches
+	// no pages and must not be skipped during page-type matching.
+	Specified bool
 }
 
 func (p pageIndex) IsNone() bool {
-	return p.A == 0 && p.B == 0 && p.Group == ""
+	return !p.Specified
 }
 
 type pageSelector struct {

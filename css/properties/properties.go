@@ -258,6 +258,10 @@ var InitialValues = Properties{
 	PAnchor: String(""),     // computed value of "none"
 	PLink:   TaggedString{}, // computed value of "none"
 	PLang:   TaggedString{}, // computed value of "none"
+
+	// Shadows: CSS Backgrounds 3 / Text Decoration 3
+	PBoxShadow:  Shadows{},
+	PTextShadow: Shadows{},
 }
 
 func (pr KnownProp) IsTextDecoration() bool {

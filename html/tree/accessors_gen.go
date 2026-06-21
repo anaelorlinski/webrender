@@ -1869,3 +1869,15 @@ func (s *AnonymousStyle) GetObjectPosition() pr.CenterPos {
 func (s *AnonymousStyle) SetObjectPosition(v pr.CenterPos) {
 	s.propsCache.setKnown(pr.PObjectPosition, v)
 }
+
+func (s *ComputedStyle) GetBoxShadow() pr.Shadows  { return s.Get(pr.PBoxShadow.Key()).(pr.Shadows) }
+func (s *ComputedStyle) SetBoxShadow(v pr.Shadows) { s.propsCache.setKnown(pr.PBoxShadow, v) }
+
+func (s *AnonymousStyle) GetBoxShadow() pr.Shadows  { return s.Get(pr.PBoxShadow.Key()).(pr.Shadows) }
+func (s *AnonymousStyle) SetBoxShadow(v pr.Shadows) { s.propsCache.setKnown(pr.PBoxShadow, v) }
+
+func (s *ComputedStyle) GetTextShadow() pr.Shadows  { return s.Get(pr.PTextShadow.Key()).(pr.Shadows) }
+func (s *ComputedStyle) SetTextShadow(v pr.Shadows) { s.propsCache.setKnown(pr.PTextShadow, v) }
+
+func (s *AnonymousStyle) GetTextShadow() pr.Shadows  { return s.Get(pr.PTextShadow.Key()).(pr.Shadows) }
+func (s *AnonymousStyle) SetTextShadow(v pr.Shadows) { s.propsCache.setKnown(pr.PTextShadow, v) }

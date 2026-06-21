@@ -130,6 +130,15 @@ func (dr recordingDrawer) DrawRasterImage(img backend.RasterImage, width, height
 func (dr recordingDrawer) DrawGradient(gradient backend.GradientLayout, width, height fl) {
 }
 
+func (dr recordingDrawer) SetGradientFillPath(x, y, width, height fl) {
+}
+
+func (dr recordingDrawer) DrawBoxShadow(shape backend.RoundedBox, offsetX, offsetY, blur, spread fl, color parser.RGBA, inset bool) {
+}
+
+func (dr recordingDrawer) DrawTextShadow(text backend.TextDrawing, offsetX, offsetY, blur fl, color parser.RGBA) {
+}
+
 func (dr recordingDrawer) DrawWithOpacity(opacity fl, group backend.Canvas) {
 }
 

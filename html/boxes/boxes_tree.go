@@ -368,7 +368,7 @@ func NewTableColumnGroupBox(style pr.ElementStyle, element *html.Node, pseudoTyp
 	out := TableColumnGroupBox{BoxFields: newBoxFields(style, element, pseudoType, children)}
 	out.properTableChild = true
 	out.internalTableOrCaption = true
-	out.GetCells = out.defaultGetCells
+	out.GetCells = out.DefaultGetCells
 	return &out
 }
 
@@ -379,8 +379,8 @@ func (b *TableColumnGroupBox) span() int {
 	return integerAttribute(utils.HTMLNode(*b.Element).Get("span"), 1)
 }
 
-// Return cells that originate in the group's columns.
-func (b *TableColumnGroupBox) defaultGetCells() []Box {
+// DefaultGetCells returns cells that originate in the group's columns.
+func (b *TableColumnGroupBox) DefaultGetCells() []Box {
 	var out []Box
 	for _, column := range b.Box().Children {
 		out = append(out, column.Box().GetCells()...)

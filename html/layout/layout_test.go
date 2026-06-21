@@ -3,6 +3,10 @@ package layout
 import (
 	"fmt"
 	"io"
+	"log"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	pr "github.com/benoitkugler/webrender/css/properties"
@@ -12,24 +16,65 @@ import (
 	"github.com/benoitkugler/webrender/text"
 	"github.com/benoitkugler/webrender/utils"
 	tu "github.com/benoitkugler/webrender/utils/testutils"
-	"github.com/benoitkugler/webrender/utils/testutils/fonts"
+	"github.com/go-text/typesetting/fontscan"
 	"golang.org/x/image/math/fixed"
 )
 
 var baseUrl, _ = utils.PathToURL("../../resources_test/")
 
+// testFontDir is the directory holding the fonts the test harness scans
+// to build an in-memory font index. We point at the compositor
+// project's bundled fonts (the same TTFs the compositor ships at
+// runtime) so test font resolution is deterministic and independent of
+// whatever fonts are installed on the host.
+const testFontDir = "../../../../internal/fonts"
+
+var fontconfig *text.FontConfigurationGotext
+
 func init() {
 	logger.ProgressLogger.SetOutput(io.Discard)
+
+	fm := fontscan.NewFontMap(log.New(io.Discard, "", 0))
+	if err := loadBundledFonts(fm, testFontDir); err != nil {
+		panic(err)
+	}
+	fontconfig = text.NewFontConfigurationGotext(fm)
+}
+
+// loadBundledFonts walks dir and registers every .ttf/.otf with fm using
+// AddFont. This builds the index in memory without touching any system
+// font cache.
+func loadBundledFonts(fm *fontscan.FontMap, dir string) error {
+	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return err
+		}
+		ext := strings.ToLower(filepath.Ext(path))
+		if ext != ".ttf" && ext != ".otf" {
+			return nil
+		}
+		f, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		return fm.AddFont(f, path, "")
+	})
+}
+
+func fakeHTML(html *tree.HTML) *tree.HTML {
+	html.UAStyleSheet = tree.TestUAStylesheet(baseUrl, fontconfig)
+	return html
 }
 
 // lay out a document and return a list of PageBox objects
 func renderPages(t *testing.T, htmlContent string, css ...tree.CSS) []*bo.PageBox {
-	doc, err := tree.NewHTML(utils.InputString(htmlContent), baseUrl, nil, "")
+	doc, err := tree.NewHTML(utils.InputString(htmlContent), baseUrl, utils.DefaultUrlFetcher, "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	doc.UAStyleSheet = fonts.UAStylesheet(baseUrl)
-	return Layout(doc, css, false, fonts.FontConfig)
+	doc.UAStyleSheet = tree.TestUAStylesheet(baseUrl, fontconfig)
+	return Layout(doc, css, false, fontconfig)
 }
 
 // same as renderPages, but expects only on laid out page

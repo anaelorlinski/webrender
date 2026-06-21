@@ -42,7 +42,7 @@ func newSVGContextReader(rootText io.Reader, baseURL string, urlFetcher utils.Ur
 		return nil, err
 	}
 
-	return newSVGContext(root, baseURL, urlFetcher)
+	return newSVGContext(root, baseURL, urlFetcher, "")
 }
 
 // newSVGContext converts from the html representation to an internal,
@@ -52,7 +52,10 @@ func newSVGContextReader(rootText io.Reader, baseURL string, urlFetcher utils.Ur
 // of the CSS properties begin stored as attributes.
 //
 // Inheritable attributes are cascaded and 'inherit' special values are resolved.
-func newSVGContext(root *html.Node, baseURL string, urlFetcher utils.UrlFetcher) (*svgContext, error) {
+// inheritedColor is an optional CSS color string (e.g. "#EB646F") inherited from
+// the HTML parent context. When non-empty, it is used to resolve "currentColor"
+// values in SVG attributes like fill and stroke.
+func newSVGContext(root *html.Node, baseURL string, urlFetcher utils.UrlFetcher, inheritedColor string) (*svgContext, error) {
 	// extract the root svg node, which is not
 	// always the first one
 	iter := utils.NewHtmlIterator(root, atom.Svg)
@@ -105,10 +108,18 @@ func newSVGContext(root *html.Node, baseURL string, urlFetcher utils.UrlFetcher)
 			}
 		}
 
-		// Handle 'inherit' values
+		// Handle 'inherit' values. If the parent has no value either,
+		// delete the attribute entirely so per-property defaults apply
+		// (e.g. fill="inherit" on a root-ish element resolves to the
+		// initial value "black", not an empty paint).
 		for key, value := range childAttrs {
 			if value == "inherit" {
-				childAttrs[key] = parentAttrs[key]
+				parentVal, has := parentAttrs[key]
+				if has && parentVal != "" && parentVal != "inherit" {
+					childAttrs[key] = parentVal
+				} else {
+					delete(childAttrs, key)
+				}
 			}
 		}
 
@@ -137,7 +148,14 @@ func newSVGContext(root *html.Node, baseURL string, urlFetcher utils.UrlFetcher)
 		return nodeSVG
 	}
 
-	out.root = buildTree((*html.Node)(svgRoot), nil)
+	// If an inherited color is provided from the HTML context,
+	// seed the parent attributes so that currentColor can resolve.
+	var initialAttrs nodeAttributes
+	if inheritedColor != "" {
+		initialAttrs = nodeAttributes{"color": inheritedColor}
+	}
+
+	out.root = buildTree((*html.Node)(svgRoot), initialAttrs)
 
 	out.inheritDefs()
 
@@ -171,6 +189,16 @@ func (tree *svgContext) inheritElement(node *cascadedNode) {
 		if _, in := node.attrs[key]; !in {
 			node.attrs[key] = value
 		}
+	}
+	// Inherit children too if the node has none of its own. Per SVG
+	// spec, <linearGradient href="#parent">  should inherit its
+	// parent's <stop> children when it has none — without this, the
+	// gradient ends up with zero stops and falls back to opaque black.
+	// The "no own children" guard preserves the spec rule that
+	// children declared on the referencing element override the
+	// referenced element's children rather than appending to them.
+	if len(node.children) == 0 {
+		node.children = parent.children
 	}
 }
 
@@ -327,11 +355,31 @@ var (
 )
 
 // replace newlines by spaces, and merge spaces if not preserved.
+// Per SVG 1.1 spec §10.15 ("White space handling"), with the default
+// xml:space="default" treatment, all newline/tab characters are
+// stripped, then runs of multiple spaces are collapsed into a single
+// space. With xml:space="preserve" we only translate \n/\t/\r to a
+// single space and leave other whitespace runs intact.
 func processWhitespace(text []byte, preserveSpace bool) []byte {
 	if preserveSpace {
 		return []byte(replacerPreserve.Replace(string(text)))
 	}
-	return []byte(replacerNoPreserve.Replace(string(text)))
+	out := []byte(replacerNoPreserve.Replace(string(text)))
+	// Collapse consecutive spaces.
+	collapsed := make([]byte, 0, len(out))
+	prevSpace := false
+	for _, c := range out {
+		if c == ' ' {
+			if !prevSpace {
+				collapsed = append(collapsed, c)
+			}
+			prevSpace = true
+		} else {
+			collapsed = append(collapsed, c)
+			prevSpace = false
+		}
+	}
+	return collapsed
 }
 
 // handle text node by fixing whitespaces and flattening tails,

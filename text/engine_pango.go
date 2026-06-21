@@ -54,7 +54,7 @@ func (f *FontConfigurationPango) LoadFace(key fonts.FaceID, format fc.FontFormat
 	return fcfonts.DefaultLoadFace(key, format)
 }
 
-func (fc *FontConfigurationPango) spaceHeight(style *TextStyle) (height, baseline pr.Float) {
+func (fc *FontConfigurationPango) SpaceHeight(style *TextStyle) (height, baseline pr.Float) {
 	layout := newTextLayout(fc, style, nil)
 	layout.SetText(" ")
 	line, _ := layout.GetFirstLine()
@@ -63,7 +63,7 @@ func (fc *FontConfigurationPango) spaceHeight(style *TextStyle) (height, baselin
 	return sp.Height, sp.Baseline
 }
 
-func (fc *FontConfigurationPango) width0(style *TextStyle) pr.Fl {
+func (fc *FontConfigurationPango) Width0(style *TextStyle) pr.Fl {
 	p := newTextLayout(fc, style, nil)
 
 	p.Layout.SetText("0") // avoid recursion for letter-spacing and word-spacing properties
@@ -84,7 +84,7 @@ func (fc *FontConfigurationPango) width0(style *TextStyle) pr.Fl {
 // 	f.Close()
 // }
 
-func (fc *FontConfigurationPango) heightx(style *TextStyle) pr.Fl {
+func (fc *FontConfigurationPango) Heightx(style *TextStyle) pr.Fl {
 	p := newTextLayout(fc, style, nil)
 
 	p.Layout.SetText("x") // avoid recursion for letter-spacing and word-spacing properties
@@ -245,7 +245,7 @@ func (f *FontConfigurationPango) loadOneFont(url pr.TaggedString, ruleDescriptor
 	}
 
 	featuresString := ""
-	for _, v := range getFontFaceFeatures(ruleDescriptors) {
+	for _, v := range GetFontFaceFeatures(ruleDescriptors) {
 		featuresString += fmt.Sprintf("<string>%s=%d</string>", v.Tag[:], v.Value)
 	}
 	fontconfigStyle, ok := fcStyle[ruleDescriptors.FontStyle]
@@ -454,7 +454,7 @@ func newTextLayout(fonts FontConfiguration, style *TextStyle, maxWidth pr.MaybeF
 // or `nil` for unlimited width.
 func createLayout(text string, style *TextStyle, fonts FontConfiguration, maxWidth pr.MaybeFloat) *TextLayoutPango {
 	layout := newTextLayout(fonts, style, maxWidth)
-	textWrap := style.textWrap()
+	textWrap := style.TextWrap()
 	if maxWidth, ok := maxWidth.(pr.Float); ok && textWrap && maxWidth < 2<<21 {
 		// Make sure that maxWidth * Pango.SCALE == maxWidth * 1024 fits in a
 		// signed integer. Treat bigger values same as None: unconstrained width.
@@ -632,13 +632,13 @@ func lineSize(line *pango.LayoutLine, letterSpacing pr.Fl) (pr.Fl, pr.Fl) {
 	return width, height
 }
 
-func (fc *FontConfigurationPango) splitFirstLine(hyphenCache map[HyphenDictKey]hyphen.Hyphener, text []rune, style *TextStyle,
+func (fc *FontConfigurationPango) SplitFirstLine(hyphenCache map[HyphenDictKey]hyphen.Hyphener, text []rune, style *TextStyle,
 	maxWidth pr.MaybeFloat, minimum, isLineStart bool,
 ) FirstLine {
 	// See https://www.w3.org/TR/css-text-3/#white-space-property
 	var (
-		textWrap         = style.textWrap()
-		spaceCollapse    = style.spaceCollapse()
+		textWrap         = style.TextWrap()
+		spaceCollapse    = style.SpaceCollapse()
 		originalMaxWidth = maxWidth
 		layout           *TextLayoutPango
 		fontSize         = pr.Float(style.Size)
@@ -808,8 +808,7 @@ func (fc *FontConfigurationPango) splitFirstLine(hyphenCache map[HyphenDictKey]h
 						break
 					}
 				}
-
-				// This word doesn’t work, try next one.
+				// This word doesn't qualify, advance to after this word and try the next.
 				nextText = nextText[stopWord:]
 				nextTextIndex += stopWord
 			} else {
@@ -840,7 +839,7 @@ func (fc *FontConfigurationPango) splitFirstLine(hyphenCache map[HyphenDictKey]h
 		}
 		dictionaryIterations = hyphenDictionaryIterationsOld(nextWord, softHyphen)
 	} else if autoHyphenation {
-		dictionaryKey := HyphenDictKey{lang, limit}
+		dictionaryKey := NewHyphenDictKey(lang, limit)
 		dictionary, ok := hyphenCache[dictionaryKey]
 		if !ok {
 			dictionary = hyphen.NewHyphener(lang, limit.Left, limit.Right)

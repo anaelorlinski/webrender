@@ -59,13 +59,14 @@ func (fd FontDescription) binary(dst []byte, includeSize bool) []byte {
 	return dst
 }
 
-// textWrap returns true if the "white-space" property allows wrapping
-func (ts *TextStyle) textWrap() bool {
+// TextWrap returns true if the "white-space" property allows wrapping
+func (ts *TextStyle) TextWrap() bool {
 	ws := ts.WhiteSpace
 	return ws == pr.Normal || ws == pr.PreWrap || ws == pr.PreLine
 }
 
-func (ts *TextStyle) spaceCollapse() bool {
+// SpaceCollapse returns true if the "white-space" property collapses spaces
+func (ts *TextStyle) SpaceCollapse() bool {
 	ws := ts.WhiteSpace
 	return ws == pr.Normal || ws == pr.Nowrap || ws == pr.PreLine
 }
@@ -115,8 +116,8 @@ func NewTextStyle(style pr.StyleAccessor, ignoreSpacing bool) *TextStyle {
 	var out TextStyle
 
 	out.FontDescription.Family = style.GetFontFamily()
-	out.FontDescription.Style = newFontStyle(style.GetFontStyle())
-	out.FontDescription.Weight = newFontWeight(style.GetFontWeight())
+	out.FontDescription.Style = NewFontStyle(style.GetFontStyle())
+	out.FontDescription.Weight = NewFontWeight(style.GetFontWeight())
 	out.FontDescription.Stretch = newFontStretch(style.GetFontStretch())
 	out.FontDescription.Size = pr.Fl(style.GetFontSize().Value)
 	out.FontDescription.VariationSettings = newFontVariationSettings(style.GetFontVariationSettings())
@@ -152,7 +153,7 @@ func NewTextStyle(style pr.StyleAccessor, ignoreSpacing bool) *TextStyle {
 	return &out
 }
 
-type styleKey struct {
+type StyleKey struct {
 	FontDescription string // serialized
 	FontFeatures    string // serialized
 
@@ -177,10 +178,10 @@ type styleKey struct {
 	Direction pr.Keyword
 }
 
-func (ts *TextStyle) key() styleKey {
-	return styleKey{
+func (ts *TextStyle) Key() StyleKey {
+	return StyleKey{
 		string(ts.FontDescription.binary(nil, true)),
-		string(featuresBinary(ts.FontFeatures)),
+		string(FeaturesBinary(ts.FontFeatures)),
 		ts.TextDecorationLine,
 		ts.FontLanguageOverride,
 		ts.Lang,
@@ -212,7 +213,7 @@ func newTabSize(ts pr.TaggedDim) TabSize {
 
 type Feature = pr.FontFeature
 
-func featuresBinary(ls pr.FontFeatures) []byte {
+func FeaturesBinary(ls pr.FontFeatures) []byte {
 	out := make([]byte, len(ls)*8)
 	for i, v := range ls {
 		out[8*i+0] = v.Tag[0]
@@ -387,7 +388,7 @@ func getFontFeatures(style pr.StyleAccessor) []Feature {
 	return features.list()
 }
 
-func getFontFaceFeatures(ruleDescriptors validation.FontFaceDescriptors) []Feature {
+func GetFontFaceFeatures(ruleDescriptors validation.FontFaceDescriptors) []Feature {
 	props := pr.Properties{}
 	// avoid nil values
 	props.SetFontKerning("")
@@ -492,7 +493,7 @@ const (
 	FSty_Italic
 )
 
-func newFontStyle(style pr.String) FontStyle {
+func NewFontStyle(style pr.String) FontStyle {
 	switch strings.ToLower(string(style)) {
 	case "", "roman", "normal":
 		return FSty_Normal
@@ -505,11 +506,14 @@ func newFontStyle(style pr.String) FontStyle {
 	}
 }
 
-func newFontWeight(weight pr.IntString) uint16 {
+func NewFontWeight(weight pr.IntString) uint16 {
 	if weight.String == "normal" {
 		weight.Int = 400
 	} else if weight.String == "bold" {
 		weight.Int = 700
+	} else if weight.String == "" && weight.Int == 0 {
+		// CSS default for @font-face font-weight when omitted.
+		weight.Int = 400
 	}
 	return uint16(weight.Int)
 }

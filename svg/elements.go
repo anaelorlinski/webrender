@@ -307,16 +307,25 @@ func (s svg) draw(dst backend.Canvas, attrs *attributes, img *SVGImage, dims dra
 	}
 
 	viewbox := attrs.viewbox
+	syntheticViewbox := false
 	if viewbox == nil && s.isRoot {
-		width, height := img.DisplayedSize()
-		if width.U != Perc && height.U != Perc {
-			w := width.Resolve(dims.fontSize, 0)
-			h := height.Resolve(dims.fontSize, 0)
+		dw, dh := img.DisplayedSize()
+		if dw.U != Perc && dh.U != Perc {
+			w := dw.Resolve(dims.fontSize, 0)
+			h := dh.Resolve(dims.fontSize, 0)
 			viewbox = &Rectangle{Width: w, Height: h}
+			syntheticViewbox = true
 		}
 	}
 
-	sx, sy, tx, ty := s.preserveRatio.resolveTransforms(width, height, viewbox, nil)
+	// When using a synthetic viewBox (no explicit viewBox attribute),
+	// preserveAspectRatio has no effect per SVG spec — the content
+	// stretches to fill the viewport.
+	pr := s.preserveRatio
+	if syntheticViewbox {
+		pr = preserveAspectRatio{none: true}
+	}
+	sx, sy, tx, ty := pr.resolveTransforms(width, height, viewbox, nil)
 	if !s.isRoot && s.isOverflowHidden {
 		dst.Rectangle(0, 0, width, height)
 		dst.State().Clip(false)
@@ -330,8 +339,9 @@ func (s svg) draw(dst backend.Canvas, attrs *attributes, img *SVGImage, dims dra
 type image struct {
 	// width, height are common attributes
 
-	img           backend.Image
-	preserveRatio preserveAspectRatio
+	img            backend.Image
+	preserveRatio  preserveAspectRatio
+	imageRendering string
 }
 
 func newImage(node *cascadedNode, context *svgContext) (drawable, error) {
@@ -353,6 +363,13 @@ func newImage(node *cascadedNode, context *svgContext) (drawable, error) {
 	var out image
 	out.img = img
 	out.preserveRatio = node.attrs.aspectRatio()
+	// Per WP commit 6446aa48: honor the image-rendering attribute
+	// instead of always passing "auto" to the backend.
+	if r := node.attrs["image-rendering"]; r != "" {
+		out.imageRendering = r
+	} else {
+		out.imageRendering = "auto"
+	}
 
 	return out, nil
 }
@@ -384,18 +401,30 @@ func (img image) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, dims
 	}
 	intrinsic := Rectangle{0, 0, Fl(intrinsicWidth.V()), Fl(intrinsicHeight.V())}
 	if width == 0 {
-		width = intrinsic.Width
+		if height != 0 && intrinsicRatio != nil {
+			width = height * Fl(intrinsicRatio.V())
+		} else {
+			width = intrinsic.Width
+		}
 	}
 	if height == 0 {
-		height = intrinsic.Height
+		if width != 0 && intrinsicRatio != nil {
+			height = width / Fl(intrinsicRatio.V())
+		} else {
+			height = intrinsic.Height
+		}
 	}
 
 	scale_x, scale_y, translate_x, translate_y := img.preserveRatio.resolveTransforms(width, height, &intrinsic, nil)
 	dst.Rectangle(0, 0, width, height)
 	dst.State().Clip(false)
+	imageRendering := img.imageRendering
+	if imageRendering == "" {
+		imageRendering = "auto"
+	}
 	dst.OnNewStack(func() {
 		dst.State().Transform(matrix.Transform{A: scale_x, D: scale_y, E: translate_x, F: translate_y})
-		img.img.Draw(dst, svg.textContext, intrinsic.Width, intrinsic.Height, "auto")
+		img.img.Draw(dst, svg.textContext, intrinsic.Width, intrinsic.Height, imageRendering)
 	})
 
 	return nil
@@ -474,15 +503,31 @@ func (context *svgContext) resolveUse(node *cascadedNode, defs definitions) (*sv
 		}
 	}
 
-	// cascade
-	for key, value := range node.attrs {
-		if notInheritedAttributes.Has(key) {
-			continue
-		}
-		if _, specified := useTarget.attrs[key]; !specified {
-			useTarget.attrs[key] = value
+	// cascade <use>'s attributes onto useTarget AND recursively into its
+	// children. The children of useTarget were already parsed and had
+	// their cascade frozen at parse time (against their original parent
+	// in <defs>), so a <use href="#sym" fill="blue"> wrapping a <symbol>
+	// with an unstyled <rect> needs to push the use's fill into the
+	// inner <rect>'s attrs too — otherwise the rect inherits nothing
+	// from the use's attribute (TestSvgUseSymbolColor regression).
+	cascade := func(target *cascadedNode) {
+		for key, value := range node.attrs {
+			if notInheritedAttributes.Has(key) {
+				continue
+			}
+			if _, specified := target.attrs[key]; !specified {
+				target.attrs[key] = value
+			}
 		}
 	}
+	var walk func(n *cascadedNode)
+	walk = func(n *cascadedNode) {
+		cascade(n)
+		for _, child := range n.children {
+			walk(child)
+		}
+	}
+	walk(&useTarget)
 
 	target, err := context.processNode(&useTarget, defs)
 	if err != nil {
@@ -566,12 +611,19 @@ func newFilter(node *cascadedNode) (out []filter, err error) {
 type clipPath struct {
 	svgNode
 	isUnitsBBox bool
+	// isClipUseEvenOdd is true when clip-rule="evenodd" is set on the
+	// <clipPath> element. Per SVG 1.1, clip-rule may be set on each
+	// child of <clipPath>; supporting that would require per-child
+	// tracking. Most real-world usage sets clip-rule on the parent, so
+	// we honor that level only.
+	isClipUseEvenOdd bool
 }
 
 func newClipPath(node *cascadedNode, children []*svgNode) (*clipPath, error) {
 	out := clipPath{
-		svgNode:     svgNode{children: children},
-		isUnitsBBox: node.attrs["clipPathUnits"] == "objectBoundingBox",
+		svgNode:          svgNode{children: children},
+		isUnitsBBox:      node.attrs["clipPathUnits"] == "objectBoundingBox",
+		isClipUseEvenOdd: node.attrs["clip-rule"] == "evenodd",
 	}
 	err := node.attrs.parseCommonAttributes(&out.attributes)
 	return &out, err

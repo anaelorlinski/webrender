@@ -127,7 +127,11 @@ func (c *pathParser) parsePath(svgPath string) ([]pathItem, error) {
 	data := []byte(svgPath)
 	lastIndex := -1
 	for i, v := range data {
-		if ('a' <= v && v <= 'z' || 'A' <= v && v <= 'Z') && v != 'e' {
+		// Letters end one path segment and begin another, except for
+		// 'e' / 'E' which are exponent markers inside numbers (e.g.
+		// "90e-1", ".8E+1"). Without the 'E' exclusion, paths like
+		// "M0 9 h .8E+1" would treat the 'E' as a (bogus) command.
+		if ('a' <= v && v <= 'z' || 'A' <= v && v <= 'Z') && v != 'e' && v != 'E' {
 			if lastIndex != -1 {
 				if err := c.addSeg(data[lastIndex:i]); err != nil {
 					return nil, err

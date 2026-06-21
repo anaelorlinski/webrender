@@ -6,6 +6,7 @@
 package boxes
 
 import (
+	"math"
 	"unicode/utf8"
 
 	"github.com/benoitkugler/webrender/images"
@@ -169,6 +170,12 @@ type BoxFields struct {
 	IsLeader         bool
 	IsOutsideMarker  bool
 
+	// ForceFragmentation makes the box treated as fragmented (split
+	// across pages) even when its in-flow content fits without a
+	// resumeAt. Set by pages.go when only out-of-flow content (floats /
+	// absolutes) has remaining work, so the in-flow root re-renders as
+	// an empty container that fills the page and yields a resumeAt for
+	// the page loop. Mirrors WeasyPrint's force_fragmentation.
 	ForceFragmentation bool
 
 	properTableChild       bool
@@ -193,7 +200,12 @@ type BoxFields struct {
 
 	BorderTopLeftRadius, BorderTopRightRadius, BorderBottomRightRadius, BorderBottomLeftRadius Point
 
-	MainOuterExtra pr.Float // used for flex layout
+	// Margin + border + padding along the main axis. Tracked separately
+	// from FlexBaseSize so the latter remains a *content* size; the
+	// algorithm adds MainOuterExtra back wherever an outer size is
+	// needed (line packing, container size, free space, etc.). Matches
+	// upstream benoitkugler/webrender and WeasyPrint's main_outer_extra.
+	MainOuterExtra pr.Float
 
 	ViewportOverflow string
 
@@ -463,6 +475,25 @@ func (b *BoxFields) roundedBox(bt, br, bb, bl pr.Float) RoundedBox {
 	y := b.BorderBoxY() + bt
 	width := b.BorderWidth() - bl - br
 	height := b.BorderHeight() - bt - bb
+
+	// `border-radius: calc(infinity * 1px)` is a CSS idiom for "pill
+	// shape" — clamp infinite radii to the box's own dimension so the
+	// overlap-ratio step below stays finite. Without this, Inf+Inf=Inf
+	// makes the ratio 0 and Inf*0 = NaN propagates into the path.
+	clampInf := func(v, cap pr.Float) pr.Float {
+		if math.IsInf(float64(v), +1) {
+			return cap
+		}
+		return v
+	}
+	tlrx = clampInf(tlrx, width)
+	tlry = clampInf(tlry, height)
+	trrx = clampInf(trrx, width)
+	trry = clampInf(trry, height)
+	brrx = clampInf(brrx, width)
+	brry = clampInf(brry, height)
+	blrx = clampInf(blrx, width)
+	blry = clampInf(blry, height)
 
 	// Fix overlapping curves
 	// See http://www.w3.org/TR/css-backgrounds-3/#corner-overlap

@@ -425,8 +425,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 
 			// Break if this row overflows the page, unless there is no
 			// other content on the page.
-			overflow := context.overflowsPage(bottomSpace, nextPositionY)
-			if !pageIsEmpty && overflow {
+			if !pageIsEmpty && context.overflowsPage(bottomSpace, nextPositionY) {
 				removePlaceholders(context, row.Children, absoluteBoxes, fixedBoxes)
 				if len(newGroupChildren) != 0 {
 					previousRow := newGroupChildren[len(newGroupChildren)-1]
@@ -729,9 +728,19 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 	}
 	table_ = bo.CopyWithChildren(table_, newChildren).(bo.TableBoxITF) // CopyWithChildren is type stable
 	table = table_.Table()
-	for i, v := range table.ColumnGroups {
-		table.ColumnGroups[i] = v.Copy().(*bo.TableColumnGroupBox)
+	// Per WP commit 8a777cb2: deep-copy column groups when copying the
+	// table. Backgrounds set on a column are applied to its cells, and
+	// these cells differ per page. Without copying, all pages would
+	// share the cells from the last page.
+	newColumnGroups := make([]*bo.TableColumnGroupBox, len(table.ColumnGroups))
+	for i, columnGroup := range table.ColumnGroups {
+		nc := bo.Deepcopy(columnGroup).(*bo.TableColumnGroupBox)
+		// GetCells on the original group binds to the original
+		// receiver; rebind so it reads the *copied* children.
+		nc.GetCells = nc.DefaultGetCells
+		newColumnGroups[i] = nc
 	}
+	table.ColumnGroups = newColumnGroups
 	removeEndDecoration := resumeAt != nil && !hasFooter
 	table_.RemoveDecoration(&table.BoxFields, removeStartDecoration, removeEndDecoration)
 	if collapse {

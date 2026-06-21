@@ -1552,6 +1552,38 @@ func TestPageStyle(t *testing.T) {
 	}
 }
 
+// A margin box that is stretched to fill the available width (here, the sole
+// generated box on its side) must honor that width even when its content has
+// no intrinsic width — e.g. a running footer whose only child is a
+// percentage-width block with absolutely-positioned content (max-content = 0).
+// Regression: the max-content clamp in setOuter must not collapse such a box
+// to zero width, which would left-align a footer meant to be full-width.
+func TestMarginBoxFillWidthZeroContent(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+
+	page := renderOnePage(t, `
+      <style>
+        @page {
+          size: 400px;
+          margin: 50px;
+          @bottom-left { content: element(foot); }
+        }
+        #foot { position: running(foot); width: 100%; }
+        /* Only content is absolutely positioned -> intrinsic width is 0. */
+        #inner { position: absolute; left: 0; right: 0; text-align: center; }
+      </style>
+      <div id="foot"><div id="inner">hello</div></div>
+      x
+    `)
+	marginBoxes := page.Box().Children[1:]
+	tu.AssertEqual(t, len(marginBoxes), 1)
+	box := marginBoxes[0]
+	tu.AssertEqual(t, box.(*bo.MarginBox).AtKeyword, "@bottom-left")
+	// Available width = page size - left/right margins = 400 - 2*50 = 300.
+	tu.AssertEqual(t, box.Box().MarginWidth(), Fl(300))
+	tu.AssertEqual(t, box.Box().PositionX, Fl(50))
+}
+
 func testPageStyle(t *testing.T, css string, widths []pr.Float) {
 	var expectedAtKeywords []string
 	for _, atKeyword := range []string{"@top-left", "@top-center", "@top-right"} {

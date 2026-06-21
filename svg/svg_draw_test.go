@@ -118,6 +118,10 @@ func (outputPage) DrawGradient(gradient backend.GradientLayout, width, height fl
 	outputLog.Println("DrawGradient")
 }
 
+func (outputPage) SetGradientFillPath(x, y, width, height fl) {
+	outputLog.Println("SetGradientFillPath")
+}
+
 func (outputPage) DrawWithOpacity(opacity fl, group backend.Canvas) {
 	outputLog.Println("DrawGroup")
 }

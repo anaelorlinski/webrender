@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	scolor "github.com/SCKelemen/color"
 	"github.com/benoitkugler/webrender/utils"
 )
 
@@ -320,39 +321,45 @@ func ParseColor(token Token) Color {
 			args = []Token{args[0], args[2], args[4], args[6]}
 		}
 		if len(args) != 0 {
-			switch utils.AsciiLower(token.Name) {
-			case "rgb":
-				rgba, ok := parseRgb(args, 1.)
-				if ok {
-					return Color{Type: ColorRGBA, RGBA: rgba}
-				}
-			case "rgba":
-				if len(args) < 3 {
-					return Color{}
-				}
-				alpha, isNotNone := parseAlpha(args[3:])
-				if isNotNone {
-					rgba, ok := parseRgb(args[:3], alpha)
+			name := utils.AsciiLower(token.Name)
+			switch name {
+			case "rgb", "rgba":
+				// CSS Color Module Level 4 makes rgb() and rgba()
+				// equivalent — both accept an optional alpha as the
+				// 4th argument. The 3-arg form defaults to opaque.
+				if len(args) == 3 {
+					rgba, ok := parseRgb(args, 1.)
 					if ok {
 						return Color{Type: ColorRGBA, RGBA: rgba}
 					}
+				} else if len(args) >= 4 {
+					alpha, isNotNone := parseAlpha(args[3:])
+					if isNotNone {
+						rgba, ok := parseRgb(args[:3], alpha)
+						if ok {
+							return Color{Type: ColorRGBA, RGBA: rgba}
+						}
+					}
 				}
-			case "hsl":
-				rgba, ok := parseHsl(args, 1.)
-				if ok {
-					return Color{Type: ColorRGBA, RGBA: rgba}
-				}
-			case "hsla":
-				if len(args) < 3 {
-					return Color{}
-				}
-				alpha, isNotNone := parseAlpha(args[3:])
-				if isNotNone {
-					rgba, ok := parseHsl(args[:3], alpha)
+			case "hsl", "hsla":
+				if len(args) == 3 {
+					rgba, ok := parseHsl(args, 1.)
 					if ok {
 						return Color{Type: ColorRGBA, RGBA: rgba}
 					}
+				} else if len(args) >= 4 {
+					alpha, isNotNone := parseAlpha(args[3:])
+					if isNotNone {
+						rgba, ok := parseHsl(args[:3], alpha)
+						if ok {
+							return Color{Type: ColorRGBA, RGBA: rgba}
+						}
+					}
 				}
+			case "oklch", "oklab", "lab", "lch", "hwb":
+				return parseColorL4(name, args)
+			case "contrast-color":
+				return parseContrastColor(args)
 			}
 		}
 	}
@@ -447,4 +454,167 @@ func hslToRgb(_hue int, saturation, lightness utils.Fl) (utils.Fl, utils.Fl, uti
 	}
 	m1 = float64(lightness*2) - m2
 	return hueToRgb(m1, m2, hue+1./3), hueToRgb(m1, m2, hue), hueToRgb(m1, m2, hue-1./3)
+}
+
+// parseColorL4 parses CSS Color Level 4 color functions: oklch, oklab, lab,
+// lch, and hwb. All are space-separated with optional "/ alpha" syntax.
+// Colors are converted to sRGB RGBA at parse time with gamut mapping.
+func parseColorL4(name string, args []Token) Color {
+	// Split args on "/" to separate color channels from alpha.
+	var channels []Token
+	var alpha utils.Fl = 1
+	for i, tok := range args {
+		if IsLiteral(tok, "/") {
+			channels = args[:i]
+			if i+1 < len(args) {
+				a, ok := parseAlpha(args[i+1:])
+				if !ok {
+					return Color{}
+				}
+				alpha = a
+			}
+			break
+		}
+	}
+	if channels == nil {
+		channels = args
+	}
+
+	switch name {
+	case "oklch":
+		if len(channels) != 3 {
+			return Color{}
+		}
+		l, ok1 := parseChannel(channels[0], 1.0)
+		c, ok2 := parseChannel(channels[1], 0.4)
+		h, ok3 := parseAngle(channels[2])
+		if !ok1 || !ok2 || !ok3 {
+			return Color{}
+		}
+		return Color{Type: ColorRGBA, RGBA: gamutMapOKLCH(float64(l), float64(c), float64(h), float64(alpha))}
+
+	case "oklab":
+		if len(channels) != 3 {
+			return Color{}
+		}
+		l, ok1 := parseChannel(channels[0], 1.0)
+		a, ok2 := parseChannel(channels[1], 0.4)
+		b, ok3 := parseChannel(channels[2], 0.4)
+		if !ok1 || !ok2 || !ok3 {
+			return Color{}
+		}
+		return Color{Type: ColorRGBA, RGBA: gamutMapOKLAB(float64(l), float64(a), float64(b), float64(alpha))}
+
+	case "lab":
+		if len(channels) != 3 {
+			return Color{}
+		}
+		l, ok1 := parseChannel(channels[0], 100.0)
+		a, ok2 := parseChannel(channels[1], 125.0)
+		b, ok3 := parseChannel(channels[2], 125.0)
+		if !ok1 || !ok2 || !ok3 {
+			return Color{}
+		}
+		return Color{Type: ColorRGBA, RGBA: gamutMapLAB(float64(l), float64(a), float64(b), float64(alpha))}
+
+	case "lch":
+		if len(channels) != 3 {
+			return Color{}
+		}
+		l, ok1 := parseChannel(channels[0], 100.0)
+		c, ok2 := parseChannel(channels[1], 150.0)
+		h, ok3 := parseAngle(channels[2])
+		if !ok1 || !ok2 || !ok3 {
+			return Color{}
+		}
+		return Color{Type: ColorRGBA, RGBA: gamutMapLCH(float64(l), float64(c), float64(h), float64(alpha))}
+
+	case "hwb":
+		if len(channels) != 3 {
+			return Color{}
+		}
+		h, ok1 := parseAngle(channels[0])
+		w, ok2 := parseChannel(channels[1], 1.0)
+		bk, ok3 := parseChannel(channels[2], 1.0)
+		if !ok1 || !ok2 || !ok3 {
+			return Color{}
+		}
+		hwb := scolor.NewHWB(float64(h), float64(w), float64(bk), float64(alpha))
+		return Color{Type: ColorRGBA, RGBA: colorToRGBA(hwb, alpha)}
+	}
+
+	return Color{}
+}
+
+// parseChannel parses a CSS color channel value that can be a number,
+// a percentage, or the "none" keyword. scaleFactor maps a 100% value
+// to its numeric equivalent (e.g. 1.0 for oklch L, 0.4 for oklch C,
+// 100 for lab L, 125 for lab a/b).
+func parseChannel(tok Token, scaleFactor utils.Fl) (utils.Fl, bool) {
+	if ident, ok := tok.(Ident); ok && utils.AsciiLower(ident.Value) == "none" {
+		return 0, true
+	}
+	if n, ok := tok.(Number); ok {
+		return n.ValueF, true
+	}
+	if p, ok := tok.(Percentage); ok {
+		return p.ValueF / 100 * scaleFactor, true
+	}
+	return 0, false
+}
+
+// parseAngle parses an angle value: bare number (degrees), number with
+// deg/grad/rad/turn units, or "none".
+func parseAngle(tok Token) (utils.Fl, bool) {
+	if ident, ok := tok.(Ident); ok && utils.AsciiLower(ident.Value) == "none" {
+		return 0, true
+	}
+	if n, ok := tok.(Number); ok {
+		return n.ValueF, true
+	}
+	if d, ok := tok.(Dimension); ok {
+		val := d.ValueF
+		switch utils.AsciiLower(d.Unit) {
+		case "deg":
+			return val, true
+		case "grad":
+			return val * 360 / 400, true
+		case "rad":
+			return val * 180 / math.Pi, true
+		case "turn":
+			return val * 360, true
+		}
+	}
+	return 0, false
+}
+
+// colorToRGBA converts a SCKelemen/color Color to parser.RGBA.
+// The library's RGBA() returns float64 values in [0,1]; we clamp and
+// convert to float32. Alpha is taken from the parsed alpha value since
+// the library may not preserve it through gamut mapping.
+func colorToRGBA(c scolor.Color, alpha utils.Fl) RGBA {
+	r, g, b, _ := c.RGBA()
+	return RGBA{
+		R: clamp(utils.Fl(r)),
+		G: clamp(utils.Fl(g)),
+		B: clamp(utils.Fl(b)),
+		A: alpha,
+	}
+}
+
+// parseContrastColor implements the CSS Color 5 contrast-color() function.
+// It takes a single <color> argument and returns white or black, whichever
+// has higher contrast against that color as a background.
+func parseContrastColor(args []Token) Color {
+	if len(args) != 1 {
+		return Color{}
+	}
+	bg := ParseColor(args[0])
+	if bg.IsNone() {
+		return Color{}
+	}
+	if bg.Type == ColorCurrentColor {
+		return Color{}
+	}
+	return Color{Type: ColorRGBA, RGBA: ContrastColor(bg.RGBA)}
 }

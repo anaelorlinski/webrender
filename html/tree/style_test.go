@@ -417,25 +417,25 @@ func TestPageSelectors(t *testing.T) {
 			{Side: "left", Specificity: selector.Specificity{0, 0, 2}},
 		}},
 		{sel: "@page :nth(2) {}", out: []pageSelector{
-			{Index: pageIndex{A: 0, B: 2}, Specificity: selector.Specificity{0, 1, 0}},
+			{Index: pageIndex{A: 0, B: 2, Specified: true}, Specificity: selector.Specificity{0, 1, 0}},
 		}},
 		{sel: "@page :nth(2n + 4) {}", out: []pageSelector{
-			{Index: pageIndex{A: 2, B: 4}, Specificity: selector.Specificity{0, 1, 0}},
+			{Index: pageIndex{A: 2, B: 4, Specified: true}, Specificity: selector.Specificity{0, 1, 0}},
 		}},
 		{sel: "@page :nth(3n) {}", out: []pageSelector{
-			{Index: pageIndex{A: 3, B: 0}, Specificity: selector.Specificity{0, 1, 0}},
+			{Index: pageIndex{A: 3, B: 0, Specified: true}, Specificity: selector.Specificity{0, 1, 0}},
 		}},
 		{sel: "@page :nth( n+2 ) {}", out: []pageSelector{
-			{Index: pageIndex{A: 1, B: 2}, Specificity: selector.Specificity{0, 1, 0}},
+			{Index: pageIndex{A: 1, B: 2, Specified: true}, Specificity: selector.Specificity{0, 1, 0}},
 		}},
 		{sel: "@page :nth(even) {}", out: []pageSelector{
-			{Index: pageIndex{A: 2, B: 0}, Specificity: selector.Specificity{0, 1, 0}},
+			{Index: pageIndex{A: 2, B: 0, Specified: true}, Specificity: selector.Specificity{0, 1, 0}},
 		}},
 		{sel: "@page pagename:nth(2) {}", out: []pageSelector{
-			{Name: "pagename", Index: pageIndex{A: 0, B: 2}, Specificity: selector.Specificity{1, 1, 0}},
+			{Name: "pagename", Index: pageIndex{A: 0, B: 2, Specified: true}, Specificity: selector.Specificity{1, 1, 0}},
 		}},
 		{sel: "@page :nth(1 of small) {}", out: []pageSelector{
-			{Index: pageIndex{"small", 0, 1}, Specificity: selector.Specificity{1, 1, 0}},
+			{Index: pageIndex{Group: "small", A: 0, B: 1, Specified: true}, Specificity: selector.Specificity{1, 1, 0}},
 		}},
 		{sel: "@page page page {}"},
 		{sel: "@page :left page {}"},

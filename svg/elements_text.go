@@ -27,6 +27,14 @@ type textSpan struct {
 
 	isText          bool // only true for tag 'text'
 	textBoundingBox Rectangle
+
+	// manualShift, when non-zero, is added to every character's X
+	// position by textSpan.draw. svg.go's drawNode sets this on each
+	// textSpan in the subtree of a <text> element with text-anchor
+	// middle/end, after measuring the union width of the subtree.
+	// This produces the equivalent of a post-draw Translate without
+	// needing a real group buffer.
+	manualShift Fl
 }
 
 func newTextSpan(node *cascadedNode) (drawable, error) {
@@ -39,7 +47,20 @@ func newTextSpan(node *cascadedNode) (drawable, error) {
 	if f, has := node.attrs["font-family"]; has {
 		family = f
 	}
-	out.style.SetFontFamily(strings.Split(family, ","))
+	// Strip CSS quoting from each comma-separated family name. Values
+	// flowing through the `font` shorthand expander come back serialized
+	// with quotes (e.g. `font: 2px 'weasyprint'` → font-family: `"weasyprint"`).
+	familyList := strings.Split(family, ",")
+	for i, f := range familyList {
+		f = strings.TrimSpace(f)
+		if len(f) >= 2 {
+			if (f[0] == '"' && f[len(f)-1] == '"') || (f[0] == '\'' && f[len(f)-1] == '\'') {
+				f = f[1 : len(f)-1]
+			}
+		}
+		familyList[i] = f
+	}
+	out.style.SetFontFamily(familyList)
 
 	if w, has := node.attrs["font-weight"]; has {
 		out.style.SetFontWeight(pr.IntString{Int: parseFontWeight(w)})
@@ -251,6 +272,31 @@ func (t *textSpan) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, di
 		dst.State().SetTextPaint(newPaintOp(doFill, doStroke, false))
 		texts = append(texts,
 			drawer.CreateFirstLine(layout, "none", pr.TaggedString{Tag: pr.None}, scaleX, xPosition, yPosition, angle))
+	}
+
+	// Apply text-anchor shift. Three cases:
+	//   1. svg.go pre-computed a shift across the <text> subtree
+	//      (covers <text text-anchor="..."> with or without nested
+	//      tspans, where the outer node's bbox is unknown when this
+	//      runs because children haven't drawn yet).
+	//   2. This is a <tspan> with its own text-anchor (e.g.
+	//      <text><tspan x="10" text-anchor="middle">...). The tspan's
+	//      bbox is local; we use its own width.
+	//   3. Otherwise (no shift), draw at unshifted positions.
+	shift := t.manualShift
+	if shift == 0 && (t.textAnchor == middle || t.textAnchor == end) && !t.isText {
+		// Case 2: tspan with its own anchor and no override from parent.
+		if t.textAnchor == middle {
+			shift = -bbox.Width / 2
+		} else {
+			shift = -bbox.Width
+		}
+	}
+	if shift != 0 {
+		for i := range texts {
+			texts[i].X += shift
+		}
+		bbox.X += shift
 	}
 
 	dst.OnNewStack(func() {

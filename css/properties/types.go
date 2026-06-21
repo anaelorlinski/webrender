@@ -60,6 +60,19 @@ func (dec Decorations) Union(other Decorations) Decorations { return dec | other
 
 type Transforms []Transform
 
+// Shadow represents one box-shadow or text-shadow layer.
+type Shadow struct {
+	OffsetX Dimension
+	OffsetY Dimension
+	Blur    Dimension
+	Spread  Dimension // box-shadow only; zero for text-shadow
+	Color   Color
+	Inset   bool // box-shadow only
+}
+
+// Shadows stores a list of box/text shadows (empty = none).
+type Shadows []Shadow
+
 type Values []TaggedDim
 
 type SIntStrings struct {
@@ -239,7 +252,10 @@ func (size GridDims) SizingFunctions() [2]TaggedDim {
 		minSizing, maxSizing = size.V, size.v2
 	}
 	if size.tag == 'f' {
-		minSizing, maxSizing = TagToV(Auto), TagToV(Auto)
+		// Fork: fit-content(L) ≈ minmax(auto, L) with growth limit
+		// clamped at L. The min is "auto", the max is the fit-content
+		// argument.
+		minSizing, maxSizing = TagToV(Auto), size.V
 	} else if minSizing.Unit == Fr {
 		minSizing = TagToV(Auto)
 	}
@@ -402,15 +418,26 @@ func (u Unit) String() string {
 	}
 }
 
-// Dimension without unit is interpreted as float
+// Dimension without unit is interpreted as float.
+//
+// A Dimension may also carry an unresolved CSS math expression
+// (calc/min/max/clamp/...) whose percentages refer to a layout dimension
+// not yet known at compute time. When [Math] is non-nil, [Value] and
+// [Unit] are ignored and consumers must call the layout-time evaluator
+// (see [ResolvePercentage]). This mirrors WeasyPrint, where any slot
+// that may hold a length can hold a tinycss2 FunctionBlock instead.
 type Dimension struct {
 	Value Float
 	Unit  Unit
+	Math  *PendingMath
 }
 
-func NewDim(v Float, u Unit) Dimension { return Dimension{v, u} }
+func NewDim(v Float, u Unit) Dimension { return Dimension{Value: v, Unit: u} }
 
 func (d Dimension) String() string {
+	if d.Math != nil {
+		return d.Math.String()
+	}
 	return fmt.Sprintf("<%g %s>", d.Value, d.Unit)
 }
 
@@ -463,6 +490,10 @@ type (
 type ColorStop struct {
 	Color    Color
 	Position Dimension
+	// IsHint marks a color transition hint (CSS Images 3 <color-hint>): a
+	// bare <length-percentage> between two color stops that shifts the
+	// midpoint of the transition. Only Position is meaningful when set.
+	IsHint bool
 }
 
 type DirectionType struct {
@@ -649,6 +680,7 @@ func (GridAuto) isCssProperty()          {}
 func (GridLine) isCssProperty()          {}
 func (GridTemplateAreas) isCssProperty() {}
 func (GridTemplate) isCssProperty()      {}
+func (Shadows) isCssProperty()            {}
 
 func (Keyword) isDeclaredValue()           {}
 func (TaggedString) isDeclaredValue()      {}
@@ -694,3 +726,4 @@ func (GridAuto) isDeclaredValue()          {}
 func (GridLine) isDeclaredValue()          {}
 func (GridTemplateAreas) isDeclaredValue() {}
 func (GridTemplate) isDeclaredValue()      {}
+func (Shadows) isDeclaredValue()           {}

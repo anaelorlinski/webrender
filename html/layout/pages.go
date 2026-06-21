@@ -47,7 +47,21 @@ func (o orientedBox) outer() pr.Float {
 }
 
 func (o *orientedBox) setOuter(newOuterWidth pr.Float) {
-	o.inner = min(max(o.minContentSize(), newOuterWidth-o.sugar()), o.maxContentSize())
+	inner := max(o.minContentSize(), newOuterWidth-o.sugar())
+	// Clamp to the content-based preferred (max-content) width so a box is
+	// not stretched past what its content needs — but only when there is a
+	// real content constraint. A max-content of 0 means the box has no
+	// in-flow content preferring a width (e.g. a full-width footer whose
+	// only content is absolutely positioned); such a box must honor the
+	// width it is assigned instead of collapsing to 0.
+	//
+	// This DIVERGES from WeasyPrint, whose OrientedBox.outer setter clamps
+	// unconditionally (min(max(min, ...), max)) and so collapses such a box
+	// to zero width — see TestMarginBoxFillWidthZeroContent.
+	if maxC := o.maxContentSize(); maxC > 0 {
+		inner = min(inner, maxC)
+	}
+	o.inner = inner
 }
 
 func (o orientedBox) outerMinContentSize() pr.Float {
@@ -697,7 +711,7 @@ func (context *layoutContext) makePage(rootBox bo.BlockLevelBoxITF, pageType uti
 	if !(bo.BlockLevelT.IsInstance(rootBox)) {
 		panic(fmt.Sprintf("expected BlockLevel, got %s", rootBox))
 	}
-	context.createBlockFormattingContext()
+	context.createBlockFormattingContext(rootBox)
 	context.currentPage = pageNumber
 	context.currentPageFootnotes = nil
 	context.currentFootnoteArea = footnoteArea
@@ -725,6 +739,9 @@ func (context *layoutContext) makePage(rootBox bo.BlockLevelBoxITF, pageType uti
 		contextOutOfFlow = context.brokenOutOfFlow
 	)
 	context.brokenOutOfFlow = make(map[Box]brokenBox) // new map
+	if context.pendingBFCExcludedShapes == nil {
+		context.pendingBFCExcludedShapes = map[Box][]*bo.BoxFields{}
+	}
 	for _, v := range contextOutOfFlow {
 		box, containingBlock := v.box, v.containingBlock
 		box.Box().PositionY = rootBox.Box().ContentBoxY()
@@ -734,8 +751,38 @@ func (context *layoutContext) makePage(rootBox bo.BlockLevelBoxITF, pageType uti
 			outOfFlowResumeAt tree.ResumeStack
 		)
 		if box.Box().IsFloated() {
+			// floatLayout appends the resumed float to the *current*
+			// (page-root) BFC's excluded shapes. That is correct only for
+			// a float owned by the page-root BFC. For a float owned by a
+			// nested BFC (e.g. a `display: flow-root` section that
+			// contained it), snapshot the list length so we can undo that
+			// append below — otherwise a sibling flow-root box laid out at
+			// page-root level would run avoidCollisions against a float
+			// that isn't in its formatting context and get pushed down by
+			// the float's height, overflowing the page.
+			nested := v.bfcRoot != nil && v.bfcRoot != rootBox
+			var excludedLenBefore int
+			if nested {
+				excludedLenBefore = len(context.excludedShapes.list)
+			}
 			outOfFlowBox, outOfFlowResumeAt = floatLayout(context, box, containingBlock.Box(),
 				&positionedBoxes, &positionedBoxes, 0, v.resumeAt)
+			// Re-publish the float as an excluded shape only for nested
+			// BFCs (not the page's root BFC). The page-root's in-flow
+			// layout already sees the float via `outOfFlowBoxes` being
+			// prepended to root.Children below and via floatLayout's own
+			// append; extra pre-seeding there would double-count and push
+			// in-flow content too far. For a nested BFC, undo floatLayout's
+			// page-root append and instead seed the float into its own
+			// BFC's pending excluded shapes, so only that BFC's in-flow
+			// content avoids/clears it. Mirrors WP commit 8373a169 (which
+			// wraps float_layout in create_block_formatting_context of the
+			// float's own BFC) in a localized way.
+			if nested {
+				context.excludedShapes.list = context.excludedShapes.list[:excludedLenBefore]
+				context.pendingBFCExcludedShapes[v.bfcRoot] = append(
+					context.pendingBFCExcludedShapes[v.bfcRoot], outOfFlowBox.Box())
+			}
 		} else {
 			if !box.Box().IsAbsolutelyPositioned() {
 				panic("internal error: box should be absolutely positioned")
@@ -744,9 +791,13 @@ func (context *layoutContext) makePage(rootBox bo.BlockLevelBoxITF, pageType uti
 				&positionedBoxes, 0, v.resumeAt)
 		}
 		outOfFlowBoxes = append(outOfFlowBoxes, outOfFlowBox)
+		// A broken out-of-flow occupied space on this page; in-flow
+		// content can no longer treat the page as empty. Mirrors
+		// WeasyPrint commit aa2dd831 which sets page_is_empty = False
+		// after each broken float/absolute placed.
 		pageIsEmpty = false
 		if outOfFlowResumeAt != nil {
-			context.brokenOutOfFlow[outOfFlowBox] = brokenBox{box, containingBlock, outOfFlowResumeAt}
+			context.brokenOutOfFlow[outOfFlowBox] = brokenBox{box: box, containingBlock: containingBlock, bfcRoot: v.bfcRoot, resumeAt: outOfFlowResumeAt}
 		}
 	}
 
@@ -754,29 +805,66 @@ func (context *layoutContext) makePage(rootBox bo.BlockLevelBoxITF, pageType uti
 	initialRootBox := rootBox
 	initialResumeAt := resumeAt
 	rootBox, tmp, _ := blockLevelLayout(context, rootBox, 0, resumeAt,
-		&initialContainingBlock.BoxFields, true, &positionedBoxes, &positionedBoxes, &adjoiningMargins, false, -1)
+		&initialContainingBlock.BoxFields, pageIsEmpty, &positionedBoxes, &positionedBoxes, &adjoiningMargins, false, -1)
 	resumeAt = tmp.resumeAt
 	if rootBox == nil {
-		// In-flow page rendering didn’t progress, only out-of-flow did. Render empty box
-		// at skip_stack and force fragmentation to make the root box and its descendants
-		// cover the whole page height.
-		if pageIsEmpty {
-			panic("expected empty page")
-		}
-		initialRootBox = bo.Deepcopy(initialRootBox).(bo.BlockLevelBoxITF)
-		box, parent := Box(initialRootBox), Box(initialRootBox)
-		skipStack := initialResumeAt
-		for len(skipStack) == 1 {
+		// In-flow page rendering didn't progress, only out-of-flow did
+		// (e.g. a float that doesn't fit pushed the in-flow content to
+		// the next page). Force the in-flow box to render as empty and
+		// fill the page so the page loop yields a resumeAt and we keep
+		// going. Mirrors WeasyPrint commit 09f76d16.
+		clone := bo.Deepcopy(initialRootBox).(bo.BlockLevelBoxITF)
+		// Drill down the resume-stack to the deepest parent whose child
+		// didn't fit, keeping every ancestor box (and its already-laid-out
+		// siblings) intact. Empty and force-fragment ONLY that deepest
+		// parent, then re-run layout with the original resume stack. This
+		// mirrors WeasyPrint (page.py): ancestors must survive so their
+		// backgrounds/borders still paint at full page height — e.g. a
+		// `background`-carrying section that spans pages while a float
+		// inside it continues. (An earlier version cleared children at
+		// every level, which dropped such ancestor boxes and left their
+		// background unpainted on continuation pages.)
+		//
+		// blockContainerLayout guards `Children[skip:]` against an empty
+		// child list, so resuming the emptied parent at skip>0 is safe.
+		var box bo.Box = clone
+		ss := initialResumeAt
+		for ss != nil && len(ss) == 1 {
 			var skip int
-			skip, skipStack = skipStack.Unpack()
-			box, parent = box.Box().Children[skip], box
+			var nextSS tree.ResumeStack
+			for k, v := range ss {
+				skip, nextSS = k, v
+			}
+			// Every ancestor on the resume path is force-fragmented so it
+			// fills the page height (and paints its background/border) even
+			// though its content continues on later pages.
+			box.Box().ForceFragmentation = true
+			if skip >= len(box.Box().Children) {
+				break
+			}
+			// Only descend while the next stack level still points inside
+			// this child; otherwise this box is the deepest parent.
+			if nextSS == nil {
+				break
+			}
+			box = box.Box().Children[skip]
+			ss = nextSS
 		}
-		parent.Box().Children = nil
-		parent.Box().ForceFragmentation = true
-		rootBox, _, _ = blockLevelLayout(
-			context, initialRootBox, 0, initialResumeAt, &initialContainingBlock.BoxFields,
-			pageIsEmpty, &positionedBoxes, &positionedBoxes, &adjoiningMargins, false, -1)
+		box.Box().Children = nil
+		box.Box().ForceFragmentation = true
+		initialRootBox = clone
+		// Re-run layout with the original resume stack and pageIsEmpty=true.
+		// pageIsEmpty=true is essential: the emptied box fills the whole page
+		// (which exceeds the remaining space), and only pageIsEmpty=true lets
+		// an over-tall first box stay on the page instead of being pushed off
+		// (which would return nil). Matches WeasyPrint page.py, which likewise
+		// passes True here.
+		rootBox, _, _ = blockLevelLayout(context, initialRootBox, 0, initialResumeAt,
+			&initialContainingBlock.BoxFields, true, &positionedBoxes, &positionedBoxes, &adjoiningMargins, false, -1)
 		resumeAt = initialResumeAt
+		if rootBox == nil {
+			panic("expected non nil box for the root element after force_fragmentation")
+		}
 	}
 
 	rootBox.Box().Children = append(outOfFlowBoxes, rootBox.Box().Children...)

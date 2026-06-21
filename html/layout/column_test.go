@@ -79,7 +79,7 @@ func TestColumnGap(t *testing.T) {
 		{"normal", 16},  // "normal" is 1em = 16px
 		{"unknown", 16}, // default value is normal
 		{"15px", 15},
-		{"40%", 16},  // percentages are not allowed
+		{"40%", 120}, // 40% of 300px container = 120px
 		{"-1em", 16}, // negative values are not allowed
 	} {
 		page := renderOnePage(t, fmt.Sprintf(`

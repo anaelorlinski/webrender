@@ -315,4 +315,39 @@ type Canvas interface {
 	// Solid gradient are already handled, meaning that only linear and radial
 	// must be taken care of.
 	DrawGradient(gradient GradientLayout, width, height Fl)
+
+	// SetGradientFillPath sets a custom fill path for the next DrawGradient
+	// call, in gradient-local coordinates. When set, DrawGradient uses this
+	// path instead of Rectangle(width, height) as the fill shape. This is
+	// needed when the gradient's positioning area (e.g. padding-box) is
+	// smaller than the painting area (e.g. border-box) so the fill shape
+	// covers the full painting area and rounded-corner clips are not
+	// truncated. The path is consumed and cleared after the next DrawGradient.
+	SetGradientFillPath(x, y, width, height Fl)
+
+	// DrawBoxShadow paints one CSS box-shadow. The caller (document layer)
+	// resolves which box the shadow applies to — the border box for an
+	// outset shadow, the padding box for an inset shadow — and passes it as
+	// `shape` in device coordinates. The backend owns all shadow geometry:
+	// applying the (offsetX, offsetY) offset, the `spread` expansion (or
+	// shrink, for inset), the `blur` Gaussian falloff, and the inset/outset
+	// clipping. `color` already has its alpha resolved. Shadows are painted
+	// back-to-front by the caller (one call per shadow).
+	DrawBoxShadow(shape RoundedBox, offsetX, offsetY, blur, spread Fl, color parser.RGBA, inset bool)
+
+	// DrawTextShadow paints one CSS text-shadow behind the given text line.
+	// `text` is the same TextDrawing that would be passed to DrawText (the
+	// caller positions it at the text origin); the backend draws it offset
+	// by (offsetX, offsetY) and blurred by `blur`, in `color`. Called
+	// back-to-front, before the real DrawText.
+	DrawTextShadow(text TextDrawing, offsetX, offsetY, blur Fl, color parser.RGBA)
+}
+
+// RoundedBox is a rectangle with (possibly zero) elliptical corner radii,
+// expressed in device coordinates. It mirrors the box model's rounded box in
+// a backend-level, layout-independent form so shadow rendering can live in the
+// backend. Each corner is (rx, ry).
+type RoundedBox struct {
+	X, Y, Width, Height                        Fl
+	TopLeft, TopRight, BottomRight, BottomLeft [2]Fl
 }

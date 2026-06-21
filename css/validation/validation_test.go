@@ -300,6 +300,11 @@ func TestTransforms(t *testing.T) {
 	assertValidDict(t, "transform: scale(2)", toValidated(pr.Properties{
 		pr.PTransform: pr.Transforms{{Kind: pr.Scale, Dimensions: []pr.Dimension{pr.FToD(2), pr.FToD(2)}}},
 	}))
+	// Per WP commit 5d4e6cec: legacy 0 (no unit) is a valid <angle>.
+	// Used by Tailwind, see CSS Values 4 §6.4.
+	assertValidDict(t, "transform: rotate(0)", toValidated(pr.Properties{
+		pr.PTransform: pr.Transforms{{Kind: pr.Rotate, Dimensions: []pr.Dimension{pr.FToD(0)}}},
+	}))
 	capt.AssertNoLogs(t)
 	assertInvalid(t, "transform: lipsumize(6px)", "invalid")
 	assertInvalid(t, "transform: foo", "invalid")
@@ -745,13 +750,18 @@ func TestLinearGradient(t *testing.T) {
 	invalid(t, "blue 10deg")
 	invalid(t, "blue 4")
 	invalid(t, "soylent-green 4px")
-	invalid(t, "red 4px 2px")
+	// Fork: `red 4px 2px` is the CSS Images L4 double-position stop, supported.
 
 	invalid(t, "18deg")
 
 	invalid(t, "10arc-minutes, blue")
 	invalid(t, "10px, blue")
 	invalid(t, "to 90deg, blue")
+
+	// Color transition hints (a bare <length-percentage> between two stops)
+	// are valid only between color stops, never first/last/adjacent.
+	invalid(t, "blue, 10px")       // trailing hint
+	invalid(t, "blue, 10px, 20px, red") // two adjacent hints
 
 	invalid(t, "to the top, blue")
 	invalid(t, "to up, blue")
@@ -789,6 +799,17 @@ func TestLinearGradient(t *testing.T) {
 	gradient(t, "to left bottom, blue", pr.DirectionType{Corner: "bottom_left"}, nil, nil)
 	gradient(t, "to bottom right, blue", pr.DirectionType{Corner: "bottom_right"}, nil, nil)
 	gradient(t, "to right bottom, blue", pr.DirectionType{Corner: "bottom_right"}, nil, nil)
+
+	// A color transition hint parses as a positioned, color-less stop with
+	// IsHint set, interleaved between the two color stops.
+	checkGradientGeneric(t, "blue, 20%, red", pr.LinearGradient{
+		Direction: pr.DirectionType{Angle: pi},
+		ColorStops: []pr.ColorStop{
+			{Color: blue},
+			{Position: pr.Dimension{Value: 20, Unit: pr.Perc}, IsHint: true},
+			{Color: red},
+		},
+	})
 	capt.AssertNoLogs(t)
 }
 
@@ -827,7 +848,7 @@ func TestRadialGradient(t *testing.T) {
 	invalid(t, "blue 10deg")
 	invalid(t, "blue 4")
 	invalid(t, "soylent-green 4px")
-	invalid(t, "red 4px 2px")
+	// Fork: `red 4px 2px` is the CSS Images L4 double-position stop, supported.
 
 	invalid(t, "circle")
 	invalid(t, "square, blue")

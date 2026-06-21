@@ -72,7 +72,9 @@ func floatLayout(context *layoutContext, box_ Box, containingBlock *bo.BoxFields
 		tmp      blockLayout
 	)
 	if bo.BlockContainerT.IsInstance(box_) {
-		context.createBlockFormattingContext()
+		// Floats establish their own anonymous BFC. Pass nil so it's
+		// not used as a key for pendingBFCExcludedShapes.
+		context.createBlockFormattingContext(nil)
 		box_, tmp, _ = blockContainerLayout(context, box_, bottomSpace,
 			skipStack, true, absoluteBoxes, fixedBoxes, new([]pr.Float), false, -1)
 		resumeAt = tmp.resumeAt
@@ -130,18 +132,24 @@ func findFloatPosition(context *layoutContext, box_ Box, containingBlock *bo.Box
 // Return nil if there is no clearance, otherwise the clearance value (as Float)
 // [collapsedMargin] defaults to 0
 func getClearance(context *layoutContext, box *bo.BoxFields, collapsedMargin pr.Float) (clearance pr.MaybeFloat) {
-	// Box should be after shape that’s broken on this page.
-	for _, brokenShape := range context.brokenOutOfFlow {
-		if brokenShape.box.Box().IsFloated() {
-			if clear := box.Style.GetClear(); clear == brokenShape.box.Box().Style.GetFloat() || clear == "both" {
-				return pr.Inf
-			}
+	clear := box.Style.GetClear()
+	// If a float is broken across pages and the in-flow box clears it,
+	// push the in-flow box past page bottom so it lands on the page that
+	// also continues the float. Mirrors WeasyPrint commit aa2dd831 /
+	// float.py:get_clearance lines 134-138.
+	for brokenShape := range context.brokenOutOfFlow {
+		bs := brokenShape.Box()
+		if !bs.IsFloated() {
+			continue
+		}
+		if clearMatches(clear, bs.Style.GetFloat()) {
+			return pr.Inf
 		}
 	}
-	// Hypothetical position is the position of the top border edge
 	hypotheticalPosition := box.PositionY + collapsedMargin
+	// Hypothetical position is the position of the top border edge
 	for _, excludedShape := range context.excludedShapes.list {
-		if clear := box.Style.GetClear(); clear == excludedShape.Style.GetFloat() || clear == "both" {
+		if clear == excludedShape.Style.GetFloat() || clear == "both" {
 			y, h := excludedShape.PositionY, excludedShape.MarginHeight()
 			if hypotheticalPosition < y+h {
 				var safeClearance pr.Float
@@ -153,6 +161,10 @@ func getClearance(context *layoutContext, box *bo.BoxFields, collapsedMargin pr.
 		}
 	}
 	return clearance
+}
+
+func clearMatches(clearValue, floatValue pr.String) bool {
+	return clearValue == floatValue || clearValue == "both"
 }
 
 // outer=true

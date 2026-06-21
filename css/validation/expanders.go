@@ -364,7 +364,7 @@ func _expandBorderSide(_ string, shortand pr.Shortand, tokens []Token) ([]namedT
 	out := make([]namedTokens, len(tokens))
 	for index, token := range tokens {
 		var suffix string
-		if !pa.ParseColor(token).IsNone() {
+		if !parseColorResolved(token).IsNone() {
 			suffix = "-color"
 		} else if borderWidth([]Token{token}, "") != nil {
 			suffix = "-width"
@@ -774,19 +774,50 @@ func _expandTextDecoration(_ string, _ pr.Shortand, tokens []Token) (out []named
 			} else {
 				styles = append(styles, token)
 			}
+		case "auto", "from-font":
+			// CSS Text Decoration Level 4 <text-decoration-thickness>
+			// keyword slot of the shorthand.
+			if len(thickness) != 0 {
+				return nil, ErrInvalidValue
+			}
+			thickness = append(thickness, token)
 		default:
-			if color := pa.ParseColor(token); !color.IsNone() {
-				if len(colors) != 0 {
-					return nil, ErrInvalidValue
-				}
-				colors = append(colors, token)
-			} else if th := textDecorationThickness([]Token{token}, ""); th != nil {
+			// Length / percentage / 0 tokens are the L4 thickness slot.
+			if _, ok := token.(pa.Dimension); ok {
 				if len(thickness) != 0 {
 					return nil, ErrInvalidValue
 				}
 				thickness = append(thickness, token)
-			} else {
+				continue
+			}
+			if _, ok := token.(pa.Percentage); ok {
+				if len(thickness) != 0 {
+					return nil, ErrInvalidValue
+				}
+				thickness = append(thickness, token)
+				continue
+			}
+			if num, ok := token.(pa.Number); ok && num.ValueF == 0 {
+				if len(thickness) != 0 {
+					return nil, ErrInvalidValue
+				}
+				thickness = append(thickness, token)
+				continue
+			}
+			if isMathFunction(token) {
+				if len(thickness) != 0 {
+					return nil, ErrInvalidValue
+				}
+				thickness = append(thickness, token)
+				continue
+			}
+			color := parseColorResolved(token)
+			if color.IsNone() {
 				return nil, ErrInvalidValue
+			} else if len(colors) != 0 {
+				return nil, ErrInvalidValue
+			} else {
+				colors = append(colors, token)
 			}
 		}
 	}
@@ -990,6 +1021,9 @@ func _expandFont(_ string, _ pr.Shortand, tokens []Token) ([]namedTokens, error)
 		if fontStyle([]Token{token}, "") != nil {
 			suffix = pr.PFontStyle
 		} else if fontVariantCaps([]Token{token}, "") != nil {
+			// Per WP commit 8ef8d1a3: accept all font-variant-caps
+			// values in the font shorthand, not just the legacy two
+			// (normal, small-caps).
 			suffix = pr.PFontVariantCaps
 		} else if fontWeight([]Token{token}, "") != nil {
 			suffix = pr.PFontWeight

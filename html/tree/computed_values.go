@@ -150,6 +150,8 @@ var (
 		pr.PBookmarkLabel: bookmarkLabel,
 		pr.PStringSet:     stringSet,
 		pr.PLink:          link,
+		pr.PBoxShadow:     shadows,
+		pr.PTextShadow:    shadows,
 	}
 )
 
@@ -292,8 +294,44 @@ func break_(_ *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) pr.CssPrope
 }
 
 func length(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) pr.CssProperty {
+	if pm, ok := _value.(pr.PendingMath); ok {
+		return resolveMathToDim(computer, pm)
+	}
 	value := _value.(pr.TaggedDim)
 	return length_(computer, value, -1, false)
+}
+
+// resolveMathToDim evaluates a PendingMath at compute time using the
+// element's font-size context. Three paths:
+//
+//   - PercentageReferTo == "" or "font-size": evaluate fully now. The
+//     percentage reference (if any) is the element's font-size.
+//   - PercentageReferTo == "layout": defer. The element's font-size and
+//     root-font-size are baked into the returned PendingMath so layout
+//     can finish the evaluation against the containing-block reference
+//     without re-walking the cascade.
+//
+// On evaluator failure the property falls back to its zero value.
+func resolveMathToDim(computer *ComputedStyle, pm pr.PendingMath) pr.CssProperty {
+	if pm.PercentageReferTo == "layout" {
+		// Defer to layout time: hand off through length_ so the
+		// font-size context is baked into the PendingMath.
+		return length_(computer, pr.Dimension{Math: &pm}.Tagged(), -1, false)
+	}
+	ctx := validation.MathContext{
+		FontSize:     utils.Fl(computer.GetFontSize().Value),
+		RootFontSize: utils.Fl(computer.rootStyle.GetFontSize().Value),
+	}
+	if pm.PercentageReferTo == "font-size" {
+		ctx.PercentageReference = ctx.FontSize
+		ctx.HasPercentageRef = true
+	}
+	dim, err := validation.EvalMathDim(pm, ctx)
+	if err != nil {
+		logger.WarningLogger.Printf("invalid math expression `%s`: %s", pm, err)
+		return pr.Dimension{}.Tagged()
+	}
+	return dim.Tagged()
 }
 
 func asPixels(v pr.TaggedDim, pixelsOnly bool) pr.TaggedDim {
@@ -309,6 +347,17 @@ func asPixels(v pr.TaggedDim, pixelsOnly bool) pr.TaggedDim {
 // pixelsOnly=false
 func length_(computer *ComputedStyle, value pr.TaggedDim, fontSize pr.Float, pixelsOnly bool) pr.TaggedDim {
 	if value.Tag == pr.Auto || value.Tag == pr.Content || value.Tag == pr.FromFont {
+		return value
+	}
+	if value.Dimension.Math != nil {
+		// Layout-deferred math: bake the font-size context now (the
+		// element-local em/rem/ex/ch reference is unreachable from
+		// inside ResolvePercentage at layout time) and pass the value
+		// through.
+		baked := *value.Dimension.Math
+		baked.FontSize = utils.Fl(computer.GetFontSize().Value)
+		baked.RootFontSize = utils.Fl(computer.rootStyle.GetFontSize().Value)
+		value.Dimension.Math = &baked
 		return value
 	}
 	if value.Value == 0 {
@@ -368,6 +417,9 @@ func bleed(computer *ComputedStyle, name pr.KnownProp, _value pr.CssProperty) pr
 }
 
 func pixelLength(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) pr.CssProperty {
+	if pm, ok := _value.(pr.PendingMath); ok {
+		return resolveMathToDim(computer, pm)
+	}
 	value := _value.(pr.TaggedDim)
 	if value.Tag == pr.Normal {
 		return value
@@ -720,14 +772,32 @@ func floating(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) pr
 
 // Compute the “font-size“ property.
 func fontSize(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) pr.CssProperty {
-	value := _value.(pr.TaggedDim)
-	if in := pr.XxSmall <= value.Tag && value.Tag <= pr.XxLarge; in {
-		return pr.FontSizeKeywords[value.Tag-pr.XxSmall].ToValue()
-	}
-
 	parentFontSize := pr.InitialValues.GetFontSize().Value
 	if computer.parentStyle != nil {
 		parentFontSize = computer.parentStyle.GetFontSize().Value
+	}
+
+	// Fork: font-size: calc(...) — evaluate now. Percentages refer to
+	// the parent font-size, em uses the parent (since em on font-size
+	// is parent-em), rem uses the root font-size.
+	if pm, ok := _value.(pr.PendingMath); ok {
+		ctx := validation.MathContext{
+			FontSize:            utils.Fl(parentFontSize),
+			RootFontSize:        utils.Fl(computer.rootStyle.GetFontSize().Value),
+			PercentageReference: utils.Fl(parentFontSize),
+			HasPercentageRef:    true,
+		}
+		dim, err := validation.EvalMathDim(pm, ctx)
+		if err != nil {
+			logger.WarningLogger.Printf("invalid font-size calc `%s`: %s", pm, err)
+			return pr.InitialValues.GetFontSize()
+		}
+		_value = dim.Tagged()
+	}
+
+	value := _value.(pr.TaggedDim)
+	if in := pr.XxSmall <= value.Tag && value.Tag <= pr.XxLarge; in {
+		return pr.FontSizeKeywords[value.Tag-pr.XxSmall].ToValue()
 	}
 
 	if value.Tag == pr.Larger {
@@ -944,7 +1014,32 @@ func tabSize(computer *ComputedStyle, name pr.KnownProp, _value pr.CssProperty) 
 	}
 	return length_(computer, value, -1, false)
 }
-
+// Compute the "box-shadow" and "text-shadow" properties.
+func shadows(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) pr.CssProperty {
+	value := _value.(pr.Shadows)
+	if len(value) == 0 {
+		return value
+	}
+	result := make(pr.Shadows, len(value))
+	for i, s := range value {
+		resolveDim := func(d pr.Dimension) pr.Dimension {
+			if d.Value == 0 {
+				return pr.Dimension{Value: 0, Unit: pr.Px}
+			}
+			resolved := length_(computer, d.Tagged(), -1, true)
+			return pr.Dimension{Value: resolved.Value, Unit: pr.Px}
+		}
+		result[i] = pr.Shadow{
+			OffsetX: resolveDim(s.OffsetX),
+			OffsetY: resolveDim(s.OffsetY),
+			Blur:    resolveDim(s.Blur),
+			Spread:  resolveDim(s.Spread),
+			Color:   s.Color,
+			Inset:   s.Inset,
+		}
+	}
+	return result
+}
 // Compute the “transform“ property.
 func transforms(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) pr.CssProperty {
 	value := _value.(pr.Transforms)

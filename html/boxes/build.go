@@ -287,8 +287,13 @@ func elementToBox(element *utils.HTMLNode, styleFor styleForI,
 				footnote := childBoxes[0]
 				footnote.Box().Style.SetFloat("none")
 				(*footnotes) = append(*footnotes, footnote)
-				callStyle := styleFor.Get((*utils.HTMLNode)(footnote.Box().Element), "footnote-call")
-				footnoteCall, err := makeBox(callStyle, nil, (*utils.HTMLNode)(footnote.Box().Element), "footnote-call")
+				// Per WP commit 5b0e66b9: footnote-call style should
+				// inherit from the footnote element (selector
+				// .footnote::footnote-call), not from the element that
+				// referenced it.
+				footnoteElement := (*utils.HTMLNode)(footnote.Box().Element)
+				callStyle := styleFor.Get(footnoteElement, "footnote-call")
+				footnoteCall, err := makeBox(callStyle, nil, footnoteElement, "footnote-call")
 				if err != nil {
 					logger.WarningLogger.Println(err)
 					return nil
@@ -348,6 +353,9 @@ func elementToBox(element *utils.HTMLNode, styleFor styleForI,
 			logger.WarningLogger.Println(err)
 			return nil
 		}
+		// Per WP commit 15b83090: pass the marker as the parent box to
+		// ContentToBoxes so the resulting children inherit the marker
+		// style, not the surrounding box style.
 		marker.Box().Children = ContentToBoxes(
 			markerStyle, marker, state.QuoteDepth, state.CounterValues, resolver,
 			targetCollector, cs, nil, nil)
@@ -441,6 +449,8 @@ func markerToBox(element *utils.HTMLNode, state *tree.PageState, parentStyle pr.
 				counterValue_ = []int{0}
 			}
 			counterValue := counterValue_[len(counterValue_)-1]
+			// Per WP commit 1b8ac910: skip empty marker strings instead
+			// of building a TextBox with empty text (would crash).
 			if markerText := cs.RenderMarker(style.GetListStyleType(), counterValue); markerText != "" {
 				markerBox := TextBoxAnonymousFrom(box, markerText)
 				markerBox.Box().Style.SetWhiteSpace(pr.PreWrap)
@@ -1633,6 +1643,17 @@ func FlexBoxes(box Box) Box {
 func flexChildren(box Box, children []Box) []Box {
 	if _, isFlexCont := box.(FlexContainerBoxITF); isFlexCont {
 		var flexChildren []Box
+		var inlineGroup []Box
+
+		flushInlineGroup := func() {
+			if len(inlineGroup) > 0 {
+				anonymous := BlockBoxAnonymousFrom(box, inlineGroup)
+				anonymous.IsFlexItem = true
+				flexChildren = append(flexChildren, anonymous)
+				inlineGroup = nil
+			}
+		}
+
 		for _, child := range children {
 			child.Box().forceNoFloated = true
 			if child.Box().IsInNormalFlow() {
@@ -1641,13 +1662,29 @@ func flexChildren(box Box, children []Box) []Box {
 
 			if textBox, ok := child.(*TextBox); ok {
 				// https://www.w3.org/TR/css-flexbox-1/#flex-items
+				// Whitespace-only text runs are skipped.
 				if strings.Trim(textBox.TextS(), " ") == "" {
 					continue
 				}
+				// Per the spec, each contiguous sequence of child text
+				// runs is wrapped in an anonymous block container flex item.
+				inlineGroup = append(inlineGroup, child)
+			} else if _, ok := child.(InlineLevelBoxITF); ok {
+				// Inline-level elements become individual flex items per
+				// the spec: "Each in-flow child of a flex container becomes
+				// a flex item". Blockify them — for InlineBlockBox this
+				// unwraps it (its content becomes the block's children);
+				// for InlineReplacedBox it converts to BlockReplacedBox;
+				// for other inline-level boxes it wraps them.
+				flushInlineGroup()
+				flexChildren = append(flexChildren, blockify(child, true))
+			} else {
+				// Block-level children become flex items directly.
+				flushInlineGroup()
+				flexChildren = append(flexChildren, child)
 			}
-
-			flexChildren = append(flexChildren, blockify(child, true))
 		}
+		flushInlineGroup()
 		return flexChildren
 	}
 	return children
@@ -1671,6 +1708,21 @@ func GridBoxes(box Box) Box {
 func gridChildren(box Box, children []Box) []Box {
 	if GridContainerT.IsInstance(box) {
 		var gridChildren []Box
+		var inlineGroup []Box
+
+		flushInlineGroup := func() {
+			if len(inlineGroup) > 0 {
+				anonymous := BlockBoxAnonymousFrom(inlineGroup[0], inlineGroup)
+				anonymous.Box().Style = inlineGroup[0].Box().Style
+				for _, ig := range inlineGroup {
+					ig.Box().IsGridItem = false
+				}
+				anonymous.Box().IsGridItem = true
+				gridChildren = append(gridChildren, anonymous)
+				inlineGroup = nil
+			}
+		}
+
 		for _, child := range children {
 			if child.Box().IsInNormalFlow() {
 				child.Box().IsGridItem = true
@@ -1681,9 +1733,26 @@ func gridChildren(box Box, children []Box) []Box {
 				// https://drafts.csswg.org/css-grid-2/#grid-item
 				continue
 			}
-
-			gridChildren = append(gridChildren, blockify(child, false))
+			if _, isText := child.(*TextBox); isText {
+				// Contiguous text-run children are wrapped together in a
+				// single anonymous block container grid item, per
+				// https://drafts.csswg.org/css-grid-2/#grid-item
+				inlineGroup = append(inlineGroup, child)
+			} else if InlineLevelT.IsInstance(child) {
+				// Inline-level *elements* must each be blockified into
+				// their own grid item, mirroring the flex container rule.
+				flushInlineGroup()
+				anonymous := BlockBoxAnonymousFrom(child, []Box{child})
+				anonymous.Box().Style = child.Box().Style
+				child.Box().IsGridItem = false
+				anonymous.Box().IsGridItem = true
+				gridChildren = append(gridChildren, anonymous)
+			} else {
+				flushInlineGroup()
+				gridChildren = append(gridChildren, child)
+			}
 		}
+		flushInlineGroup()
 		return gridChildren
 	}
 	return children

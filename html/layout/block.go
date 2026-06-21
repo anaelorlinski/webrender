@@ -119,6 +119,9 @@ func blockLevelLayoutSwitch(context *layoutContext, box_ bo.BlockLevelBoxITF, bo
 	} else if bo.GridT.IsInstance(box_) {
 		box_, layout := gridLayout(context, box_, bottomSpace, skipStack, containingBlock,
 			pageIsEmpty, absoluteBoxes, fixedBoxes)
+		if box_ == nil {
+			return nil, layout, -1
+		}
 		return box_.(bo.BlockLevelBoxITF), layout, -1 // gridLayout is type stable
 	} else {
 		panic(fmt.Sprintf("Layout for %s not handled yet", box_))
@@ -175,16 +178,30 @@ var blockReplacedWidth = handleMinMaxWidth(blockReplacedWidth_)
 func blockReplacedWidth_(box Box, _ *layoutContext, containingBlock containingBlock) (bool, pr.Float) {
 	// https://www.w3.org/TR/CSS21/visudet.html#block-replaced-width
 	replacedBoxWidth_(box, nil, containingBlock)
-	blockLevelWidth_(box, nil, containingBlock)
+	// Caller already applies handleMinMaxWidth, so don't re-apply internally.
+	blockLevelWidthWithoutMinMax(box, nil, containingBlock)
 	return false, 0
 }
 
-var blockLevelWidth = handleMinMaxWidth(blockLevelWidth_)
+// blockLevelWidth sets the box width and the auto margins, applying
+// min/max-width internally. Mirrors WeasyPrint commit 367829db
+// (#2698): the previous implementation used the width-determining
+// step to also set margins, then re-applied min/max on top — which
+// produced wrong margins for RTL elements when min/max actually
+// constrained the width. The new flow takes care of min/max before
+// computing the final position_x shift for RTL boxes.
+func blockLevelWidth(box_ Box, _ *layoutContext, containingBlock_ containingBlock) (bool, pr.Float) {
+	return blockLevelWidthFn(box_, containingBlock_, true)
+}
 
-// @handleMinMaxWidth
-// Set the “box“ width.
-// containingBlock must be bo.BoxFields
-func blockLevelWidth_(box_ Box, _ *layoutContext, containingBlock_ containingBlock) (bool, pr.Float) {
+// blockLevelWidthWithoutMinMax is the variant used by code paths that
+// already compute the min/max constraint themselves (e.g. column
+// layout). Equivalent to WP's `block_level_width.without_min_max`.
+func blockLevelWidthWithoutMinMax(box_ Box, _ *layoutContext, containingBlock_ containingBlock) (bool, pr.Float) {
+	return blockLevelWidthFn(box_, containingBlock_, false)
+}
+
+func blockLevelWidthFn(box_ Box, containingBlock_ containingBlock, withMinMax bool) (bool, pr.Float) {
 	box := box_.Box()
 	// "cb" stands for "containing block"
 	var (
@@ -201,66 +218,70 @@ func blockLevelWidth_(box_ Box, _ *layoutContext, containingBlock_ containingBlo
 	}
 	// https://www.w3.org/TR/CSS21/visudet.html#blockwidth
 
-	// These names are waaay too long
-	marginL := box.MarginLeft
-	marginR := box.MarginRight
-	width := box.Width
-	paddingL := box.PaddingLeft.V()
-	paddingR := box.PaddingRight.V()
-	borderL := box.BorderLeftWidth.V()
-	borderR := box.BorderRightWidth.V()
+	paddingPlusBorder := box.PaddingLeft.V() + box.PaddingRight.V() +
+		box.BorderLeftWidth.V() + box.BorderRightWidth.V()
 
-	// Only margin-left, margin-right and width can be "auto".
-	// We want:  width of containing block ==
-	//               margin-left + border-left-width + padding-left + width
-	//               + padding-right + border-right-width + margin-right
+	// Set width. Only margin-left, margin-right and width can be 'auto'.
+	if box.Width == pr.AutoF {
+		w := cbWidth - paddingPlusBorder
+		if box.MarginLeft != pr.AutoF {
+			w -= box.MarginLeft.V()
+		}
+		if box.MarginRight != pr.AutoF {
+			w -= box.MarginRight.V()
+		}
+		box.Width = w
+	}
+	if withMinMax {
+		w := box.Width.V()
+		minW := box.MinWidth.V()
+		maxW := box.MaxWidth.V()
+		if w < minW {
+			w = minW
+		}
+		if w > maxW {
+			w = maxW
+		}
+		box.Width = w
+	}
 
-	paddingsPlusBorders := paddingL + paddingR + borderL + borderR
-	if width != pr.AutoF {
-		total := paddingsPlusBorders + width.V()
-		if marginL != pr.AutoF {
-			total += marginL.V()
-		}
-		if marginR != pr.AutoF {
-			total += marginR.V()
-		}
-		if total > cbWidth {
-			if marginL == pr.AutoF {
-				marginL = pr.Float(0)
-				box.MarginLeft = pr.Float(0)
-			}
-			if marginR == pr.AutoF {
-				marginR = pr.Float(0)
-				box.MarginRight = pr.Float(0)
-			}
-		}
+	// Set auto margins to 0 for boxes larger than containing block.
+	marginWidth := paddingPlusBorder + box.Width.V()
+	if box.MarginLeft != pr.AutoF {
+		marginWidth += box.MarginLeft.V()
 	}
-	if width != pr.AutoF && marginL != pr.AutoF && marginR != pr.AutoF {
-		// The equation is over-constrained.
-		if direction == pr.Rtl && !box.IsColumn {
-			box.PositionX += cbWidth - paddingsPlusBorders - width.V() - marginR.V() - marginL.V()
-		} // Do nothing in ltr.
+	if box.MarginRight != pr.AutoF {
+		marginWidth += box.MarginRight.V()
 	}
-	if width == pr.AutoF {
-		if marginL == pr.AutoF {
-			marginL = pr.Float(0)
+	if marginWidth > cbWidth {
+		if box.MarginLeft == pr.AutoF {
 			box.MarginLeft = pr.Float(0)
 		}
-		if marginR == pr.AutoF {
-			marginR = pr.Float(0)
+		if box.MarginRight == pr.AutoF {
 			box.MarginRight = pr.Float(0)
 		}
-		width = cbWidth - (paddingsPlusBorders + marginL.V() + marginR.V())
-		box.Width = width
 	}
-	marginSum := cbWidth - paddingsPlusBorders - width.V()
-	if marginL == pr.AutoF && marginR == pr.AutoF {
-		box.MarginLeft = marginSum / 2.
-		box.MarginRight = marginSum / 2.
-	} else if marginL == pr.AutoF && marginR != pr.AutoF {
-		box.MarginLeft = marginSum - marginR.V()
-	} else if marginL != pr.AutoF && marginR == pr.AutoF {
-		box.MarginRight = marginSum - marginL.V()
+
+	// Right-align right-to-left boxes.
+	if direction == pr.Rtl && !box.IsColumn {
+		box.PositionX += cbWidth - paddingPlusBorder - box.Width.V()
+		if box.MarginLeft != pr.AutoF {
+			box.PositionX -= box.MarginLeft.V()
+		}
+		if box.MarginRight != pr.AutoF {
+			box.PositionX -= box.MarginRight.V()
+		}
+	}
+
+	// Set margins according to width.
+	marginSum := cbWidth - paddingPlusBorder - box.Width.V()
+	if box.MarginLeft == pr.AutoF && box.MarginRight == pr.AutoF {
+		box.MarginLeft = marginSum / 2
+		box.MarginRight = marginSum / 2
+	} else if box.MarginLeft == pr.AutoF {
+		box.MarginLeft = marginSum - box.MarginRight.V()
+	} else if box.MarginRight == pr.AutoF {
+		box.MarginRight = marginSum - box.MarginLeft.V()
 	}
 	return false, 0
 }
@@ -326,7 +347,7 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 
 	// See https://www.w3.org/TR/CSS21/visuren.html#block-formatting
 	if bo.EstablishesFormattingContext(box_) {
-		context.createBlockFormattingContext()
+		context.createBlockFormattingContext(box_)
 	}
 
 	isStart := skipStack == nil
@@ -363,10 +384,12 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 	}
 
 	var (
-		newChildren, brokenOutOfFlow []Box
-		nextPage                     = tree.PageBreak{Break: "any"}
-		resumeAt                     tree.ResumeStack
-		lastInFlowChild              Box
+		newChildren     []Box
+		brokenOutOfFlow = make(map[Box]brokenBox)
+		nextPage        = tree.PageBreak{Break: "any"}
+		resumeAt        tree.ResumeStack
+		lastInFlowChild Box
+		allFootnotes    []Box
 	)
 
 	if ml := box.Style.GetMaxLines(); ml.Tag != pr.None {
@@ -381,6 +404,13 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 		skip, skipStack = skipStack.Unpack()
 		firstLetterStyle = nil
 	}
+	// A force-fragmented box (empty-filled continuation page, see
+	// makePage's rootBox==nil branch) may be resumed at a skip beyond its
+	// now-empty child list. Clamp so `Children[skip:]` stays in range;
+	// Python slicing tolerates this implicitly, Go does not.
+	if skip > len(box.Children) {
+		skip = len(box.Children)
+	}
 	var (
 		i      int
 		child_ Box
@@ -391,6 +421,11 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 		child.PositionX = positionX
 		child.PositionY = positionY // does not count margins in adjoiningMargins
 		var newFootnotes []Box
+		// Defer adding to allFootnotes after this iteration's footnotes
+		// are determined; the abort/stop branches use newFootnotes for
+		// loop-local cleanup, and `allFootnotes` is for the
+		// break-inside avoid cleanup that retroactively rejects all
+		// already-laid-out children.
 
 		var abort, stop bool
 		if !child.IsInNormalFlow() {
@@ -402,8 +437,16 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 			stop, resumeAt, newChild, outOfFlowResumeAt = outOfFlowLayout(context, box_, index, child_,
 				&newChildren, pageIsEmpty, absoluteBoxes, fixedBoxes, *adjoiningMargins, bottomSpace)
 			if outOfFlowResumeAt != nil {
-				context.brokenOutOfFlow[newChild] = brokenBox{child_, box_, outOfFlowResumeAt}
-				brokenOutOfFlow = append(brokenOutOfFlow, newChild)
+				// Record into both the local map (carried up to be
+				// merged at end-of-layout) and context.brokenOutOfFlow
+				// immediately so subsequent siblings' getClearance can
+				// detect the broken float — needed for clear: left/right
+				// to push following content to the next page when a
+				// float spans pages. Mirrors WeasyPrint's
+				// add_broken_out_of_flow which writes through.
+				bb := brokenBox{box: child_, containingBlock: box_, bfcRoot: context.currentBFCRoot(), resumeAt: outOfFlowResumeAt}
+				brokenOutOfFlow[newChild] = bb
+				context.brokenOutOfFlow[newChild] = bb
 			}
 			if child.IsOutsideMarker {
 				newChild.Box().PositionX = box.BorderBoxX()
@@ -415,6 +458,7 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 			abort, stop, resumeAt, positionY, newChildren, newFootnotes, maxLines = lineBoxLayout(context, box_, index, childLineBox,
 				newChildren, pageIsEmpty, absoluteBoxes, fixedBoxes, *adjoiningMargins,
 				bottomSpace, positionY, skipStack, firstLetterStyle, maxLines)
+			allFootnotes = append(allFootnotes, newFootnotes...)
 			drawBottomDecoration = drawBottomDecoration || resumeAt == nil
 			adjoiningMargins = new([]pr.Float)
 		} else {
@@ -478,8 +522,12 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 		} else if stop {
 			if box.Height != pr.AutoF {
 				if overflows(box.PositionY+box.BorderHeight(), positionY) {
-					// Box height is fixed and it doesn’t overflow page, forget
-					// overflowing children.
+					// Box height is fixed and overflowing children push
+					// past it — forget those children. Upstream's
+					// `overflows` helper does the same `positionY >
+					// boxBottom*(1+1e-9)` check we previously inlined
+					// against `overflowsPage` (which was wrong for tall
+					// boxes — see WP block.py:809-815).
 					resumeAt = nil
 				}
 			}
@@ -499,8 +547,18 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 	}
 
 	if bi := string(box.Style.GetBreakInside()); boxIsFragmented && avoidPageBreak(bi, context) && !pageIsEmpty {
-		removePlaceholders(context, append(newChildren, box.Children[skip:]...), absoluteBoxes, fixedBoxes)
-		for _, child := range brokenOutOfFlow {
+		// Per WP commit b45b77b7: also remove placeholders from
+		// children we already laid out before aborting, otherwise
+		// their absolute/fixed descendants leak into the next page.
+		toClean := append([]Box{}, newChildren...)
+		toClean = append(toClean, box.Children[skip:]...)
+		removePlaceholders(context, toClean, absoluteBoxes, fixedBoxes)
+		for _, footnote := range allFootnotes {
+			context.unlayoutFootnote(footnote)
+		}
+		// Also clean up brokenOutOfFlow tracking from upstream HEAD —
+		// removed children's broken floats must not leak forward.
+		for child := range brokenOutOfFlow {
 			delete(context.brokenOutOfFlow, child)
 		}
 
@@ -652,7 +710,12 @@ func outOfFlowLayout(context *layoutContext, box bo.Box, index int, child_ Box, 
 		pageOverflow := context.overflowsPage(bottomSpace, newChild.Box().PositionY+newChild.Box().Height.V())
 		addChild := (pageIsEmpty && len(*newChildren) == 0) || !pageOverflow || bo.IsMonolithic(box)
 		if addChild {
-			// Child fits or has to fit, add it.
+			// Child fits or has to fit, add it. Floats are added
+			// directly (not wrapped in AbsolutePlaceholder) so
+			// pageIsEmpty-recompute and similar checks correctly count
+			// them as in-flow content, deferring subsequent inline text
+			// when the float occupies the page. AbsolutePlaceholder is
+			// reserved for absolutely-positioned elements per WP.
 			newChild.Box().Index = index
 			*newChildren = append(*newChildren, newChild)
 		} else {
@@ -661,6 +724,14 @@ func outOfFlowLayout(context *layoutContext, box bo.Box, index int, child_ Box, 
 			lastInFlowChild := findLastInFlowChild(*newChildren)
 			pageBreak := blockLevelPageBreak(lastInFlowChild, child_)
 			resumeAt = tree.ResumeStack{index: nil}
+			// Always discard the float's resumeAt when the parent stops
+			// here — the float's continuation is tracked separately via
+			// the float's own resumeAt under the parent's resumeAt slot.
+			// Mirrors WeasyPrint commit 82deda41 ("Fix wrong resume_at
+			// for split floats"): leaving outOfFlowLayoutResumeAt set in
+			// this branch double-records the same float and produces a
+			// duplicate render on the next page.
+			outOfFlowLayoutResumeAt = nil
 			stop = true
 			if len(*newChildren) != 0 && avoidPageBreak(pageBreak, context) {
 				// Can’t break inside float, find an earlier page break.
@@ -669,7 +740,6 @@ func outOfFlowLayout(context *layoutContext, box bo.Box, index int, child_ Box, 
 					// Earlier page break found, drop whole child rendering.
 					*newChildren, resumeAt = r1, r2
 					newChild = nil
-					outOfFlowLayoutResumeAt = nil
 				}
 			}
 		}
@@ -834,6 +904,12 @@ func lineBoxLayout(context *layoutContext, box_ Box, index int, child_ *bo.LineB
 					// to push this line or block to the next page. Otherwise,
 					// we can't (and would loop forever if we tried), so don't
 					// even try.
+					//
+					// Only footnote-policy line/block break out of the loop;
+					// the default "auto" policy keeps reporting the remaining
+					// footnotes on this line so none are lost. Matches
+					// WeasyPrint block.py (the break lives inside each policy
+					// branch, not after both).
 					if len(newChildren) != 0 || !pageIsEmpty {
 						if footnote.Box().Style.GetFootnotePolicy() == "line" {
 							nextLines := linesIterator.consume()
@@ -841,10 +917,11 @@ func lineBoxLayout(context *layoutContext, box_ Box, index int, child_ *bo.LineB
 								context, box, line_, &newChildren, nextLines, pageIsEmpty,
 								index, skipStack, resumeAt, absoluteBoxes, fixedBoxes)
 							breakLinebox = true
+							break
 						} else if footnote.Box().Style.GetFootnotePolicy() == "block" {
 							abort, breakLinebox = true, true
+							break
 						}
-						break
 					}
 				}
 			}
@@ -917,7 +994,8 @@ func inFlowLayout(context *layoutContext, box_ bo.Box, index int, child_ Box, ne
 				previousNewChild.Translate(0, collapsedMarginDifference, false)
 			}
 
-			if clearance := getClearance(context, child, newCollapsedMargin); clearance != nil {
+			clearance := getClearance(context, child, newCollapsedMargin)
+			if clearance != nil {
 				for _, previousNewChild := range newChildren {
 					previousNewChild.Translate(0, -collapsedMarginDifference, false)
 				}
@@ -960,6 +1038,12 @@ func inFlowLayout(context *layoutContext, box_ bo.Box, index int, child_ Box, ne
 		child.FirstLetterStyle = firstLetterStyle
 	}
 
+	// Per WP commit 7e09a5a4: snapshot the child's position before
+	// the first layout pass so the retry path (when the child's
+	// border/padding overflows the page) can restore the original
+	// position. Without this, the second pass starts from the
+	// already-translated coordinates and computes a wrong size.
+	childPositionX, childPositionY := child.PositionX, child.PositionY
 	newChild_, tmp, maxLines := blockLevelLayout(context, child_.(bo.BlockLevelBoxITF), bottomSpace, skipStack,
 		newContainingBlock, pageIsEmptyWithNoChildren, absoluteBoxes, fixedBoxes, adjoiningMargins, discard, maxLines)
 	resumeAt, nextPage = tmp.resumeAt, tmp.nextPage
@@ -976,6 +1060,12 @@ func inFlowLayout(context *layoutContext, box_ bo.Box, index int, child_ Box, ne
 			newPositionY := newChild.BorderBoxY() + newChild.BorderHeight()
 			contentPageOverflow := context.overflowsPage(bottomSpace, newContentPositionY)
 			borderPageOverflow := context.overflowsPage(bottomSpace, newPositionY)
+			// Per WP commit ce8f925d (#1904): a box with `overflow:
+			// hidden` + a defined `height` clips its overflow rather
+			// than fragmenting, so don't break it across pages.
+			if overflow := box.Style.GetOverflow(); overflow == "hidden" && box.Style.GetHeight().Tag != pr.Auto {
+				contentPageOverflow = false
+			}
 			canBreak := !(pageIsEmptyWithNoChildren || bo.IsMonolithic(box_))
 			if canBreak && contentPageOverflow {
 				// The child content overflows the page area, display it on the
@@ -986,6 +1076,10 @@ func inFlowLayout(context *layoutContext, box_ bo.Box, index int, child_ Box, ne
 				// The child border/padding overflows the page area, do the
 				// layout again with a higher bottomSpace value.
 				removePlaceholders(context, []Box{newChild_}, absoluteBoxes, fixedBoxes)
+				// Per WP commit 7e09a5a4: restore the child's
+				// pre-layout position so the second pass uses the
+				// original starting point.
+				child.PositionX, child.PositionY = childPositionX, childPositionY
 				bottomSpace += newChild.PaddingBottom.V() + newChild.BorderBottomWidth.V()
 
 				newChild_, tmp, maxLines = blockLevelLayout(context, child_.(bo.BlockLevelBoxITF), bottomSpace, skipStack,

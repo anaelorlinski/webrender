@@ -39,7 +39,13 @@ func minContentWidth(context *layoutContext, box Box, outer bool) pr.Float {
 		return tableAndColumnsPreferredWidths(context, box, outer).tableMinContentWidth
 	} else if bo.TableCellT.IsInstance(box) {
 		return tableCellMinContentWidth(context, box, outer)
-	} else if bo.BlockContainerT.IsInstance(box) || bo.TableColumnT.IsInstance(box) {
+	} else if bo.FlexContainerT.IsInstance(box) {
+		// Flex container intrinsic size depends on flex-direction —
+		// row-nowrap sums children's min-content, otherwise takes the
+		// max. Must come before BlockContainerT below (FlexT also
+		// satisfies BlockContainerT).
+		return flexMinContentWidth(context, box, outer)
+	} else if bo.BlockContainerT.IsInstance(box) || bo.TableColumnT.IsInstance(box) || bo.FlexT.IsInstance(box) {
 		return blockMinContentWidth(context, box, outer)
 	} else if bo.TableColumnGroupT.IsInstance(box) {
 		return columnGroupContentWidth(box)
@@ -47,8 +53,6 @@ func minContentWidth(context *layoutContext, box Box, outer bool) pr.Float {
 		return inlineMinContentWidth(context, box, outer, nil, false, true)
 	} else if rep, isReplaced := box.(bo.ReplacedBoxITF); isReplaced {
 		return replacedMinContentWidth(rep.Replaced(), outer)
-	} else if bo.FlexContainerT.IsInstance(box) {
-		return flexMinContentWidth(context, box, outer)
 	} else if bo.GridContainerT.IsInstance(box) {
 		return blockMinContentWidth(context, box, outer)
 	} else {
@@ -65,7 +69,13 @@ func maxContentWidth(context *layoutContext, box Box, outer bool) pr.Float {
 		return tableAndColumnsPreferredWidths(context, box, outer).tableMaxContentWidth
 	} else if bo.TableCellT.IsInstance(box) {
 		return tableCellMaxContentWidth(context, box, outer)
-	} else if bo.BlockContainerT.IsInstance(box) || bo.TableColumnT.IsInstance(box) {
+	} else if bo.FlexContainerT.IsInstance(box) {
+		// Flex container intrinsic size depends on flex-direction —
+		// row-direction sums children's max-content, column-direction
+		// takes the max. This must come before BlockContainerT below
+		// (FlexT also satisfies BlockContainerT).
+		return flexMaxContentWidth(context, box, outer)
+	} else if bo.BlockContainerT.IsInstance(box) || bo.TableColumnT.IsInstance(box) || bo.FlexT.IsInstance(box) {
 		return blockMaxContentWidth(context, box, outer)
 	} else if bo.TableColumnGroupT.IsInstance(box) {
 		return columnGroupContentWidth(box)
@@ -73,8 +83,6 @@ func maxContentWidth(context *layoutContext, box Box, outer bool) pr.Float {
 		return inlineMaxContentWidth(context, box, outer, true)
 	} else if isReplaced {
 		return replacedMaxContentWidth(rep.Replaced(), outer)
-	} else if bo.FlexContainerT.IsInstance(box) {
-		return flexMaxContentWidth(context, box, outer)
 	} else if bo.GridContainerT.IsInstance(box) {
 		return blockMaxContentWidth(context, box, outer)
 	} else {
@@ -86,23 +94,43 @@ func maxContentWidth(context *layoutContext, box Box, outer bool) pr.Float {
 type fnBlock = func(*layoutContext, Box, bool) pr.Float
 
 // Helper to create “block_*_ContentWidth.“
-func blockContentWidth(context *layoutContext, box Box, function fnBlock, outer bool) pr.Float {
+func blockContentWidth(context *layoutContext, box Box, function fnBlock, outer bool, minimum bool) pr.Float {
 	width := box.Box().Style.GetWidth()
 	var widthValue pr.Float
 	if width.Tag == pr.Auto || width.Unit == pr.Perc {
 		// "percentages on the following properties are treated instead as
 		// though they were the following: width: auto"
 		// https://dbaron.org/css/intrinsic/#outer-intrinsic
-		var max pr.Float = 0
+
+		// Check if this block establishes an inline formatting context
+		// (all non-absolutely-positioned children are inline-level).
+		// In that case, use inlineLineWidths for correct measurement.
+		allInline := len(box.Box().Children) > 0
 		for _, child := range box.Box().Children {
-			if !child.Box().IsAbsolutelyPositioned() {
-				v := function(context, child, true)
-				if v > max {
-					max = v
-				}
+			if child.Box().IsAbsolutelyPositioned() {
+				continue
+			}
+			if _, ok := child.(bo.InlineLevelBoxITF); !ok {
+				allInline = false
+				break
 			}
 		}
-		widthValue = max
+
+		if allInline {
+			widths := inlineLineWidths(context, box, false, true, minimum, nil, false)
+			widthValue = pr.Maxs(widths...)
+		} else {
+			var max pr.Float = 0
+			for _, child := range box.Box().Children {
+				if !child.Box().IsAbsolutelyPositioned() {
+					v := function(context, child, true)
+					if v > max {
+						max = v
+					}
+				}
+			}
+			widthValue = max
+		}
 	} else {
 		if width.Unit != pr.Px {
 			panic(fmt.Sprintf("expected Px got %d", width.Unit))
@@ -223,14 +251,14 @@ func adjust(box Box, outer bool, width pr.Float, left, right bool) pr.Float {
 // Return the min-content width for a “BlockBox“.
 // outer=true
 func blockMinContentWidth(context *layoutContext, box Box, outer bool) pr.Float {
-	v := blockContentWidth(context, box, minContentWidth, outer)
+	v := blockContentWidth(context, box, minContentWidth, outer, true)
 	return v
 }
 
 // Return the max-content width for a “BlockBox“.
 // outer=true
 func blockMaxContentWidth(context *layoutContext, box Box, outer bool) pr.Float {
-	return blockContentWidth(context, box, maxContentWidth, outer)
+	return blockContentWidth(context, box, maxContentWidth, outer, false)
 }
 
 // Return the min-content width for an “InlineBox“.
@@ -418,6 +446,11 @@ func inlineLineWidths(context *layoutContext, box_ Box, outer, isLineStart,
 			// https://www.unicode.org/reports/tr14/#DescriptionOfProperties
 			// "By default, there is a break opportunity
 			//  both before and after any inline object."
+			//
+			// Per WP commit 8c899a9c: a soft-wrap opportunity at an
+			// atomic-inline boundary is controlled by the parent's
+			// white-space — if it forbids breaks (nowrap/pre), the
+			// replaced box must not introduce one.
 			if minimum {
 				lines = []pr.MaybeFloat{nil, minContentWidth(context, child, true), nil}
 			} else {
@@ -769,7 +802,10 @@ outerLoop:
 
 	tableMinWidth := tableMinContentWidth
 	tableMaxWidth := tableMaxContentWidth
-	if wid := table.Style.GetWidth(); wid.Tag != pr.Auto && wid.Unit == pr.Px {
+	// Fork: skip a calc() value here (Math != nil); it's not a raw px
+	// length and falls through to the auto/percentage branch (per WP
+	// commit 38d3f531).
+	if wid := table.Style.GetWidth(); wid.Tag != pr.Auto && wid.Math == nil && wid.Unit == pr.Px {
 		// "percentages on the following properties are treated instead as
 		// though they were the following: width: auto"
 		// https://dbaron.org/css/intrinsic/#outer-intrinsic

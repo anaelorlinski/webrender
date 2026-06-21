@@ -247,5 +247,8 @@ const (
 	PObjectFit
 	PObjectPosition
 
+	PBoxShadow
+	PTextShadow
+
 	nbProperties
 )

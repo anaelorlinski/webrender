@@ -63,8 +63,16 @@ func handleLeader(context *layoutContext, line *bo.LineBox, containingBlock cont
 		availableWidth := extraWidth + textBox.Width.V()
 		line.Width = cbWidth
 
-		// Add text boxes into the leader box
-		numberOfLeaders := int(line.Width.V()) / int(textBox.Width.V())
+		// Add text boxes into the leader box. Compute count via floating-point
+		// division so sub-1px glyph widths don't truncate to int(0) and crash.
+		// (CSS Text §9 leaves the exact tiling implementation-defined; this
+		// matches WeasyPrint's intent — fill the available width with as many
+		// leader copies as fit.)
+		tw := textBox.Width.V()
+		if tw <= 0 {
+			return
+		}
+		numberOfLeaders := int(line.Width.V() / tw)
 		positionX := line.PositionX + line.Width.V()
 		var children []Box
 		for i := 0; i < numberOfLeaders; i++ {

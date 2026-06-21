@@ -46,7 +46,10 @@ func columnsLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.F
 
 	box_ = bo.CopyWithChildren(box_, box_.Box().Children).(bo.BlockBoxITF) // CopyWithChildren preserves the concrete type of box_
 	box := box_.Box()
-	box.PositionY += collapseMargin(adjoiningMargins) - box.MarginTop.V()
+	// Per WP commit 77e26037: don't subtract MarginTop here. The
+	// column wrapper's top margin should be respected as part of its
+	// vertical position, not removed.
+	box.PositionY += collapseMargin(adjoiningMargins)
 
 	// Set height if defined
 	heightDefined := false
@@ -100,6 +103,12 @@ func columnsLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.F
 	var (
 		columnsAndBlocks []ibl
 		columnChildren   []Box
+		// spannerIndex is the box-children index of the most recently
+		// seen `column-span: all` element. -1 if none. Used below to
+		// force balancing of the column block placed BEFORE a spanner
+		// (per WP commit bfc0fd00 "Balance columns before
+		// `column-span: all`").
+		spannerIndex = -1
 	)
 	skip := 0
 	if skipStack != nil {
@@ -111,6 +120,7 @@ func columnsLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.F
 			if len(columnChildren) != 0 {
 				columnsAndBlocks = append(columnsAndBlocks, ibl{index - len(columnChildren), boxOrList{list: columnChildren}})
 			}
+			spannerIndex = index
 			columnsAndBlocks = append(columnsAndBlocks, ibl{index, boxOrList{box: child.Copy().(bo.BlockLevelBoxITF)}})
 			columnChildren = nil
 			continue
@@ -339,7 +349,7 @@ func columnsLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.F
 					// Everything fits, start expanding columns at the average
 					// of the column heights
 					maxHeight -= lastFootnotesHeight
-					if style.GetColumnFill() == "balance" || index < columnsAndBlocks[len(columnsAndBlocks)-1].index {
+					if style.GetColumnFill() == "balance" || index < spannerIndex {
 						balancing = true
 						height = sum(consumedHeights) / pr.Float(count)
 					} else {

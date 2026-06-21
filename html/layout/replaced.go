@@ -305,7 +305,7 @@ func blockReplacedBoxLayout(context *layoutContext, box_ bo.ReplacedBoxITF, cont
 		replacedBoxHeight_(box_, nil, nil)
 		minMaxAutoReplaced(box)
 		box.MarginLeft, box.MarginRight = computedMarginsL, computedMarginsR
-		blockLevelWidth_(box_, nil, containingBlock)
+		blockLevelWidthWithoutMinMax(box_, nil, containingBlock)
 	} else {
 		blockReplacedWidth(box_, nil, containingBlock)
 		replacedBoxHeight(box_, nil, nil)

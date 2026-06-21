@@ -152,9 +152,9 @@ type metrics struct {
 
 func newMetrics(fc FontConfiguration, desc FontDescription) metrics {
 	style := &TextStyle{FontDescription: desc}
-	hx := fc.heightx(style)
-	w0 := fc.width0(style)
-	height, baseline := fc.spaceHeight(style)
+	hx := fc.Heightx(style)
+	w0 := fc.Width0(style)
+	height, baseline := fc.SpaceHeight(style)
 	return metrics{
 		utils.RoundPrec(hx, 1),
 		utils.RoundPrec(w0, 1),
@@ -252,11 +252,11 @@ func Test_heightx(t *testing.T) {
 		Weight:  400,
 		Size:    100,
 	}}
-	h := fcGotext.heightx(style)
+	h := fcGotext.Heightx(style)
 	assertApprox(t, pr.Float(h), 79.98, "")
 
 	style.Size = 1000
-	h = fcGotext.heightx(style)
+	h = fcGotext.Heightx(style)
 	assertApprox(t, pr.Float(h), 799.8, "")
 }
 

@@ -195,10 +195,15 @@ func (ctx drawContext) drawStackingContext(stackingContext StackingContext) {
 		// Point 2
 		if bo.BlockT.IsInstance(box_) || bo.MarginT.IsInstance(box_) ||
 			bo.InlineBlockT.IsInstance(box_) || bo.TableCellT.IsInstance(box_) ||
-			bo.FlexContainerT.IsInstance(box_) || bo.GridContainerT.IsInstance(box_) || bo.ReplacedT.IsInstance(box_) {
+			bo.FlexContainerT.IsInstance(box_) || bo.GridContainerT.IsInstance(box_) ||
+			bo.ReplacedT.IsInstance(box_) {
 			ctx.setMaskBorder(box_)
-			// The canvas background was removed by layout_backgrounds.
+			// Outer box-shadows: drawn behind the background
+			ctx.drawBoxShadow(box_, false)
+			// The canvas background was removed by layoutBackgrounds.
 			ctx.drawBackgroundDefaut(box_.Box().Background)
+			// Inset box-shadows: drawn above background, below border
+			ctx.drawBoxShadow(box_, true)
 			ctx.drawBorder(box_)
 		}
 
@@ -223,7 +228,9 @@ func (ctx drawContext) drawStackingContext(stackingContext StackingContext) {
 				if box_, ok := block.(bo.TableBoxITF); ok {
 					ctx.drawTable(box_.Table())
 				} else {
+					ctx.drawBoxShadow(block, false)
 					ctx.drawBackgroundDefaut(block.Box().Background)
+					ctx.drawBoxShadow(block, true)
 					ctx.drawBorder(block)
 				}
 			}
@@ -263,6 +270,79 @@ func (ctx drawContext) drawStackingContext(stackingContext StackingContext) {
 			})
 		}
 	})
+}
+
+// Draw the path of the border radius box.
+// “widths“ is a tuple of the inner widths (top, right, bottom, left) from
+// the border box. Radii are adjusted from these values. Default is (0, 0, 0,
+// 0).
+func roundedBoxPath(context backend.Canvas, radii bo.RoundedBox) {
+	x, y, w, h, tl, tr, br, bl := pr.Fl(radii.X), pr.Fl(radii.Y), pr.Fl(radii.Width), pr.Fl(radii.Height), radii.TopLeft, radii.TopRight, radii.BottomRight, radii.BottomLeft
+	if (tl[0] == 0 || tl[1] == 0) && (tr[0] == 0 || tr[1] == 0) &&
+		(br[0] == 0 || br[1] == 0) && (bl[0] == 0 || bl[1] == 0) {
+		// No radius, draw a rectangle
+		context.Rectangle(x, y, w, h)
+		return
+	}
+
+	var r pr.Fl = 0.45
+
+	context.MoveTo(x+pr.Fl(tl[0]), y)
+	context.LineTo(x+w-pr.Fl(tr[0]), y)
+	context.CubicTo(
+		x+w-pr.Fl(tr[0])*r, y, x+w, y+pr.Fl(tr[1])*r, x+w, y+pr.Fl(tr[1]))
+	context.LineTo(x+w, y+h-pr.Fl(br[1]))
+	context.CubicTo(
+		x+w, y+h-pr.Fl(br[1])*r, x+w-pr.Fl(br[0])*r, y+h, x+w-pr.Fl(br[0]),
+		y+h)
+	context.LineTo(x+pr.Fl(bl[0]), y+h)
+	context.CubicTo(
+		x+pr.Fl(bl[0])*r, y+h, x, y+h-pr.Fl(bl[1])*r, x, y+h-pr.Fl(bl[1]))
+	context.LineTo(x, y+pr.Fl(tl[1]))
+	context.CubicTo(
+		x, y+pr.Fl(tl[1])*r, x+pr.Fl(tl[0])*r, y, x+pr.Fl(tl[0]), y)
+}
+
+// roundedBoxPathReverse traces the same rounded-box shape as roundedBoxPath
+// but in counter-clockwise winding order. Used together with a CW outer path
+// and NonZero fill rule to create ring/annular shapes.
+func roundedBoxPathReverse(context backend.Canvas, radii bo.RoundedBox) {
+	x, y, w, h, tl, tr, br, bl := pr.Fl(radii.X), pr.Fl(radii.Y), pr.Fl(radii.Width), pr.Fl(radii.Height), radii.TopLeft, radii.TopRight, radii.BottomRight, radii.BottomLeft
+	if (tl[0] == 0 || tl[1] == 0) && (tr[0] == 0 || tr[1] == 0) &&
+		(br[0] == 0 || br[1] == 0) && (bl[0] == 0 || bl[1] == 0) {
+		// CCW rectangle
+		context.MoveTo(x, y)
+		context.LineTo(x, y+h)
+		context.LineTo(x+w, y+h)
+		context.LineTo(x+w, y)
+		context.LineTo(x, y)
+		return
+	}
+
+	var r pr.Fl = 0.45
+
+	// Same start point as CW path, traced in opposite direction.
+	context.MoveTo(x+pr.Fl(tl[0]), y)
+	// Top-left corner (reversed)
+	context.CubicTo(
+		x+pr.Fl(tl[0])*r, y, x, y+pr.Fl(tl[1])*r, x, y+pr.Fl(tl[1]))
+	// Left edge downward
+	context.LineTo(x, y+h-pr.Fl(bl[1]))
+	// Bottom-left corner (reversed)
+	context.CubicTo(
+		x, y+h-pr.Fl(bl[1])*r, x+pr.Fl(bl[0])*r, y+h, x+pr.Fl(bl[0]), y+h)
+	// Bottom edge rightward
+	context.LineTo(x+w-pr.Fl(br[0]), y+h)
+	// Bottom-right corner (reversed)
+	context.CubicTo(
+		x+w-pr.Fl(br[0])*r, y+h, x+w, y+h-pr.Fl(br[1])*r, x+w, y+h-pr.Fl(br[1]))
+	// Right edge upward
+	context.LineTo(x+w, y+pr.Fl(tr[1]))
+	// Top-right corner (reversed)
+	context.CubicTo(
+		x+w, y+pr.Fl(tr[1])*r, x+w-pr.Fl(tr[0])*r, y, x+w-pr.Fl(tr[0]), y)
+	// Top edge leftward back to start
+	context.LineTo(x+pr.Fl(tl[0]), y)
 }
 
 func formatSVG(svg string, data svgArgs) (string, error) {
@@ -425,6 +505,37 @@ func (ctx drawContext) drawBackgroundImage(layer bo.BackgroundLayer, imageRender
 	X := pr.Fl(positionX.V()) + positioningX
 	Y := pr.Fl(positionY.V()) + positioningY
 
+	// For gradient images, bypass the group/pattern pipeline and draw directly
+	// on the main canvas. This avoids the need for SetColorPattern which may
+	// not be implemented by all backends.
+	if grad, ok := layer.Image.(images.LayoutableGradient); ok {
+		layout := grad.ComputeLayout(imageWidth, imageHeight)
+		ctx.dst.OnNewStack(func() {
+			if layer.Unbounded {
+				x1, y1, x2, y2 := ctx.dst.GetBoundingBox()
+				ctx.dst.Rectangle(x1, y1, x2-x1, y2-y1)
+			} else {
+				ctx.dst.Rectangle(paintingX, paintingY, paintingWidth, paintingHeight)
+			}
+			ctx.dst.State().Clip(false)
+			mat := matrix.New(1, 0, 0, 1, X, Y)
+			ctx.dst.State().Transform(mat)
+			// The gradient is positioned relative to the positioning area
+			// (padding-box by default), but the fill shape must cover the
+			// full painting area (border-box) so that rounded-corner clips
+			// are not truncated by the smaller positioning-area rectangle.
+			// SetGradientFillPath takes coordinates in gradient-local space
+			// (i.e. relative to the transform at X, Y).
+			if !layer.Unbounded {
+				ctx.dst.SetGradientFillPath(
+					paintingX-X, paintingY-Y,
+					paintingWidth, paintingHeight)
+			}
+			ctx.dst.DrawGradient(layout, imageWidth, imageHeight)
+		})
+		return
+	}
+
 	// draw the image on a pattern
 	patttern := ctx.dst.NewGroup(0, 0, repeatWidth, repeatHeight)
 	layer.Image.Draw(patttern, ctx, imageWidth, imageHeight, string(imageRendering))
@@ -487,6 +598,103 @@ type segment struct {
 	side pr.KnownProp
 	bo.Border
 	borderBox pr.Rectangle
+}
+
+// mergeCollinearSegments coalesces collinear segments produced by
+// drawCollapsedBorders that share an endpoint and have identical
+// Border (style/color/width). The original code emits one segment per
+// cell column/row at each grid line; when two adjacent segments meet
+// at a fractional coordinate (e.g. x=9.5 for two 1-px strokes around
+// an inner cell-column boundary), antialiasing leaks a notch of
+// partial coverage at the join. Merging them into a single stroke
+// eliminates the seam.
+//
+// Segments with differing styles/colors/widths/scores remain separate.
+// Within each (axis, coord, Border) bucket, segments are sorted by
+// start coord and merged transitively, then re-emitted preserving the
+// caller's painter-order sort across buckets.
+func mergeCollinearSegments(in []segment) []segment {
+	if len(in) < 2 {
+		return in
+	}
+	const eps = 1e-6
+	type bucketKey struct {
+		horizontal bool
+		coord      pr.Fl // y for horizontal, x for vertical
+		border     bo.Border
+	}
+	buckets := make(map[bucketKey][]int)
+	other := make([]int, 0, len(in))
+	for i, s := range in {
+		_, _, w, h := s.borderBox.Unpack()
+		if h == 0 {
+			_, y, _, _ := s.borderBox.Unpack()
+			buckets[bucketKey{true, y, s.Border}] = append(buckets[bucketKey{true, y, s.Border}], i)
+		} else if w == 0 {
+			x, _, _, _ := s.borderBox.Unpack()
+			buckets[bucketKey{false, x, s.Border}] = append(buckets[bucketKey{false, x, s.Border}], i)
+		} else {
+			other = append(other, i)
+		}
+	}
+
+	// Track which segments survived merging, and (for each bucket)
+	// which output indices already represent the merged result.
+	keep := make([]bool, len(in))
+	out := make([]segment, len(in))
+	copy(out, in)
+
+	for key, idxs := range buckets {
+		// Sort by start coord along the line's axis.
+		sort.Slice(idxs, func(a, b int) bool {
+			ia, ib := idxs[a], idxs[b]
+			xa, ya, _, _ := out[ia].borderBox.Unpack()
+			xb, yb, _, _ := out[ib].borderBox.Unpack()
+			if key.horizontal {
+				return xa < xb
+			}
+			_ = ya
+			_ = yb
+			return ya < yb
+		})
+		// Greedy merge: for each segment, extend the running segment
+		// if it touches its end (within eps), otherwise emit and start
+		// a new one.
+		curIdx := idxs[0]
+		keep[curIdx] = true
+		for k := 1; k < len(idxs); k++ {
+			next := idxs[k]
+			cx, cy, cw, ch := out[curIdx].borderBox.Unpack()
+			nx, ny, nw, nh := out[next].borderBox.Unpack()
+			if key.horizontal {
+				if math.Abs(float64((cx+cw)-nx)) < eps {
+					out[curIdx].borderBox = pr.Rectangle{pr.Float(cx), pr.Float(cy), pr.Float(cw + nw), 0}
+					continue
+				}
+			} else {
+				if math.Abs(float64((cy+ch)-ny)) < eps {
+					out[curIdx].borderBox = pr.Rectangle{pr.Float(cx), pr.Float(cy), 0, pr.Float(ch + nh)}
+					continue
+				}
+			}
+			curIdx = next
+			keep[curIdx] = true
+			_ = nx
+			_ = nh
+		}
+	}
+	for _, i := range other {
+		keep[i] = true
+	}
+
+	// Emit in original order, skipping merged-away indices.
+	result := make([]segment, 0, len(in))
+	for i, s := range out {
+		if keep[i] {
+			result = append(result, s)
+		}
+	}
+	return result
 }
 
 func boolToInt(b bool) int {
@@ -638,6 +846,18 @@ func (ctx drawContext) drawCollapsedBorders(table *bo.TableBox) {
 		return segments[i].Border.Score.Lower(segments[j].Border.Score)
 	})
 
+	// Merge consecutive collinear segments that share an endpoint at a
+	// fractional (sub-pixel) coordinate and have identical Border (style,
+	// color, width). When two strokes meet at e.g. x=9.5 with butt caps,
+	// each contributes ~50% coverage to the (9,*) pixel, and stacking
+	// the second 50%-pink stroke on the first 50%-pink stroke yields
+	// 75% pink — visible as a notch (#ff9f9f instead of #ff7f7f) at every
+	// inner cell-column corner. Merging them into one continuous stroke
+	// gives full coverage. We only merge segments with matching Border —
+	// different colors/widths must remain separate, and segments at
+	// different y/x positions are never adjacent.
+	segments = mergeCollinearSegments(segments)
+
 	for _, segment := range segments {
 		ctx.dst.OnNewStack(func() {
 			bx, by, bw, bh := segment.borderBox.Unpack()
@@ -678,7 +898,9 @@ func (ctx drawContext) drawInlineLevel(page *bo.PageBox, box_ Box, offsetX fl, t
 	} else {
 		ctx.setMaskBorder(box_)
 		box := box_.Box()
+		ctx.drawBoxShadow(box_, false)
 		ctx.drawBackgroundDefaut(box.Background)
+		ctx.drawBoxShadow(box_, true)
 		ctx.drawBorder(box_)
 		textBox, isTextBox := box_.(*bo.TextBox)
 		replacedBox, isReplacedBox := box_.(bo.ReplacedBoxITF)

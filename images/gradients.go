@@ -63,6 +63,88 @@ func processColorStops(gradientLineSize pr.Float, positions_ []pr.Dimension) []p
 	return out
 }
 
+// hintSamples is the number of intermediate color stops generated when
+// expanding a single color transition hint. The backend renders discrete
+// stops (unlike the PDF exponential interpolation used elsewhere), so a hint
+// is approximated by sampling the transition curve. 16 is enough for a smooth
+// result at typical sizes while keeping the stop list small.
+const hintSamples = 16
+
+// interpolatePremul returns the color at fraction t in [0,1] between c0 and c1,
+// interpolating in premultiplied-alpha space as required by CSS Images 3.
+func interpolatePremul(c0, c1 Color, t utils.Fl) Color {
+	r0, g0, b0 := c0.R*c0.A, c0.G*c0.A, c0.B*c0.A
+	r1, g1, b1 := c1.R*c1.A, c1.G*c1.A, c1.B*c1.A
+	a := c0.A + (c1.A-c0.A)*t
+	r := r0 + (r1-r0)*t
+	g := g0 + (g1-g0)*t
+	b := b0 + (b1-b0)*t
+	if a != 0 {
+		return Color{R: r / a, G: g / a, B: b / a, A: a}
+	}
+	return Color{}
+}
+
+// expandColorHints removes color transition hints from a gradient by sampling
+// the transition curve they describe into ordinary color stops.
+//
+// isHint[i] marks entry i as a hint (only positions[i] is meaningful). Between
+// the surrounding stops with colors cA (at pA) and cB (at pB), a hint at pH
+// places the 50% blend of cA and cB. Per CSS Images 3 §3.4.2 the color at a
+// point with fraction P of the way from pA to pB is:
+//
+//	C = P ^ (ln(0.5) / ln(H))    where H = (pH-pA)/(pB-pA)
+//	color = interpolate(cA, cB, C)
+//
+// Returns hint-free colors and positions of equal length.
+// See http://drafts.csswg.org/csswg/css-images-3/#color-transition-hint
+func expandColorHints(colors []Color, positions []pr.Fl, isHint []bool) ([]Color, []pr.Fl) {
+	// Fast path: no hints.
+	hasHint := false
+	for _, h := range isHint {
+		if h {
+			hasHint = true
+			break
+		}
+	}
+	if !hasHint {
+		return colors, positions
+	}
+
+	outColors := make([]Color, 0, len(colors))
+	outPos := make([]pr.Fl, 0, len(positions))
+	for i := range colors {
+		if !isHint[i] {
+			outColors = append(outColors, colors[i])
+			outPos = append(outPos, positions[i])
+			continue
+		}
+		// A hint must sit between two real stops; parsing guarantees this,
+		// but guard defensively.
+		if i == 0 || i == len(colors)-1 {
+			continue
+		}
+		pA, pB, pH := positions[i-1], positions[i+1], positions[i]
+		cA, cB := colors[i-1], colors[i+1]
+		span := pB - pA
+		// Degenerate span or hint at an endpoint: nothing to interpolate,
+		// the adjacent stops already produce a hard transition.
+		if span <= 0 || pH <= pA || pH >= pB {
+			continue
+		}
+		h := float64((pH - pA) / span)
+		exponent := math.Log(0.5) / math.Log(h)
+		// Sample strictly between the surrounding stops.
+		for s := 1; s < hintSamples; s++ {
+			p := float64(s) / float64(hintSamples)
+			c := utils.Fl(math.Pow(p, exponent))
+			outColors = append(outColors, interpolatePremul(cA, cB, c))
+			outPos = append(outPos, pA+pr.Fl(p)*span)
+		}
+	}
+	return outColors, outPos
+}
+
 // http://drafts.csswg.org/csswg/css-images-3/#find-the-average-color-of-a-gradient
 func gradientAverageColor(colors []Color, positions []pr.Fl) Color {
 	nbStops := len(positions)
@@ -119,21 +201,43 @@ type layouter interface {
 	Layout(width, height pr.Float) backend.GradientLayout
 }
 
+// LayoutableGradient is implemented by gradient images that can compute
+// their GradientLayout for direct rendering via Canvas.DrawGradient,
+// bypassing the group/pattern pipeline.
+type LayoutableGradient interface {
+	Image
+	ComputeLayout(width, height pr.Fl) backend.GradientLayout
+}
+
 type gradient struct {
 	layouter
 
 	colors        []Color
 	stopPositions []pr.Dimension
-	repeating     bool
+	// isHint[i] reports whether entry i is a color transition hint rather
+	// than a real color stop. Hints carry only a position; their colors
+	// slot is unused. Interleaved with the color stops, same length.
+	isHint    []bool
+	repeating bool
+}
+
+// ComputeLayout returns the GradientLayout for the given concrete dimensions.
+// This satisfies the LayoutableGradient interface.
+func (g gradient) ComputeLayout(concreteWidth, concreteHeight pr.Fl) backend.GradientLayout {
+	layout := g.layouter.Layout(pr.Float(concreteWidth), pr.Float(concreteHeight))
+	layout.Reapeating = g.repeating
+	return layout
 }
 
 func newGradient(colorStops []pr.ColorStop, repeating bool) gradient {
 	self := gradient{}
 	self.colors = make([]Color, len(colorStops))
 	self.stopPositions = make([]pr.Dimension, len(colorStops))
+	self.isHint = make([]bool, len(colorStops))
 	for i, v := range colorStops {
 		self.colors[i] = v.Color.RGBA
 		self.stopPositions[i] = v.Position
+		self.isHint[i] = v.IsHint
 	}
 	self.repeating = repeating
 	return self
@@ -213,6 +317,9 @@ func (lg LinearGradient) Layout(width, height pr.Float) backend.GradientLayout {
 	colors := lg.colors
 	vectorLength := pr.Fl(pr.Abs(width*pr.Float(dx)) + pr.Abs(height*pr.Float(dy)))
 	positions := processColorStops(pr.Float(vectorLength), lg.stopPositions)
+	// Expand any color transition hints into sampled color stops before the
+	// boundary fixups below, which assume a hint-free stop list.
+	colors, positions = expandColorHints(colors, positions, lg.isHint)
 
 	if !lg.repeating {
 		// Add explicit colors at boundaries if needed, because PDF doesn’t
@@ -296,6 +403,7 @@ func (rg RadialGradient) Layout(width, height pr.Float) backend.GradientLayout {
 
 	colors := rg.colors
 	positions := processColorStops(sizeX, rg.stopPositions)
+	colors, positions = expandColorHints(colors, positions, rg.isHint)
 	if !rg.repeating {
 		// Add explicit colors at boundaries if needed, because PDF doesn’t
 		// extend color stops that are not displayed

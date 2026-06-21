@@ -2,6 +2,7 @@ package svg
 
 import (
 	"fmt"
+	"math"
 	"net/url"
 	"strconv"
 	"strings"
@@ -67,14 +68,39 @@ type Value struct {
 
 // look for an absolute unit, or nothing (considered as pixels)
 // % is also supported.
-// it returns an empty value when 's' is empty
+// it returns an empty value when 's' is empty.
+// Angle units (deg, rad, grad, turn) are handled by converting to
+// degrees at parse time and storing the result with unit Px so that
+// downstream code (which treats the numeric arg as degrees for
+// rotate/skew/etc.) sees a normalized value.
 func parseValue(s string) (Value, error) {
 	s = strings.TrimSpace(s)
 	if s == "" {
 		return Value{}, nil
 	}
 
+	// Angle units: normalize to degrees up front.
+	for _, ang := range []struct {
+		suffix string
+		toDeg  Fl
+	}{
+		{"deg", 1},
+		{"grad", 360.0 / 400.0},
+		{"rad", 180.0 / Fl(math.Pi)},
+		{"turn", 360},
+	} {
+		if strings.HasSuffix(s, ang.suffix) {
+			num := strings.TrimSpace(strings.TrimSuffix(s, ang.suffix))
+			v, err := strconv.ParseFloat(num, 32)
+			if err != nil {
+				return Value{}, err
+			}
+			return Value{U: Px, V: Fl(v) * ang.toDeg}, nil
+		}
+	}
+
 	resolvedUnit := Px
+	matched := false
 	for u, suffix := range units {
 		if u == 0 {
 			continue
@@ -82,10 +108,20 @@ func parseValue(s string) (Value, error) {
 		if strings.HasSuffix(s, suffix) {
 			s = strings.TrimSpace(strings.TrimSuffix(s, suffix))
 			resolvedUnit = Unit(u)
+			matched = true
 			break
 		}
 	}
 	v, err := strconv.ParseFloat(s, 32)
+	if err != nil && !matched {
+		// Unknown unit suffix on an SVG length: per SVG spec, the attribute
+		// is invalid and falls back to its initial value. We can't apply the
+		// initial here (it's per-property), so return zero and a non-error
+		// result; callers using parseValue for SVG attrs will get 0, which
+		// is the initial value for x/y/width/height/etc. A non-error return
+		// keeps the broader SVG parse from aborting on a single bad attr.
+		return Value{U: Px, V: 0}, nil
+	}
 	return Value{U: resolvedUnit, V: Fl(v)}, err
 }
 
@@ -128,8 +164,10 @@ func consumeNumber(data []byte, pos int, isFlag bool) int {
 			}
 			// else continue: floating point
 			seenDot = true
-		case '-':
-			// new number, expected on exponents
+		case '-', '+':
+			// '+' / '-' immediately after an exponent marker ('e'/'E') is
+			// the exponent's sign — keep consuming. Otherwise it begins a
+			// new number, so stop here.
 			if data[pos-1] == 'e' || data[pos-1] == 'E' {
 				continue
 			}
@@ -155,7 +193,10 @@ func parsePoints(dataPoints string, points []Fl, isEllipticalArc bool) ([]Fl, er
 	data := []byte(dataPoints)
 	for pos := 0; pos < len(data); {
 		c := data[pos]
-		if '0' <= c && c <= '9' || c == '.' || c == '-' || c == 'e' || c == 'E' {
+		// Per WP commit 4cfd3a02: SVG number lists may use `+` as a
+		// separator between two unsigned numbers (e.g. `1+2+3` is
+		// three numbers). Accept it as a number-start sign.
+		if '0' <= c && c <= '9' || c == '.' || c == '-' || c == '+' || c == 'e' || c == 'E' {
 			// for elliptical arc, arguments 4 and 5 are flags
 			// modulo the number of parameters in an elliptical arc command
 			isFlag := isEllipticalArc && (len(points)%7 == 3 || len(points)%7 == 4)
@@ -284,8 +325,25 @@ func parseTransform(attr string) (out []transform, err error) {
 			} else {
 				return nil, fmt.Errorf("invalid transformation: %s", t)
 			}
+		case "translatex":
+			if L == 1 {
+				tr.args[1] = Value{0, Px}
+				tr.kind = translate
+			} else {
+				return nil, fmt.Errorf("invalid transformation: %s", t)
+			}
+		case "translatey":
+			if L == 1 {
+				tr.args[1] = tr.args[0]
+				tr.args[0] = Value{0, Px}
+				tr.kind = translate
+			} else {
+				return nil, fmt.Errorf("invalid transformation: %s", t)
+			}
 		case "skew":
-			if L == 2 {
+			// skew(thetax) is shorthand for skew(thetax, 0) — same as
+			// skewX(thetax). WeasyPrint accepts both forms.
+			if L == 1 || L == 2 {
 				tr.kind = skew
 			} else {
 				return nil, fmt.Errorf("invalid transformation: %s", t)
@@ -309,6 +367,21 @@ func parseTransform(attr string) (out []transform, err error) {
 				tr.args[1] = tr.args[0]
 				tr.kind = scale
 			} else if L == 2 {
+				tr.kind = scale
+			} else {
+				return nil, fmt.Errorf("invalid transformation: %s", t)
+			}
+		case "scalex":
+			if L == 1 {
+				tr.args[1] = Value{1, Px}
+				tr.kind = scale
+			} else {
+				return nil, fmt.Errorf("invalid transformation: %s", t)
+			}
+		case "scaley":
+			if L == 1 {
+				tr.args[1] = tr.args[0]
+				tr.args[0] = Value{1, Px}
 				tr.kind = scale
 			} else {
 				return nil, fmt.Errorf("invalid transformation: %s", t)

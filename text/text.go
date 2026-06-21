@@ -65,8 +65,8 @@ type FirstLine struct {
 	FirstLineRTL bool // true is the first line direction is RTL
 }
 
-// split word on each hyphen occurence, starting by the end
-func hyphenDictionaryIterations(word []rune, hyphen rune) (out []string) {
+// HyphenDictionaryIterations splits word on each hyphen occurrence, starting by the end.
+func HyphenDictionaryIterations(word []rune, hyphen rune) (out []string) {
 	for i := len(word) - 1; i >= 0; i-- {
 		if word[i] == hyphen {
 			out = append(out, string(word[:i+1]))
@@ -78,6 +78,16 @@ func hyphenDictionaryIterations(word []rune, hyphen rune) (out []string) {
 type HyphenDictKey struct {
 	lang  language.Language
 	limit pr.Limits
+}
+
+// NewHyphenDictKey creates a HyphenDictKey from a language and hyphenation limits.
+func NewHyphenDictKey(lang language.Language, limit pr.Limits) HyphenDictKey {
+	return HyphenDictKey{lang, limit}
+}
+
+// ShortTextHint returns a prefix of text as a hint for layout.
+func ShortTextHint(text []rune, maxWidth, fontSize pr.Float) []rune {
+	return shortTextHint(text, maxWidth, fontSize)
 }
 
 // returns a prefix of text
@@ -111,11 +121,7 @@ func SplitFirstLine(text []rune, style_ pr.StyleAccessor, context TextLayoutCont
 	maxWidth pr.MaybeFloat, minimum, isLineStart bool,
 ) FirstLine {
 	style := NewTextStyle(style_, false)
-	// fmt.Printf("SplitFirstLine in: %q %v %v %v %v\n", string(text), text, maxWidth, style_.GetDirection(), style.Family)
-	out := context.Fonts().splitFirstLine(context.HyphenCache(), text, style, maxWidth, minimum, isLineStart)
-	// fmt.Println("SplitFirstLine out:", out.Length, out.ResumeAt, out.Width, out.Height, out.FirstLineRTL)
-	// fmt.Println()
-	return out
+	return context.Fonts().SplitFirstLine(context.HyphenCache(), text, style, maxWidth, minimum, isLineStart)
 }
 
 type StrutLayoutKey struct {
@@ -158,7 +164,7 @@ func StrutLayout(style_ pr.StyleAccessor, context TextLayoutContext) (lineHeight
 		return v[0], v[1]
 	}
 
-	height, baseline := context.Fonts().spaceHeight(style)
+	height, baseline := context.Fonts().SpaceHeight(style)
 
 	if lineHeightV.Tag == pr.Normal {
 		lineHeight = height
@@ -195,9 +201,9 @@ func CharacterRatio(style_ pr.ElementStyle, cache pr.TextRatioCache, isCh bool, 
 
 	var measure pr.Fl
 	if isCh {
-		measure = fonts.width0(style)
+		measure = fonts.Width0(style)
 	} else {
-		measure = fonts.heightx(style)
+		measure = fonts.Heightx(style)
 	}
 
 	// Zero means some kind of failure, fallback is 0.5.
@@ -211,7 +217,7 @@ func CharacterRatio(style_ pr.ElementStyle, cache pr.TextRatioCache, isCh bool, 
 }
 
 func (style *TextStyle) cacheKey() string {
-	return string(append(style.FontDescription.binary(nil, false), featuresBinary(style.FontFeatures)...))
+	return string(append(style.FontDescription.binary(nil, false), FeaturesBinary(style.FontFeatures)...))
 }
 
 func indexRune(text []rune, s rune) int {

@@ -228,3 +228,4 @@ func TestVariableInFunctionInVariable(t *testing.T) {
 	assertText(t, unpack1(unpack1(unpack1(div2))), "II")
 	assertText(t, unpack1(unpack1(unpack1(div3))), "iii")
 }
+

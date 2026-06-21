@@ -273,7 +273,13 @@ var _ text.TextLayoutContext = (*layoutContext)(nil)
 type brokenBox struct {
 	box             Box
 	containingBlock Box
-	resumeAt        tree.ResumeStack
+	// bfcRoot is the BFC root that the float was originally placed
+	// in. On the next page, the float continuation must register as
+	// an excluded shape in that same BFC so the BFC's in-flow content
+	// sees it. nil means no specific BFC root (rare — usually the
+	// page root BFC).
+	bfcRoot  Box
+	resumeAt tree.ResumeStack
 }
 
 type shapeList struct {
@@ -306,7 +312,19 @@ type layoutContext struct {
 	pageMaker           []tree.PageMaker
 	excludedShapes      *shapeList
 	excludedShapesLists []shapeList
-	brokenOutOfFlow     map[Box]brokenBox
+	// bfcRootStack tracks the BFC root box for each open BFC, parallel
+	// to excludedShapesLists. The top entry identifies which BFC a
+	// float belongs to when it's recorded broken-across-pages, so the
+	// continuation can re-enter the same BFC on the next page.
+	bfcRootStack    []Box
+	brokenOutOfFlow map[Box]brokenBox
+	// pendingBFCExcludedShapes holds floats that broke on the previous
+	// page, keyed by the BFC root box that contained them. When that
+	// root's BFC is created on the new page, the floats are inserted
+	// as excluded shapes so the BFC's in-flow content sees them.
+	// Mirrors WP commit 8373a169's per-BFC excluded-shapes mapping in
+	// the simplest way that fixes float pagination across BFCs.
+	pendingBFCExcludedShapes map[Box][]*bo.BoxFields
 
 	footnotes            []Box
 	currentPageFootnotes []Box
@@ -376,9 +394,24 @@ func overflows(bottomSpace, positionY pr.Float) bool {
 	return positionY > bottomSpace*(1+1e-9)
 }
 
-func (l *layoutContext) createBlockFormattingContext() {
-	l.excludedShapesLists = append(l.excludedShapesLists, shapeList{})
+// createBlockFormattingContext pushes a new BFC. Pass the BFC root
+// box (the box whose `EstablishesFormattingContext` returned true). If
+// the root is nil, the BFC is anonymous (e.g. for floats themselves).
+// When pendingBFCExcludedShapes has shapes recorded for rootBox (from
+// floats that broke on the previous page), they are pre-loaded into
+// the new BFC's excluded shapes so in-flow content sees them and can
+// avoid/clear them.
+func (l *layoutContext) createBlockFormattingContext(rootBox Box) {
+	initial := shapeList{}
+	if rootBox != nil && l.pendingBFCExcludedShapes != nil {
+		if shapes, ok := l.pendingBFCExcludedShapes[rootBox]; ok {
+			initial.list = shapes
+			delete(l.pendingBFCExcludedShapes, rootBox)
+		}
+	}
+	l.excludedShapesLists = append(l.excludedShapesLists, initial)
 	l.excludedShapes = &l.excludedShapesLists[len(l.excludedShapesLists)-1]
+	l.bfcRootStack = append(l.bfcRootStack, rootBox)
 }
 
 func (l *layoutContext) finishBlockFormattingContext(rootBox_ Box) {
@@ -396,6 +429,9 @@ func (l *layoutContext) finishBlockFormattingContext(rootBox_ Box) {
 		rootBox.Height = rootBox.Height.V() + maxShapeBottom - boxBottom
 	}
 	l.excludedShapesLists = l.excludedShapesLists[:len(l.excludedShapesLists)-1]
+	if n := len(l.bfcRootStack); n > 0 {
+		l.bfcRootStack = l.bfcRootStack[:n-1]
+	}
 	if L := len(l.excludedShapesLists); L != 0 {
 		l.excludedShapes = &l.excludedShapesLists[L-1]
 	} else {
@@ -406,15 +442,32 @@ func (l *layoutContext) finishBlockFormattingContext(rootBox_ Box) {
 func (l *layoutContext) createFlexFormattingContext() {
 	l.excludedShapesLists = append(l.excludedShapesLists, shapeList{isFrozen: true})
 	l.excludedShapes = &l.excludedShapesLists[len(l.excludedShapesLists)-1]
+	// Push nil onto bfcRootStack so the stack stays parallel to
+	// excludedShapesLists; flex containers don't have a fork-tracked
+	// BFC root for broken-float purposes.
+	l.bfcRootStack = append(l.bfcRootStack, nil)
 }
 
 func (l *layoutContext) finishFlexFormattingContext(_ Box) {
 	l.excludedShapesLists = l.excludedShapesLists[:len(l.excludedShapesLists)-1]
+	if n := len(l.bfcRootStack); n > 0 {
+		l.bfcRootStack = l.bfcRootStack[:n-1]
+	}
 	if L := len(l.excludedShapesLists); L != 0 {
 		l.excludedShapes = &l.excludedShapesLists[L-1]
 	} else {
 		l.excludedShapes = nil
 	}
+}
+
+// currentBFCRoot returns the box currently at the top of the BFC stack,
+// or nil if no BFC is active. Used to record the BFC root in brokenBox
+// entries so floats split across pages re-enter the correct BFC.
+func (l *layoutContext) currentBFCRoot() Box {
+	if n := len(l.bfcRootStack); n > 0 {
+		return l.bfcRootStack[n-1]
+	}
+	return nil
 }
 
 func resolveKeyword(keyword, name string, page Box) string {
@@ -553,6 +606,12 @@ func (l *layoutContext) updateFootnoteArea() bool {
 		return overflow
 	} else {
 		l.currentFootnoteArea.Height = pr.Float(0)
+		// Per WP commit 4c816633: when all footnotes are removed from
+		// the footnote area, restore the space we previously reserved
+		// for it on the page (only outside columns).
+		if !l.inColumn {
+			l.pageBottom -= l.currentFootnoteArea.MarginHeight()
+		}
 		return false
 	}
 }

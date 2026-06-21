@@ -610,9 +610,9 @@ func TestGridShorthandAutoFlowColumnsNoneDense(t *testing.T) {
           display: grid;
           font-family: weasyprint;
           font-size: 2px;
-          grid: none / auto-flow 1fr dense;
+          grid: none / auto-flow dense 1fr;
           line-height: 1;
-          width: 10px;
+          width: 12px;
         }
       </style>
       <article>
@@ -626,19 +626,19 @@ func TestGridShorthandAutoFlowColumnsNoneDense(t *testing.T) {
 	article := body.Box().Children[0]
 	div_a, div_b, div_c := unpack3(article)
 	tu.AssertEqual(t, div_a.Box().PositionX, Fl(0))
-	tu.AssertEqual(t, div_b.Box().PositionX, Fl(0))
-	tu.AssertEqual(t, div_c.Box().PositionX, Fl(0))
+	tu.AssertEqual(t, div_b.Box().PositionX, Fl(4))
+	tu.AssertEqual(t, div_c.Box().PositionX, Fl(8))
 	tu.AssertEqual(t, div_a.Box().PositionY, Fl(0))
-	tu.AssertEqual(t, div_b.Box().PositionY, Fl(2))
-	tu.AssertEqual(t, div_c.Box().PositionY, Fl(4))
-	tu.AssertEqual(t, div_a.Box().Width, Fl(10))
-	tu.AssertEqual(t, div_b.Box().Width, Fl(10))
-	tu.AssertEqual(t, div_c.Box().Width, Fl(10))
+	tu.AssertEqual(t, div_b.Box().PositionY, Fl(0))
+	tu.AssertEqual(t, div_c.Box().PositionY, Fl(0))
+	tu.AssertEqual(t, div_a.Box().Width, Fl(4))
+	tu.AssertEqual(t, div_b.Box().Width, Fl(4))
+	tu.AssertEqual(t, div_c.Box().Width, Fl(4))
 
 	for _, child := range article.Box().Children {
 		tu.AssertEqual(t, child.Box().Height, Fl(2))
 	}
-	tu.AssertEqual(t, article.Box().Width, Fl(10))
+	tu.AssertEqual(t, article.Box().Width, Fl(12))
 }
 
 func TestGridTemplateFrUndefinedFreeSpace(t *testing.T) {

@@ -157,14 +157,11 @@ func getNextLinebox(context *layoutContext, linebox *bo.LineBox, positionY, bott
 		maxX := positionX + availableWidth
 		positionX += linebox.TextIndent.V()
 
-		var (
-			preservedLineBreak bool
-			floatWidths        widths
-		)
+		var preservedLineBreak bool
 
 		spi := splitInlineBox(context, linebox, positionX, maxX, bottomSpace, skipStack, containingBlock_,
 			&lineAbsolutes, &lineFixed, &linePlaceholders, &waitingFloats, nil)
-		resumeAt, preservedLineBreak, floatWidths = spi.resumeAt, spi.preservedLineBreak, spi.floatWidths
+		resumeAt, preservedLineBreak = spi.resumeAt, spi.preservedLineBreak
 		line_ = spi.newBox.(*bo.LineBox) // splitInlineBox preserve the concrete type
 
 		if traceMode {
@@ -182,7 +179,6 @@ func getNextLinebox(context *layoutContext, linebox *bo.LineBox, positionY, bott
 		removeLastWhitespace(context, line_)
 
 		newPositionX, _, newAvailableWidth := avoidCollisions(context, linebox, containingBlock, false)
-		newAvailableWidth -= floatWidths.right
 		alignmentAvailableWidth := newAvailableWidth + newPositionX - linebox.PositionX
 		offsetX := textAlign(context, line_, alignmentAvailableWidth, resumeAt == nil || preservedLineBreak)
 
@@ -262,7 +258,7 @@ func getNextLinebox(context *layoutContext, linebox *bo.LineBox, positionY, bott
 
 		floatChildren = append(floatChildren, newWaitingFloat)
 		if waitingFloatResumeAt != nil {
-			context.brokenOutOfFlow[newWaitingFloat] = brokenBox{waitingFloat_, containingBlock_, waitingFloatResumeAt}
+			context.brokenOutOfFlow[newWaitingFloat] = brokenBox{box: waitingFloat_, containingBlock: containingBlock_, bfcRoot: context.currentBFCRoot(), resumeAt: waitingFloatResumeAt}
 		}
 	}
 	line.Children = append(line.Children, floatChildren...)
@@ -308,6 +304,13 @@ func skipFirstWhitespace(box Box, skipStack tree.ResumeStack) (tree.ResumeStack,
 		if index == 0 && len(children) == 0 {
 			return nil, false
 		}
+		if index >= len(children) {
+			// Skip stack points past the last child (this can happen on
+			// repagination of an absolutely-positioned box whose children
+			// were all consumed on the previous page). Treat as fully
+			// consumed and tell the caller to continue.
+			return nil, true
+		}
 		result, cont := skipFirstWhitespace(children[index], nextSkipStack)
 		if cont {
 			index += 1
@@ -347,6 +350,7 @@ func removeLastWhitespace(context *layoutContext, line *bo.LineBox) {
 		return
 	}
 	newText := text.TrimSuffix(textBox.Text, ' ')
+	firstLineIsRTL := textBox.FirstLineIsRTL
 	var spaceWidth pr.Float
 	if L := len(newText); L != 0 {
 		if L == len(textBox.Text) {
@@ -363,11 +367,15 @@ func removeLastWhitespace(context *layoutContext, line *bo.LineBox) {
 		spaceWidth = textBox.Width.V()
 		textBox.Width = pr.Float(0)
 		textBox.Text = nil
+		// We don't have layout for an empty box, so fall back to the
+		// line's CSS direction.
+		firstLineIsRTL = line.Style.GetDirection() == pr.Rtl
 	}
 
-	// RTL line, the trailing space is at the left of the box. We have to translate the
-	// box to align the stripped text with the right edge of the box.
-	if textBox.FirstLineIsRTL {
+	// RTL line, the trailing space is at the left of the box. Translate
+	// every direct child of the line to align the stripped text with the
+	// right edge of the box.
+	if firstLineIsRTL {
 		for _, child := range line.Children {
 			child.Translate(-spaceWidth, 0, true)
 		}
@@ -434,17 +442,25 @@ func firstLetterToBox(context *layoutContext, box Box, skipStack tree.ResumeStac
 				// "This type of initial letter is similar to an
 				// inline-level element if its "float" property is "none",
 				// otherwise it is similar to a floated element."
+				//
+				// Per WP commit 9b6b5d02: when the first-letter floats,
+				// its inner TextBox/LineBox children must use an
+				// anonymous style derived from the letter style, not
+				// the letter style itself. Sharing the letter style
+				// would let "float" propagate into the children, which
+				// then crashes during inline layout.
+				childrenStyle := tree.NewAnonymousStyle(letterStyle)
 				if firstLetterStyle.GetFloat() == "none" {
 					letterBox := bo.NewInlineBox(firstLetterStyle, textBox.Element, "first-letter", nil)
-					textBox = bo.NewTextBox(letterStyle, textBox.Element, "first-letter", []rune(firstLetter))
+					textBox = bo.NewTextBox(childrenStyle, textBox.Element, "first-letter", []rune(firstLetter))
 					letterBox.Children = []Box{textBox}
 					textBox.Children = append([]Box{letterBox}, textBox.Children...)
 				} else {
 					letterBox := bo.NewBlockBox(firstLetterStyle, textBox.Element, "first-letter", nil)
 					letterBox.FirstLetterStyle = nil
-					lineBox := bo.NewLineBox(firstLetterStyle, textBox.Element, "first-letter", nil)
+					lineBox := bo.NewLineBox(childrenStyle, textBox.Element, "first-letter", nil)
 					letterBox.Children = []Box{&lineBox}
-					textBox = bo.NewTextBox(letterStyle, textBox.Element, "first-letter", []rune(firstLetter))
+					textBox = bo.NewTextBox(childrenStyle, textBox.Element, "first-letter", []rune(firstLetter))
 					lineBox.Children = []Box{textBox}
 					textBox.Children = append([]Box{letterBox}, textBox.Children...)
 				}
@@ -532,6 +548,7 @@ func inlineBlockBoxLayout(context *layoutContext, box_ Box, positionX pr.Float, 
 	}
 
 	inlineBlockWidth(box_, context, containingBlock)
+
 
 	box.PositionX = positionX
 	box.PositionY = 0
@@ -895,6 +912,17 @@ func splitInlineBox(context *layoutContext, box_ Box, positionX, maxX, bottomSpa
 			newChild, resumeAt, preserved, first, last, newFloatWidths = v.newBox, v.resumeAt, v.preservedLineBreak, v.firstLetter, v.lastLetter, v.floatWidths
 		}
 
+		// Per WP commit c3c25f2c (issue #1510): floats inside nested
+		// inline boxes must be reflected back into the outer line's
+		// float-widths accumulator so subsequent siblings get the
+		// reduced available width.
+		if newFloatWidths.left > floatWidths.left {
+			floatWidths.left = newFloatWidths.left
+		}
+		if newFloatWidths.right > floatWidths.right {
+			floatWidths.right = newFloatWidths.right
+		}
+
 		skipStack = nil
 		if preserved {
 			preservedLineBreak = true
@@ -915,6 +943,13 @@ func splitInlineBox(context *layoutContext, box_ Box, positionX, maxX, bottomSpa
 				canBreak = pr.True
 			} else if first == letterFalse {
 				canBreak = pr.False
+			} else if lastLetter == '\u2e80' || first == '\u2e80' {
+				// CSS Text Level 3 §5.2: Atomic inlines (inline-block, replaced elements)
+				// should be treated as U+FFFC (Contingent Break class), allowing breaks
+				// on both sides. Using '\u2e80' (Ideographic class) with CanBreakText
+				// incorrectly prevents breaks before punctuation (LB13: ×IS).
+				// Always allow breaks adjacent to atomic inlines.
+				canBreak = pr.True
 			} else {
 				canBreak = context.Fonts().CanBreakText([]rune{lastLetter, first})
 			}
@@ -948,6 +983,30 @@ func splitInlineBox(context *layoutContext, box_ Box, positionX, maxX, bottomSpa
 				previousResumeAt := breakWaitingChildren(context, containingBlock, bottomSpace, initialSkipStack, absoluteBoxes, fixedBoxes,
 					linePlaceholders, waitingFloats, lineChildren, &children, waitingChildren)
 				if previousResumeAt != nil {
+					// Per CSS Text §4.1, trailing whitespace at the end
+					// of a line is collapsed for line-break decisions
+					// but kept on the breaking line as a zero-width
+					// box. If the overflow is caused by a
+					// pure-whitespace TextBox AND a wrappable sibling
+					// follows (so the break point logically falls
+					// AFTER the whitespace), keep the whitespace on
+					// the current line so removeLastWhitespace can
+					// later trim it to width 0.
+					if index < len(box.Children)-1 {
+						if tb, ok := newChild.(*bo.TextBox); ok && tb != nil && len(tb.Text) > 0 {
+							allWS := true
+							for _, r := range tb.Text {
+								if r != ' ' && r != '\t' {
+									allWS = false
+									break
+								}
+							}
+							if allWS {
+								children = append(children, indexedBoxC{index: index, box: newChild, child: child_})
+								previousResumeAt = tree.ResumeStack{index + 1: nil}
+							}
+						}
+					}
 					resumeAt = previousResumeAt
 					break
 				}
@@ -1123,7 +1182,7 @@ func inlineOutOfFlowLayout(context *layoutContext, box Box, containingBlock Box,
 				bottomSpace, nil)
 
 			if floatResumeAt != nil {
-				context.brokenOutOfFlow[child_] = brokenBox{child_, containingBlock, floatResumeAt}
+				context.brokenOutOfFlow[child_] = brokenBox{box: child_, containingBlock: containingBlock, bfcRoot: context.currentBFCRoot(), resumeAt: floatResumeAt}
 			}
 			*waitingChildren = append(*waitingChildren, indexedBoxC{index: index, box: newChild, child: child_})
 			child_ = newChild
@@ -1492,6 +1551,9 @@ func addWordSpacing(context *layoutContext, box_ Box, justificationSpacing, xAdv
 		box := box_.Box()
 		box.PositionX += xAdvance
 		previousXAdvance := xAdvance
+		// Per WP commit 32a7cd58: walk children in visual order. RTL
+		// inline boxes lay out their children right-to-left, so the
+		// running x-advance must accumulate over them in reverse.
 		children := slices.Clone(box.Children)
 		if box.Style.GetDirection() == pr.Rtl {
 			slices.Reverse(children)

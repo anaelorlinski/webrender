@@ -205,6 +205,18 @@ func (dr Drawer) DrawGradient(gradient backend.GradientLayout, width, height fl)
 	dr.println("DrawGradient :")
 }
 
+func (dr Drawer) SetGradientFillPath(x, y, width, height fl) {
+	dr.println("SetGradientFillPath :")
+}
+
+func (dr Drawer) DrawBoxShadow(shape backend.RoundedBox, offsetX, offsetY, blur, spread fl, color parser.RGBA, inset bool) {
+	dr.println("DrawBoxShadow :")
+}
+
+func (dr Drawer) DrawTextShadow(text backend.TextDrawing, offsetX, offsetY, blur fl, color parser.RGBA) {
+	dr.println("DrawTextShadow :")
+}
+
 func (dr Drawer) DrawWithOpacity(opacity fl, group backend.Canvas) {
 	dr.println("DrawWithOpacity :", opacity)
 }

@@ -213,6 +213,12 @@ func NewNumber(v utils.Fl, pos Pos) Number {
 	return newNumber(repr, v, isInt, pos)
 }
 
+func NewPercentage(v utils.Fl, pos Pos) Percentage {
+	isInt := v == utils.Fl(math.Trunc((float64(v))))
+	repr := fmt.Sprintf("%v%%", v)
+	return Percentage{numberVal{stringVal{Value: repr, pos: pos, flag: newFlag(isInteger, isInt)}, v}}
+}
+
 func newNumber(v string, vf utils.Fl, isInt bool, pos Pos) Number {
 	return Number{numberVal{stringVal{Value: v, pos: pos, flag: newFlag(isInteger, isInt)}, vf}}
 }
@@ -615,7 +621,10 @@ func (tk *tokenizer) tryConsumeNumber(pos Pos) Token {
 	}
 	L := len(tk.src)
 	if tk.pos < L && tk.isIdentStart() {
-		unit := tk.consumeIdent()
+		// Per WP commit dbde3d98: CSS dimension units are
+		// case-insensitive ("PX" == "px"). Lower-case at parse time
+		// so downstream comparisons in unit tables stay simple.
+		unit := utils.AsciiLower(tk.consumeIdent())
 		return Dimension{unit, n}
 	} else if tk.pos < L && tk.src[tk.pos] == '%' {
 		tk.pos += 1

@@ -147,3 +147,30 @@ func TestNilContent(t *testing.T) {
 	rule = parseOneRule(tokenizeString("@font-face", true)).(AtRule)
 	tu.AssertEqual(t, rule.Content == nil, true)
 }
+
+// TestDimensionUnitCaseInsensitive: per WP commit dbde3d98, CSS
+// dimension units are case-insensitive. The tokenizer must lower-case
+// them so downstream lookups (LENGTH_UNITS, etc.) succeed regardless
+// of source casing.
+func TestDimensionUnitCaseInsensitive(t *testing.T) {
+	cases := []struct{ in, want string }{
+		{"10px", "px"},
+		{"10PX", "px"},
+		{"10Px", "px"},
+		{"10EM", "em"},
+		{"10Hz", "hz"},
+	}
+	for _, c := range cases {
+		toks := tokenizeString(c.in, false)
+		if len(toks) != 1 {
+			t.Fatalf("input %q: expected 1 token, got %d", c.in, len(toks))
+		}
+		dim, ok := toks[0].(Dimension)
+		if !ok {
+			t.Fatalf("input %q: expected Dimension, got %T", c.in, toks[0])
+		}
+		if dim.Unit != c.want {
+			t.Errorf("input %q: unit = %q, want %q", c.in, dim.Unit, c.want)
+		}
+	}
+}

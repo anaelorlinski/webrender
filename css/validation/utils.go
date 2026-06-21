@@ -71,12 +71,16 @@ func getImage(_token Token, baseUrl string) (pr.Image, error) {
 	case "linear-gradient", "repeating-linear-gradient":
 		direction, colorStops := parseLinearGradientParameters(arguments)
 		if len(colorStops) > 0 {
-			parsedColorsStop := make([]pr.ColorStop, len(colorStops))
-			for index, stop := range colorStops {
-				parsedColorsStop[index], err = parseColorStop(stop)
+			var parsedColorsStop []pr.ColorStop
+			for _, stop := range colorStops {
+				stops, err := parseColorStops(stop)
 				if err != nil {
 					return nil, err
 				}
+				parsedColorsStop = append(parsedColorsStop, stops...)
+			}
+			if err := validateColorStopList(parsedColorsStop); err != nil {
+				return nil, err
 			}
 			return pr.LinearGradient{
 				Direction:  direction,
@@ -93,12 +97,16 @@ func getImage(_token Token, baseUrl string) (pr.Image, error) {
 			result.colorStops = arguments
 		}
 		if len(result.colorStops) > 0 {
-			parsedColorsStop := make([]pr.ColorStop, len(result.colorStops))
-			for index, stop := range result.colorStops {
-				parsedColorsStop[index], err = parseColorStop(stop)
+			var parsedColorsStop []pr.ColorStop
+			for _, stop := range result.colorStops {
+				stops, err := parseColorStops(stop)
 				if err != nil {
 					return nil, err
 				}
+				parsedColorsStop = append(parsedColorsStop, stops...)
+			}
+			if err := validateColorStopList(parsedColorsStop); err != nil {
+				return nil, err
 			}
 			return pr.RadialGradient{
 				ColorStops: parsedColorsStop,
@@ -225,24 +233,77 @@ func parseRadialGradientParameters(arguments [][]Token) radialGradientParameters
 	return out
 }
 
+// validateColorStopList enforces the CSS Images 3 <color-stop-list> grammar
+// with respect to color transition hints: a hint (<color-hint>) may only
+// appear between two color stops, so the list must start and end with a real
+// color stop and no two hints may be adjacent. (A hint-free list of a single
+// color stop remains valid — it renders as a solid color.)
+func validateColorStopList(stops []pr.ColorStop) error {
+	prevWasHint := false
+	for i, s := range stops {
+		if s.IsHint {
+			// A hint cannot be first, last, or follow another hint.
+			if i == 0 || i == len(stops)-1 || prevWasHint {
+				return ErrInvalidValue
+			}
+			prevWasHint = true
+		} else {
+			prevWasHint = false
+		}
+	}
+	return nil
+}
+
 func parseColorStop(tokens []Token) (pr.ColorStop, error) {
 	switch len(tokens) {
 	case 1:
-		color := pa.ParseColor(tokens[0])
+		color := parseColorResolved(tokens[0])
 		if color.Type == pa.ColorCurrentColor {
 			return pr.ColorStop{Color: pr.Color(pa.ParseColorString("black"))}, nil
 		}
 		if !color.IsNone() {
 			return pr.ColorStop{Color: pr.Color(color)}, nil
 		}
+		// A bare <length-percentage> with no color is a color transition
+		// hint (CSS Images 3 <color-hint>).
+		if position := getLength(tokens[0], true, true); !position.IsNone() {
+			return pr.ColorStop{Position: position, IsHint: true}, nil
+		}
 	case 2:
-		color := pa.ParseColor(tokens[0])
+		color := parseColorResolved(tokens[0])
 		position := getLength(tokens[1], true, true)
 		if !color.IsNone() && !position.IsNone() {
 			return pr.ColorStop{Color: pr.Color(color), Position: position}, nil
 		}
 	}
 	return pr.ColorStop{}, ErrInvalidValue
+}
+
+// parseColorStops parses a color stop token group into one or two ColorStops.
+// Per CSS Images Level 3, a color stop can have two position values (double-position):
+//
+//	<color> <position1> <position2> expands to <color> <position1>, <color> <position2>
+func parseColorStops(tokens []Token) ([]pr.ColorStop, error) {
+	if len(tokens) == 3 {
+		color := parseColorResolved(tokens[0])
+		position1 := getLength(tokens[1], true, true)
+		position2 := getLength(tokens[2], true, true)
+		if !color.IsNone() && !position1.IsNone() && !position2.IsNone() {
+			c := pr.Color(color)
+			if color.Type == pa.ColorCurrentColor {
+				c = pr.Color(pa.ParseColorString("black"))
+			}
+			return []pr.ColorStop{
+				{Color: c, Position: position1},
+				{Color: c, Position: position2},
+			}, nil
+		}
+	}
+	stop, err := parseColorStop(tokens)
+	if err != nil {
+		return nil, err
+	}
+	return []pr.ColorStop{stop}, nil
 }
 
 func parseURLToken(value, baseURL string) (url pr.TaggedString, attr pr.AttrData, err error) {
@@ -305,23 +366,27 @@ func checkStringOrElementFunction(stringOrElement string, token Token) (out pr.C
 }
 
 // HasVar returns true if [token] is a var(...),
-// or is a function with any var()
+// or is any compound token (function, parentheses, square/curly brackets)
+// containing a var() at any depth.
 func HasVar(token Token) bool {
-	name, args := pa.ParseFunction(token)
-	if name == "" {
-		return false
-	}
-	if name == "var" && len(args) != 0 {
+	// var(...) detection needs the parsed function name and arguments.
+	if name, args := pa.ParseFunction(token); name == "var" && len(args) != 0 {
 		// TODO: we should check authorized tokens
 		// https://drafts.csswg.org/css-syntax-3/#typedef-declaration-value
-		ident, ok := args[0].(pa.Ident)
-		return ok && strings.HasPrefix(ident.Value, "--")
+		if ident, ok := args[0].(pa.Ident); ok && strings.HasPrefix(ident.Value, "--") {
+			return true
+		}
 	}
 
-	// recurse
-	for _, arg := range args {
-		if HasVar(arg) {
-			return true
+	// Recurse into the children of any compound token. Going through
+	// pa.Children (rather than enumerating FunctionBlock/ParenthesesBlock
+	// here) means var() nested inside square/curly brackets — or any future
+	// compound type — is detected without extra cases.
+	if children, ok := pa.Children(token); ok {
+		for _, arg := range children {
+			if HasVar(arg) {
+				return true
+			}
 		}
 	}
 	return false

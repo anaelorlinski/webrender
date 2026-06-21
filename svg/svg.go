@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"strings"
 
 	"github.com/benoitkugler/webrender/backend"
 	"github.com/benoitkugler/webrender/matrix"
@@ -92,6 +93,37 @@ func (svg *SVGImage) Draw(dst backend.Canvas, width, height Fl, textContext text
 	svg.drawNode(dst, svg.root, dims, true)
 }
 
+// measureTextSubtreeWidth returns the total CSS-pixel width of all
+// glyphs that will be drawn for the given <text>/<tspan> subtree at
+// the resolved fontSize. Used by drawNode to compute a single anchor
+// shift that gets applied to every textSpan in the subtree.
+func measureTextSubtreeWidth(node *svgNode, dims drawingDims) Fl {
+	var width Fl
+	if t, ok := node.graphicContent.(*textSpan); ok && t.text != "" {
+		fontSize := node.attributes.fontSize.Resolve(dims.fontSize, dims.fontSize)
+		// Approximate width: chars × fontSize. Works exactly for
+		// monospace test fonts (weasyprint.otf, AHEM); for proportional
+		// fonts we'd need to query the actual face. Future improvement.
+		width += Fl(len([]rune(t.text))) * fontSize
+	}
+	for _, child := range node.children {
+		width += measureTextSubtreeWidth(child, dims)
+	}
+	return width
+}
+
+// propagateAnchorShift sets manualShift on every textSpan in the
+// subtree so each child's draw call positions glyphs at the
+// anchor-adjusted x coordinates.
+func propagateAnchorShift(node *svgNode, shift Fl) {
+	if t, ok := node.graphicContent.(*textSpan); ok {
+		t.manualShift = shift
+	}
+	for _, child := range node.children {
+		propagateAnchorShift(child, shift)
+	}
+}
+
 // if paint is false, only the path operations are executed, not the actual filling or drawing
 // moreover, no new graphic stack is created
 func (svg *SVGImage) drawNode(dst backend.Canvas, node *svgNode, dims drawingDims, paint bool) {
@@ -104,7 +136,10 @@ func (svg *SVGImage) drawNode(dst backend.Canvas, node *svgNode, dims drawingDim
 		}
 
 		// apply transform attribute
-		applyTransform(dst, node.attributes.transforms, dims)
+		applyTransformWithOrigin(dst, node.attributes.transforms, dims,
+			node.attributes.hasTransformOrigin,
+			node.attributes.transformOriginX,
+			node.attributes.transformOriginY)
 
 		// create sub group for opacity
 		opacity := node.attributes.opacity
@@ -136,6 +171,29 @@ func (svg *SVGImage) drawNode(dst backend.Canvas, node *svgNode, dims drawingDim
 			if textAnchor == middle || textAnchor == end {
 				originalDst2 = dst
 				dst = dst.NewGroup(0, 0, 0, 0) // BBox set after drawing
+			}
+
+			// Pre-compute the anchor shift from the union width of
+			// this <text> node's content (own text + recursively all
+			// child <tspan>s) and propagate it to every descendant
+			// textSpan so each draw call positions glyphs at the
+			// already-shifted x coordinates. This avoids the upstream
+			// pattern (NewGroup buffer + post-draw Translate) which
+			// requires a real group buffer not yet implemented here.
+			//
+			// Only propagate when the OUTER <text> itself has an
+			// anchor — if the anchor came from a single child, that
+			// child handles its own shift in textSpan.draw via
+			// `t.textAnchor`, and propagating would double-apply.
+			if (text.textAnchor == middle || text.textAnchor == end) && text.text != "" {
+				totalWidth := measureTextSubtreeWidth(node, dims)
+				var shift Fl
+				if text.textAnchor == middle {
+					shift = -totalWidth / 2
+				} else {
+					shift = -totalWidth
+				}
+				propagateAnchorShift(node, shift)
 			}
 		}
 
@@ -386,12 +444,27 @@ func aggregateTransforms(transforms []transform, fontSize, diagonal Fl) matrix.T
 }
 
 func applyTransform(dst backend.Canvas, transforms []transform, dims drawingDims) {
-	if len(transforms) == 0 { // do not apply a useless identity transform
+	applyTransformWithOrigin(dst, transforms, dims, false, 0, 0)
+}
+
+// applyTransformWithOrigin applies the user-coordinate transforms,
+// optionally pivoted around (originX, originY) per CSS transform-origin /
+// SVG 2. The pivot is encoded as Translate(origin) · transforms ·
+// Translate(-origin), which aggregates with the user's transforms before
+// hitting the backend so it's a single Transform call.
+func applyTransformWithOrigin(dst backend.Canvas, transforms []transform, dims drawingDims, hasOrigin bool, originX, originY Fl) {
+	if len(transforms) == 0 && !hasOrigin {
 		return
 	}
 
-	// aggregate the transformations
 	mat := aggregateTransforms(transforms, dims.fontSize, dims.innerDiagonal)
+	if hasOrigin && (originX != 0 || originY != 0) {
+		// Compose: Translate(origin) · mat · Translate(-origin).
+		shifted := matrix.Translation(originX, originY)
+		shifted.RightMultBy(mat)
+		shifted.RightMultBy(matrix.Translation(-originX, -originY))
+		mat = shifted
+	}
 	if mat.Determinant() != 0 {
 		dst.State().Transform(mat)
 	}
@@ -430,7 +503,7 @@ func (svg *SVGImage) applyClipPath(dst backend.Canvas, clipPath *clipPath, node 
 	// At least set the clipping area to an empty path, so that it’s
 	// totally clipped when the clipping path is empty.
 	dst.Rectangle(0, 0, 0, 0)
-	dst.State().Clip(false)
+	dst.State().Clip(clipPath.isClipUseEvenOdd)
 	newCtm := dst.State().GetTransform()
 	if err := newCtm.Invert(); err == nil {
 		dst.State().Transform(matrix.Mul(oldCtm, newCtm))
@@ -479,13 +552,15 @@ func Parse(svg io.Reader, baseURL string, imageLoader ImageLoader, urlFetcher ut
 		return nil, err
 	}
 
-	return ParseNode(root, baseURL, imageLoader, urlFetcher)
+	return ParseNode(root, baseURL, imageLoader, urlFetcher, "")
 }
 
 // ParseNode is the same as Parse but works with an already parsed
 // svg input.
-func ParseNode(root *html.Node, baseURL string, imageLoader ImageLoader, urlFetcher utils.UrlFetcher) (*SVGImage, error) {
-	tree, err := newSVGContext(root, baseURL, urlFetcher)
+// inheritedColor is an optional CSS color string from the HTML parent context,
+// used to resolve "currentColor" SVG attribute values.
+func ParseNode(root *html.Node, baseURL string, imageLoader ImageLoader, urlFetcher utils.UrlFetcher, inheritedColor string) (*SVGImage, error) {
+	tree, err := newSVGContext(root, baseURL, urlFetcher, inheritedColor)
 	if err != nil {
 		return nil, err
 	}
@@ -561,6 +636,13 @@ type attributes struct {
 	viewbox *Rectangle
 
 	transforms []transform
+	// transformOriginX/Y is the pivot for `transforms` (CSS
+	// transform-origin / SVG 2). When hasTransformOrigin is true,
+	// applyTransform composes Translate(origin) · transforms ·
+	// Translate(-origin). The flag distinguishes "no origin set"
+	// from "origin set to (0, 0)".
+	transformOriginX, transformOriginY Fl
+	hasTransformOrigin                 bool
 
 	clipPathID, maskID, filterID                      string
 	markerID, markerStartID, markerMidID, markerEndID string
@@ -644,9 +726,10 @@ func (tree *svgContext) processNode(node *cascadedNode, defs definitions) (*svgN
 			return nil, err
 		}
 		return resolved, nil
-	case "defs":
-		// children has been processed and registred,
-		// so we discard the node, which is not needed anymore
+	case "defs", "symbol":
+		// children has been processed and registred (defs), or are
+		// rendered only via <use> (symbol). In either case, the node
+		// itself is not drawn directly. Per WP commit 1043ffce.
 	default:
 		out, err := tree.processGraphicNode(node, children)
 		if err != nil {
@@ -772,6 +855,22 @@ func (na nodeAttributes) parseSharedAttributes(out *attributes) error {
 	if err != nil {
 		return err
 	}
+	if origin := strings.TrimSpace(na["transform-origin"]); origin != "" {
+		vs, perr := parseValues(origin)
+		if perr != nil {
+			return perr
+		}
+		// Per CSS Transforms / SVG 2: one value defaults Y to "center"
+		// (50%); we lack box dimensions here, so fall back to 0 — most
+		// real authoring uses the two-value form.
+		if len(vs) >= 1 {
+			out.transformOriginX = vs[0].V
+			out.hasTransformOrigin = true
+		}
+		if len(vs) >= 2 {
+			out.transformOriginY = vs[1].V
+		}
+	}
 
 	out.stroke, err = newPainter(na["stroke"])
 	if err != nil {
@@ -781,7 +880,7 @@ func (na nodeAttributes) parseSharedAttributes(out *attributes) error {
 	if err != nil {
 		return err
 	}
-	out.isFillEvenOdd = na["fill-rull"] == "evenodd"
+	out.isFillEvenOdd = na["fill-rule"] == "evenodd"
 
 	out.dashOffset, err = parseValue(na["stroke-dashoffset"])
 	if err != nil {

@@ -164,9 +164,11 @@ type UrlFetcher = func(url string) (RemoteRessource, error)
 // Fetch an external resource such as an image or stylesheet.
 func DefaultUrlFetcher(urlTarget string) (RemoteRessource, error) {
 	if strings.HasPrefix(strings.ToLower(urlTarget), "data:") {
-		// data url can't contains spaces and the strings comming from css
-		// may contain tabs when separated on several lines with \
-		urlTarget = htmlSpacesRe.ReplaceAllString(urlTarget, "")
+		// data url strings coming from CSS may contain tabs, newlines, etc.
+		// when separated on several lines with \
+		// Only strip these whitespace characters, NOT regular spaces,
+		// since spaces can be legitimate in data URIs (e.g. SVG attributes).
+		urlTarget = strings.NewReplacer("\t", "", "\n", "", "\f", "", "\r", "").Replace(urlTarget)
 		data, err := parseDataURL([]byte(urlTarget))
 		if err != nil {
 			return RemoteRessource{}, err
@@ -264,8 +266,18 @@ func (d dataURI) toResource(urlTarget string) (RemoteRessource, error) {
 		return RemoteRessource{}, err
 	}
 	if d.isBase64 {
-		dbuf := make([]byte, base64.StdEncoding.DecodedLen(len(d.data)))
-		n, err := base64.StdEncoding.Decode(dbuf, d.data)
+		// CSS string line-continuations (`\<newline>`) and surrounding
+		// whitespace can leave non-base64 characters in the encoded
+		// payload. Strip ASCII whitespace before decoding.
+		stripped := make([]byte, 0, len(d.data))
+		for _, b := range d.data {
+			if b == ' ' || b == '\t' || b == '\n' || b == '\r' {
+				continue
+			}
+			stripped = append(stripped, b)
+		}
+		dbuf := make([]byte, base64.StdEncoding.DecodedLen(len(stripped)))
+		n, err := base64.StdEncoding.Decode(dbuf, stripped)
 		if err != nil {
 			return RemoteRessource{}, fmt.Errorf("invalid base64 data url: %s", err)
 		}

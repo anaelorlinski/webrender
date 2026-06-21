@@ -31,6 +31,8 @@ func Test_parsePoints(t *testing.T) {
 		{"50 160 55 180.2 70 180", false, []Fl{50, 160, 55, 180.2, 70, 180}, false},
 		{"153.423,21.442,12.3e5,", false, []Fl{153.423, 21.442, 12.3e5}, false},
 		{"3e-2,", false, []Fl{3e-2}, false},
+		{"3e+2,", false, []Fl{3e+2}, false},
+		{"0 90e-1 .8E+1,0", false, []Fl{0, 90e-1, .8E+1, 0}, false},
 		{"-11.231-1.388-22.118-3.789-32.621", false, []Fl{-11.231, -1.388, -22.118, -3.789, -32.621}, false},
 		{"7px 8% 10 px 72pt", false, []Fl{7, 8, 10, 72}, false}, // units are ignored
 		{"15,45.7e", false, nil, true},

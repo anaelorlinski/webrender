@@ -57,8 +57,10 @@ var (
 	}
 
 	// http://drafts.csswg.org/csswg/css-values/#resolution
+	// Per WP commit c57a44ef: "x" is an alias for "dppx".
 	RESOLUTIONTODPPX = map[string]utils.Fl{
 		"dppx": 1,
+		"x":    1,
 		"dpi":  utils.Fl(1 / pr.LengthsToPixels[pr.In]),
 		"dpcm": utils.Fl(1 / pr.LengthsToPixels[pr.Cm]),
 	}
@@ -164,7 +166,6 @@ var (
 		pr.PMarginRight:             lengthOrAuto,
 		pr.PMarginBottom:            lengthOrAuto,
 		pr.PMarginLeft:              lengthOrAuto,
-		pr.PTextUnderlineOffset:     lengthOrAuto,
 		pr.PHeight:                  widthHeight,
 		pr.PWidth:                   widthHeight,
 		pr.PColumnFill:              columnFill,
@@ -215,6 +216,7 @@ var (
 		pr.PTextDecorationLine:      textDecorationLine,
 		pr.PTextDecorationStyle:     textDecorationStyle,
 		pr.PTextDecorationThickness: textDecorationThickness,
+		pr.PTextUnderlineOffset:     textUnderlineOffset,
 		pr.PTextIndent:              textIndent,
 		pr.PTextTransform:           textTransform,
 		pr.PVerticalAlign:           verticalAlign,
@@ -263,6 +265,8 @@ var (
 		pr.PGridColumnStart:         gridLine,
 		pr.PGridRowEnd:              gridLine,
 		pr.PGridColumnEnd:           gridLine,
+		pr.PBoxShadow:               boxShadow,
+		pr.PTextShadow:              textShadow,
 	}
 	validatorsError = map[pr.KnownProp]validatorError{
 		pr.PBackgroundImage:   backgroundImage,
@@ -740,7 +744,7 @@ func getLength(token Token, negative, percentage bool) pr.Dimension {
 			return pr.PercToD(token.ValueF)
 		}
 	case pa.Dimension:
-		unit, isKnown := LENGTHUNITS[string(token.Unit)]
+		unit, isKnown := LENGTHUNITS[strings.ToLower(string(token.Unit))]
 		if isKnown && (negative || token.ValueF >= 0) {
 			return pr.NewDim(pr.Float(token.ValueF), unit)
 		}
@@ -759,6 +763,11 @@ func getAngle(token Token) (utils.Fl, bool) {
 		if in {
 			return dim.ValueF * ANGLETORADIANS[unit], true
 		}
+	}
+	// Per WP commit 5d4e6cec: legacy syntax allows a bare 0 (no unit)
+	// to mean 0 angle. Used by Tailwind, see CSS Values 4 §6.4.
+	if num, ok := token.(pa.Number); ok && num.ValueF == 0 {
+		return 0, true
 	}
 	return 0, false
 }
@@ -810,7 +819,7 @@ func backgroundAttachment(tokens []Token, _ string) pr.CssProperty {
 // @singleToken
 func otherColors(tokens []Token, _ string) pr.CssProperty {
 	if len(tokens) == 1 {
-		c := pa.ParseColor(tokens[0])
+		c := parseColorResolved(tokens[0])
 		if !c.IsNone() {
 			return pr.Color(c)
 		}
@@ -826,7 +835,13 @@ func outlineColor(tokens []Token, _ string) pr.CssProperty {
 		if getKeyword(token) == "invert" {
 			return pr.Color{Type: pa.ColorCurrentColor}
 		} else {
-			return pr.Color(pa.ParseColor(token))
+			// Per WP commit 0af0b250: reject invalid colors instead
+			// of silently passing through the zero color.
+			c := parseColorResolved(token)
+			if c.IsNone() {
+				return nil
+			}
+			return pr.Color(c)
 		}
 	}
 	return nil
@@ -865,7 +880,7 @@ func color(tokens []Token, _ string) pr.DeclaredValue {
 		return nil
 	}
 	token := tokens[0]
-	result := pa.ParseColor(token)
+	result := parseColorResolved(token)
 	if result.Type == pa.ColorCurrentColor {
 		return pr.Inherit
 	} else {
@@ -1151,20 +1166,34 @@ func box(tokens []Token, _ string) pr.CssProperty {
 }
 
 func borderDims(tokens []Token, negative, percentage bool) pr.CssProperty {
-	lengths := make([]pr.Dimension, len(tokens))
-	allLengths := true
-	for index, token := range tokens {
-		lengths[index] = getLength(token, negative, percentage)
-		allLengths = allLengths && !lengths[index].IsNone()
+	if len(tokens) != 1 && len(tokens) != 2 {
+		return nil
 	}
-	if allLengths {
-		if len(lengths) == 1 {
-			return pr.Point{lengths[0], lengths[0]}
-		} else if len(lengths) == 2 {
-			return pr.Point{lengths[0], lengths[1]}
+	axes := make([]pr.Dimension, len(tokens))
+	for i, token := range tokens {
+		dim := getLength(token, negative, percentage)
+		if !dim.IsNone() {
+			axes[i] = dim
+			continue
 		}
+		if isMathFunction(token) {
+			shape := pr.MathLength
+			if percentage {
+				shape = pr.MathLengthPercentage
+			}
+			pm, err := parseMath(token, shape, "layout")
+			if err != nil {
+				return nil
+			}
+			axes[i] = pr.Dimension{Math: &pm}
+			continue
+		}
+		return nil
 	}
-	return nil
+	if len(axes) == 1 {
+		return pr.Point{axes[0], axes[0]}
+	}
+	return pr.Point{axes[0], axes[1]}
 }
 
 // @validator()
@@ -1687,7 +1716,7 @@ func lengthOrAuto(tokens []Token, _ string) pr.CssProperty {
 	if getKeyword(token) == "auto" {
 		return pr.TaggedDim{Tag: pr.Auto}
 	}
-	return nil
+	return getLengthPercentageOrCalc(token, true, "layout")
 }
 
 // @validator("height")
@@ -1706,7 +1735,7 @@ func widthHeight(tokens []Token, _ string) pr.CssProperty {
 	if getKeyword(token) == "auto" {
 		return pr.TagToV(pr.Auto)
 	}
-	return nil
+	return getLengthPercentageOrCalc(token, false, "layout")
 }
 
 // Validation for the “column-gap“ and "row-gap" property.
@@ -1722,7 +1751,9 @@ func gap(tokens []Token, _ string) pr.CssProperty {
 	if getKeyword(token) == "normal" {
 		return pr.TagToV(pr.Normal)
 	}
-	return nil
+	// Per CSS Box Alignment 3: percentages are valid for gaps (resolved
+	// against the container's content-box width).
+	return getLengthPercentageOrCalc(token, false, "layout")
 }
 
 // @validator()
@@ -2121,7 +2152,20 @@ func fontSize(tokens []Token, _ string) (pr.CssProperty, error) {
 	if isIn := pr.XxSmall <= tag && tag <= pr.XxLarge; isIn || tag == pr.Smaller || tag == pr.Larger {
 		return pr.TaggedDim{Tag: tag}, nil
 	}
-	return nil, nil
+	// Percentages on font-size resolve against the parent's font-size.
+	// We defer that to the fontSize computer function which has access
+	// to the parent style.
+	return getLengthPercentageOrCalc(token, false, "parent-font-size"), nil
+}
+
+// resolveMathLengthOnly returns the number of pixels resolved from pm
+// using ctx, requiring the result to be a length (no percentages).
+func resolveMathLengthOnly(pm pr.PendingMath, ctx MathContext) (utils.Fl, bool) {
+	v, err := EvalMath(pm, ctx)
+	if err != nil {
+		return 0, false
+	}
+	return v, true
 }
 
 // @validator()
@@ -2214,11 +2258,7 @@ func spacing(tokens []Token, _ string) pr.CssProperty {
 	if getKeyword(token) == "normal" {
 		return pr.TaggedDim{Tag: pr.Normal}
 	}
-	length := getLength(token, true, false)
-	if !length.IsNone() {
-		return length.Tagged()
-	}
-	return nil
+	return getLengthOrCalc(token, true, false, "")
 }
 
 // @validator()
@@ -2249,6 +2289,13 @@ func lineHeight(tokens []Token, _ string) pr.CssProperty {
 				return nil
 			}
 			return l.Tagged()
+		}
+	case pa.FunctionBlock:
+		if isMathFunction(tt) {
+			pm, err := parseMath(tt, pr.MathLengthPercentage, "font-size")
+			if err == nil {
+				return pm
+			}
 		}
 	}
 	return nil
@@ -2394,7 +2441,7 @@ func maxWidthHeight(tokens []Token, _ string) pr.CssProperty {
 	if getKeyword(token) == "none" {
 		return pr.NewDim(pr.Inf, pr.Px).Tagged()
 	}
-	return nil
+	return getLengthPercentageOrCalc(token, false, "layout")
 }
 
 // @validator()
@@ -2409,6 +2456,11 @@ func opacity(tokens []Token, _ string) pr.CssProperty {
 		return pr.Float(min(1, max(0, number.ValueF)))
 	} else if perc, ok := token.(pa.Percentage); ok {
 		return pr.Float(min(1, max(0, perc.ValueF/100)))
+	} else if isMathFunction(token) {
+		pm, err := parseMath(token, pr.MathNumber, "")
+		if err == nil {
+			return pm
+		}
 	}
 
 	return nil
@@ -2644,14 +2696,15 @@ func textDecorationStyle(tokens []Token, _ string) pr.CssProperty {
 	}
 }
 
-// @single_token
-// “text-decoration-thickness“ property validation.
+// @validator()
+// @singleToken
+// “text-decoration-thickness“ property validation (CSS Text Decoration L4).
+// Accepts: auto | from-font | <length> | <percentage> (percentage of 1em).
 func textDecorationThickness(tokens []Token, _ string) pr.CssProperty {
 	if len(tokens) != 1 {
 		return nil
 	}
 	token := tokens[0]
-
 	length := getLength(token, true, true)
 	if !length.IsNone() {
 		return length.Tagged()
@@ -2662,7 +2715,26 @@ func textDecorationThickness(tokens []Token, _ string) pr.CssProperty {
 	case "from-font":
 		return pr.TaggedDim{Tag: pr.FromFont}
 	}
-	return nil
+	return getLengthPercentageOrCalc(token, true, "font-size")
+}
+
+// @validator()
+// @singleToken
+// “text-underline-offset“ property validation (CSS Text Decoration L4).
+// Accepts: auto | <length> | <percentage> (percentage of 1em).
+func textUnderlineOffset(tokens []Token, _ string) pr.CssProperty {
+	if len(tokens) != 1 {
+		return nil
+	}
+	token := tokens[0]
+	length := getLength(token, true, true)
+	if !length.IsNone() {
+		return length.Tagged()
+	}
+	if getKeyword(token) == "auto" {
+		return pr.TaggedDim{Tag: pr.Auto}
+	}
+	return getLengthPercentageOrCalc(token, true, "font-size")
 }
 
 // @validator()
@@ -2672,12 +2744,7 @@ func textIndent(tokens []Token, _ string) pr.CssProperty {
 	if len(tokens) != 1 {
 		return nil
 	}
-	token := tokens[0]
-	l := getLength(token, true, true)
-	if l.IsNone() {
-		return nil
-	}
-	return l.Tagged()
+	return getLengthPercentageOrCalc(tokens[0], true, "layout")
 }
 
 // @validator()
@@ -3973,15 +4040,17 @@ func transformFunction(token Token) (pr.Transform, error) {
 		length := getLength(args[0], true, true)
 		switch name {
 		case "rotate":
-			if notNone && angle != 0 {
+			// Per WP commit 5d4e6cec: 0 (with or without unit) is a
+			// valid angle, so don't reject it here.
+			if notNone {
 				return pr.Transform{Kind: pr.Rotate, Dimensions: []pr.Dimension{pr.FToD(pr.Fl(angle))}}, nil
 			}
 		case "skewx", "skew":
-			if notNone && angle != 0 {
+			if notNone {
 				return pr.Transform{Kind: pr.Skew, Dimensions: []pr.Dimension{pr.FToD(pr.Fl(angle)), pr.ZeroPixels}}, nil
 			}
 		case "skewy":
-			if notNone && angle != 0 {
+			if notNone {
 				return pr.Transform{Kind: pr.Skew, Dimensions: []pr.Dimension{pr.ZeroPixels, pr.FToD(pr.Fl(angle))}}, nil
 			}
 		case "translatex", "translate":
@@ -4057,4 +4126,115 @@ func appearance(tokens []Token, _ string) pr.CssProperty {
 	default:
 		return nil
 	}
+}
+
+// parseSingleShadow parses one shadow value (shared by box-shadow and text-shadow).
+func parseSingleShadow(tokens []Token, allowSpread, allowInset bool) (pr.Shadow, bool) {
+	var (
+		lengths  []pr.Dimension
+		color    pr.Color
+		colorSet bool
+		inset    bool
+	)
+
+	for _, token := range tokens {
+		if allowInset && getKeyword(token) == "inset" {
+			if inset {
+				return pr.Shadow{}, false
+			}
+			inset = true
+			continue
+		}
+
+		if !colorSet {
+			c := parseColorResolved(token)
+			if c.Type != 0 {
+				color = pr.Color(c)
+				colorSet = true
+				continue
+			}
+		}
+
+		l := getLength(token, true, false)
+		if l.IsNone() {
+			return pr.Shadow{}, false
+		}
+		lengths = append(lengths, l)
+	}
+
+	if len(lengths) < 2 {
+		return pr.Shadow{}, false
+	}
+
+	maxLengths := 3
+	if allowSpread {
+		maxLengths = 4
+	}
+	if len(lengths) > maxLengths {
+		return pr.Shadow{}, false
+	}
+
+	if !colorSet {
+		color = pr.Color(pa.ParseColorString("currentcolor"))
+	}
+
+	var blur, spread pr.Dimension
+	if len(lengths) >= 3 {
+		blur = lengths[2]
+		if blur.Value < 0 {
+			return pr.Shadow{}, false
+		}
+	}
+	if len(lengths) >= 4 {
+		spread = lengths[3]
+	}
+
+	return pr.Shadow{
+		OffsetX: lengths[0],
+		OffsetY: lengths[1],
+		Blur:    blur,
+		Spread:  spread,
+		Color:   color,
+		Inset:   inset,
+	}, true
+}
+
+func boxShadow(tokens []Token, _ string) pr.CssProperty {
+	if getSingleKeyword(tokens) == "none" {
+		return pr.Shadows{}
+	}
+
+	var shadows pr.Shadows
+	for _, part := range pa.SplitOnComma(tokens) {
+		part = pa.RemoveWhitespace(part)
+		if len(part) == 0 {
+			return nil
+		}
+		shadow, ok := parseSingleShadow(part, true, true)
+		if !ok {
+			return nil
+		}
+		shadows = append(shadows, shadow)
+	}
+	return shadows
+}
+
+func textShadow(tokens []Token, _ string) pr.CssProperty {
+	if getSingleKeyword(tokens) == "none" {
+		return pr.Shadows{}
+	}
+
+	var shadows pr.Shadows
+	for _, part := range pa.SplitOnComma(tokens) {
+		part = pa.RemoveWhitespace(part)
+		if len(part) == 0 {
+			return nil
+		}
+		shadow, ok := parseSingleShadow(part, false, false)
+		if !ok {
+			return nil
+		}
+		shadows = append(shadows, shadow)
+	}
+	return shadows
 }

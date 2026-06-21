@@ -2012,3 +2012,83 @@ func TestFlexImageMinWidth(t *testing.T) {
 	img, div := unpack2(article)
 	assertEquals(t, article.Box().Height, img.Box().Height, img.Box().Width, div.Box().Height, Fl(10))
 }
+
+// Flex container with position:relative containing an absolutely-positioned
+// descendant must not double-resolve the placeholder. The fork previously had
+// two `position:relative` branches running absoluteLayout on the same list,
+// causing a "placeholder can't have its layout done." panic.
+func TestFlexRelativeAbsoluteChild(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+	page := renderOnePage(t, `
+      <article style="display: flex; position: relative; width: 100px; height: 50px">
+        <div style="position: absolute; top: 5px; left: 5px; width: 10px; height: 10px"></div>
+        <span>x</span>
+      </article>
+    `)
+	html := unpack1(page)
+	body := unpack1(html)
+	article := unpack1(body)
+	tu.AssertEqual(t, article.Box().Width, Fl(100))
+	tu.AssertEqual(t, article.Box().Height, Fl(50))
+}
+
+// Regression test: a replaced box (e.g. SVG) inside a column flex container
+// with align-items: center must be centered on the cross axis (PositionX).
+// Previously, blockReplacedBoxLayout called avoidCollisions which overwrote
+// the centered PositionX set by the flex algorithm's step 14, leaving the
+// replaced box left-aligned.
+func TestFlexColumnReplacedCentered(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+	page := renderOnePage(t, `
+      <div style="display: flex; flex-direction: column; align-items: center;
+                  width: 100px; font: 2px weasyprint">
+        <span>A</span>
+        <svg style="width: 20px; height: 1px" xmlns="http://www.w3.org/2000/svg">
+          <line x1="0" y1="50%" x2="100%" y2="50%" stroke="black"/>
+        </svg>
+        <span>B</span>
+      </div>
+    `)
+	html := unpack1(page)
+	body := unpack1(html)
+	flex := unpack1(body)
+	span1, svg, span2 := unpack3(flex)
+	// The SVG must be centered: its left edge should be at
+	// (containerWidth - svgWidth) / 2 = (100 - 20) / 2 = 40.
+	tu.AssertEqual(t, svg.Box().PositionX, Fl(40))
+	// The text items should also be centered (they have non-zero width).
+	tu.Assert(t, span1.Box().PositionX > Fl(0))
+	tu.AssertEqual(t, span1.Box().PositionX, span2.Box().PositionX)
+	// Items should be stacked vertically.
+	tu.Assert(t, span1.Box().PositionY < svg.Box().PositionY)
+	tu.Assert(t, svg.Box().PositionY < span2.Box().PositionY)
+}
+
+// All items in a column flex container should get the same height when their
+// content fits on a single line at the container's width. Regression: the
+// `min-height: auto` calculation set newChild width to maxContentWidth(grid),
+// which for grid containers returns max-of-children (not column-track sum).
+// For grid items with text wider than other children, that narrow width
+// caused a wrap, inflating min-height to 2 lines for those rows only.
+func TestFlexColumnGridItemUniformHeight(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+	page := renderOnePage(t, `
+      <style>
+        .rows { display: flex; flex-direction: column; width: 400px;
+                font: 2px weasyprint }
+        .row { display: grid; grid-template-columns: 50px 1fr; padding: 0 }
+      </style>
+      <div class="rows">
+        <div class="row"><div>A</div><div>x</div></div>
+        <div class="row"><div>B</div><div>longer text</div></div>
+        <div class="row"><div>C</div><div>x</div></div>
+      </div>
+    `)
+	html := unpack1(page)
+	body := unpack1(html)
+	rows := unpack1(body)
+	r1, r2, r3 := unpack3(rows)
+	// All three rows must be the same height: one line of text.
+	tu.AssertEqual(t, r1.Box().Height, r2.Box().Height)
+	tu.AssertEqual(t, r2.Box().Height, r3.Box().Height)
+}

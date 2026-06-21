@@ -127,8 +127,8 @@ func (f *FontConfigurationGotext) loadOneFont(url pr.TaggedString, ruleDescripto
 	desc := font.Description{
 		Family: string(ruleDescriptors.FontFamily),
 		Aspect: newAspect(
-			newFontStyle(ruleDescriptors.FontStyle),
-			newFontWeight(ruleDescriptors.FontWeight),
+			NewFontStyle(ruleDescriptors.FontStyle),
+			NewFontWeight(ruleDescriptors.FontWeight),
 			newFontStretch(ruleDescriptors.FontStretch),
 		),
 	}
@@ -141,7 +141,7 @@ func (f *FontConfigurationGotext) loadOneFont(url pr.TaggedString, ruleDescripto
 	}
 
 	// track the font features to apply
-	f.fontsFeatures[ft] = getFontFaceFeatures(ruleDescriptors)
+	f.fontsFeatures[ft] = GetFontFaceFeatures(ruleDescriptors)
 
 	return key, nil
 }
@@ -294,7 +294,7 @@ func (fc *FontConfigurationGotext) shapeRune(r rune, desc FontDescription, featu
 	return out.Glyphs, out.LineBounds, pr.Float(sizeFactor)
 }
 
-func (fc *FontConfigurationGotext) heightx(style *TextStyle) pr.Fl {
+func (fc *FontConfigurationGotext) Heightx(style *TextStyle) pr.Fl {
 	glyphs, _, sizeFactor := fc.shapeRune('x', style.FontDescription, style.FontFeatures)
 
 	if len(glyphs) == 0 { // fontmap is broken, return a 'reasonnable' value
@@ -304,7 +304,7 @@ func (fc *FontConfigurationGotext) heightx(style *TextStyle) pr.Fl {
 	return pr.Fl(fixedToFloat(glyphs[0].YBearing) / sizeFactor) // fixed to float
 }
 
-func (fc *FontConfigurationGotext) width0(style *TextStyle) pr.Fl {
+func (fc *FontConfigurationGotext) Width0(style *TextStyle) pr.Fl {
 	glyphs, _, sizeFactor := fc.shapeRune('0', style.FontDescription, style.FontFeatures)
 
 	if len(glyphs) == 0 { // fontmap is broken, return a 'reasonnable' value
@@ -313,13 +313,23 @@ func (fc *FontConfigurationGotext) width0(style *TextStyle) pr.Fl {
 	return pr.Fl(fixedToFloat(glyphs[0].Advance) / sizeFactor) // fixed to float
 }
 
-func (fc *FontConfigurationGotext) spaceHeight(style *TextStyle) (height, baseline pr.Float) {
-	_, bounds, sizeFactor := fc.shapeRune(' ', style.FontDescription, style.FontFeatures)
-
-	height = fixedToFloat(bounds.Ascent-bounds.Descent) / sizeFactor
-	baseline = fixedToFloat(bounds.Ascent) / sizeFactor
-
-	return height, baseline
+func (fc *FontConfigurationGotext) SpaceHeight(style *TextStyle) (height, baseline pr.Float) {
+	// Fork: read FontHExtents directly (rather than going through the
+	// shaper's LineBounds). The `wrap` path computes per-line metrics
+	// from FontHExtents the same way; routing strut metrics through the
+	// shaper introduces 1/64-px quantisation that disagrees with `wrap`,
+	// inflating the line box height by ~1/300 of an em and pushing
+	// lines past page boundaries in tightly-sized layouts.
+	face := fc.resolveFace(' ', style.FontDescription)
+	if face == nil {
+		return 0, 0
+	}
+	ext, _ := face.FontHExtents()
+	size := pr.Float(style.FontDescription.Size)
+	upem := pr.Float(face.Upem())
+	ascent := pr.Float(ext.Ascender) * size / upem
+	descent := pr.Float(ext.Descender) * size / upem
+	return ascent - descent, ascent
 }
 
 func (fc *FontConfigurationGotext) widthSpace(style *TextStyle) pr.Fl {
@@ -436,7 +446,7 @@ func fixedToFloat(v fixed.Int26_6) pr.Float { return pr.Float(v) / 64 }
 
 type textKey struct {
 	text           string
-	style          styleKey
+	style          StyleKey
 	maxWidth       pr.Float
 	allowWordBreak bool
 }
@@ -453,12 +463,64 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 		}
 	}
 
-	key := textKey{string(text), style.key(), maxWidth, allowWordBreak}
+	key := textKey{string(text), style.Key(), maxWidth, allowWordBreak}
 	if l, ok := fc.textLayoutCache[key]; ok {
 		return l
 	}
 
-	textWrap, spaceCollapse := style.textWrap(), style.spaceCollapse()
+	// Fork: preserved newlines (pre/pre-wrap/pre-line/break-spaces) are
+	// forced line breaks. The shaper wraps the whole text into one line
+	// without flagging embedded "\n" as a break, so handle them here:
+	//   - leading "\n":  emit a zero-length first line that resumes after the \n.
+	//   - internal "\n": shape only the text up to the first "\n", then expose
+	//     a ResumeAt past the newline and Length=position-of-newline so
+	//     splitTextBox sees a preserved line break (length != resumeIndex,
+	//     between == "\n").
+	// Mirrors the canvas engine.
+	ws := style.WhiteSpace
+	preservesNewlines := ws == pr.Pre || ws == pr.PreWrap || ws == pr.PreLine
+	if preservesNewlines && text[0] == '\n' {
+		var height, baseline pr.Float
+		face := fc.resolveFace(' ', style.FontDescription)
+		if face != nil {
+			out := fc.shaper.Shape(shaping.Input{
+				Text:     []rune{' '},
+				RunStart: 0, RunEnd: 1,
+				Direction:    di.DirectionLTR,
+				FontFeatures: newFeatures(style.FontFeatures),
+				Script:       language.Latin,
+				Language:     language.NewLanguage("en"),
+				Face:         face,
+				Size:         floatToFixed(style.FontDescription.Size),
+			})
+			height = fixedToFloat(out.LineBounds.Ascent - out.LineBounds.Descent)
+			baseline = fixedToFloat(out.LineBounds.Ascent)
+		}
+		out := FirstLine{
+			Layout:   TextLayoutGotext{Style: style},
+			Length:   0,
+			ResumeAt: 1,
+			Width:    0,
+			Height:   height,
+			Baseline: baseline,
+		}
+		fc.textLayoutCache[key] = out
+		return out
+	}
+	if preservesNewlines {
+		if nl := indexRune(text, '\n'); nl != -1 {
+			// Recurse on the prefix (no internal newlines) to do real shaping,
+			// then patch Length/ResumeAt so the caller sees the forced break.
+			prefix := text[:nl]
+			sub := fc.wrapWordBreak(prefix, style, maxWidth, allowWordBreak)
+			sub.Length = nl
+			sub.ResumeAt = nl + 1
+			fc.textLayoutCache[key] = sub
+			return sub
+		}
+	}
+
+	textWrap, spaceCollapse := style.TextWrap(), style.SpaceCollapse()
 	const maxFixed = math.MaxInt32 >> 6 // max value for fixed.Int26_6
 	mw := fixed.I(maxFixed)
 	if textWrap && maxWidth <= maxFixed {
@@ -646,12 +708,12 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 
 // splitFirstLineGotext fit as much text from [text_] as possible in the available width given by [maxWidth].
 // minimum should defaults to false
-func (fc *FontConfigurationGotext) splitFirstLine(hyphenCache map[HyphenDictKey]hyphen.Hyphener, text []rune, style *TextStyle,
+func (fc *FontConfigurationGotext) SplitFirstLine(hyphenCache map[HyphenDictKey]hyphen.Hyphener, text []rune, style *TextStyle,
 	maxWidth pr.MaybeFloat, minimum, isLineStart bool,
 ) FirstLine {
 	// See https://www.w3.org/TR/css-text-3/#white-space-property
 	var (
-		textWrap         = style.textWrap()
+		textWrap         = style.TextWrap()
 		originalMaxWidth = maxWidth
 		fontSize         = pr.Float(style.Size)
 		firstLine        FirstLine
@@ -716,9 +778,28 @@ func (fc *FontConfigurationGotext) splitFirstLine(hyphenCache map[HyphenDictKey]
 		secondLineText = text
 	}
 
+	// Fork: mirror Pango's firstLineFits handling — if the first line
+	// doesn't fit and can't be broken earlier (no internal space after
+	// trimming), treat the entire text as the second line so hyphenation
+	// can be tried on the first (overflowing) word.
+	if firstLine.Width > maxWidthV {
+		trimmed := firstLineText
+		for len(trimmed) > 0 && trimmed[len(trimmed)-1] == ' ' {
+			trimmed = trimmed[:len(trimmed)-1]
+		}
+		for len(trimmed) > 0 && trimmed[0] == ' ' {
+			trimmed = trimmed[1:]
+		}
+		hasInternalSpace := index(trimmed, ' ') != -1
+		if !hasInternalSpace {
+			firstLineText = nil
+			secondLineText = text
+		}
+	}
+
 	breakPoint := len(secondLineText)
 	if len(secondLineText) != 0 {
-		// Find the second line’s first break point.
+		// Find the second line's first break point.
 		breakPoint = fc.getNextBreakPoint(secondLineText)
 		if breakPoint == -1 {
 			breakPoint = len(secondLineText)
@@ -727,7 +808,7 @@ func (fc *FontConfigurationGotext) splitFirstLine(hyphenCache map[HyphenDictKey]
 
 	nextWord := trimTrailingSpaces(secondLineText[:breakPoint])
 	if len(nextWord) != 0 {
-		if style.spaceCollapse() && hasSuffix(secondLineText[:breakPoint], ' ') {
+		if style.SpaceCollapse() && hasSuffix(secondLineText[:breakPoint], ' ') {
 			// Next word might fit without a space afterwards; only try when
 			// space collapsing is allowed.
 			newFirstLineText := slices.Concat(firstLineText, nextWord)
@@ -798,8 +879,7 @@ func (fc *FontConfigurationGotext) splitFirstLine(hyphenCache map[HyphenDictKey]
 						break
 					}
 				}
-
-				// This word doesn’t work, try next one.
+				// This word doesn't qualify, advance to after this word and try the next.
 				nextText = nextText[stopWord:]
 				nextTextIndex += stopWord
 			} else {
@@ -826,9 +906,9 @@ func (fc *FontConfigurationGotext) splitFirstLine(hyphenCache map[HyphenDictKey]
 				firstLineText, nextWord = nil, firstLineText
 			}
 		}
-		dictionaryIterations = hyphenDictionaryIterations(nextWord, softHyphen)
+		dictionaryIterations = HyphenDictionaryIterations(nextWord, softHyphen)
 	} else if autoHyphenation {
-		dictionaryKey := HyphenDictKey{lang, hyphenLimit}
+		dictionaryKey := NewHyphenDictKey(lang, hyphenLimit)
 		dictionary, ok := hyphenCache[dictionaryKey]
 		if !ok {
 			dictionary = hyphen.NewHyphener(lang, hyphenLimit.Left, hyphenLimit.Right)
@@ -850,6 +930,12 @@ func (fc *FontConfigurationGotext) splitFirstLine(hyphenCache map[HyphenDictKey]
 			if hyphenated {
 				firstLine = newFirstLine
 				firstLine.ResumeAt = len(newFirstLineText)
+				if firstLine.ResumeAt < len(text) && text[firstLine.ResumeAt] == softHyphen {
+					// Fork: recreate the layout with no maxWidth to be
+					// sure that we don't break before the soft hyphen.
+					firstLine.Layout = fc.wrap(hyphenatedFirstLineText, style, pr.Inf).Layout
+					firstLine.ResumeAt += 1
+				}
 				break
 			}
 		}
@@ -859,8 +945,14 @@ func (fc *FontConfigurationGotext) splitFirstLine(hyphenCache map[HyphenDictKey]
 			// we don't break before or inside the hyphenate character
 			hyphenated = true
 			firstLine = fc.wrap(hyphenatedFirstLineText, style, pr.Inf)
+			// ResumeAt is the rune count of the unhyphenated portion in
+			// the original text. Length should match after the
+			// post-loop `Length -= len(hyphenateCharacter)` adjustment,
+			// so set it to len(newFirstLineText)+len(hyphenateCharacter)
+			// here.
+			firstLine.Length = len(newFirstLineText) + len(hyphenateCharacter)
 			firstLine.ResumeAt = len(newFirstLineText)
-			if text[firstLine.ResumeAt] == softHyphen {
+			if firstLine.ResumeAt < len(text) && text[firstLine.ResumeAt] == softHyphen {
 				firstLine.ResumeAt += 1
 			}
 		}
@@ -872,6 +964,7 @@ func (fc *FontConfigurationGotext) splitFirstLine(hyphenCache map[HyphenDictKey]
 		hyphenated = true
 		hyphenatedFirstLineText = slices.Concat(firstLineText, hyphenateCharacter)
 		firstLine = fc.wrap(hyphenatedFirstLineText, style, pr.Inf)
+		firstLine.Length = len(firstLineText)
 		firstLine.ResumeAt = len(firstLineText)
 	}
 

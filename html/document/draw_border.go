@@ -635,9 +635,37 @@ func (ctx drawContext) drawRectBorder(box, widths pr.Rectangle, style pr.String,
 
 // Only works for vertical or horizontal lines : x1 == x2 or y1 == y2
 func (ctx drawContext) drawLine(x1, y1, x2, y2, thickness pr.Fl, style pr.String, colors [2]Color, offset fl) {
+	// Fork enhancement: snap line center to a pixel-grid-aligned coordinate
+	// so that an N-px-wide axis-aligned line lands on exactly N integer
+	// pixel rows (or columns) without antialiasing bleed. For an integer
+	// thickness `t`, the desired center is at `floor(coord) + t/2` (i.e.,
+	// the midpoint of the t pixels). Applying nearest-integer rounding to
+	// `coord - t/2` gives that. Skips when thickness < 0.5 (sub-pixel
+	// hairlines should stay where they are) or when the line is neither
+	// horizontal nor vertical.
+	if thickness >= 0.5 {
+		half := thickness / 2
+		if y1 == y2 {
+			y1 = pr.Fl(math.Round(float64(y1-half))) + half
+			y2 = y1
+		} else if x1 == x2 {
+			x1 = pr.Fl(math.Round(float64(x1-half))) + half
+			x2 = x1
+		}
+	}
 	ctx.dst.OnNewStack(func() {
 		if !(style == "ridge" || style == "groove") {
 			ctx.dst.State().SetColorRgba(colors[0], true)
+		}
+
+		// Fork enhancement: stroke width must be set BEFORE SetDash because
+		// backends may scale dashes by stroke width (the canvas backend
+		// pre-divides by line width to compensate for the rasterizer's
+		// downstream scaling).
+		if style == "double" {
+			ctx.dst.State().SetLineWidth(thickness / 3)
+		} else {
+			ctx.dst.State().SetLineWidth(thickness)
 		}
 
 		if style == "dashed" {
@@ -647,7 +675,6 @@ func (ctx drawContext) drawLine(x1, y1, x2, y2, thickness pr.Fl, style pr.String
 		}
 
 		if style == "double" {
-			ctx.dst.State().SetLineWidth(thickness / 3)
 			if x1 == x2 {
 				ctx.dst.MoveTo(x1-thickness/3, y1)
 				ctx.dst.LineTo(x2-thickness/3, y2)
@@ -717,12 +744,23 @@ func (ctx drawContext) drawOutline(box_ Box) {
 			box.BorderBoxX() - width, box.BorderBoxY() - width,
 			box.BorderWidth() + 2*width, box.BorderHeight() + 2*width,
 		}
-		for _, side := range sides {
-			ctx.dst.OnNewStack(func() {
-				clipBorderSegment(ctx.dst, style, fl(width), side, outlineBox, nil, nil)
-				ctx.drawRectBorder(outlineBox, pr.Rectangle{width, width, width, width},
-					style, styledColor(style, color, side))
-			})
+		// Fork enhancement: solid (or double) outline with a single color —
+		// draw the ring once instead of clipping to four side-trapezoids
+		// and overdrawing. The per-side path produces antialiasing seams
+		// at the diagonal joins — fine for a 100-px outline, visibly
+		// desaturated for a 1-px outline around a degenerate (0×0)
+		// border-box where every output pixel sits astride a join.
+		if style == "solid" || style == "double" {
+			ctx.drawRectBorder(outlineBox, pr.Rectangle{width, width, width, width},
+				style, [2]Color{color})
+		} else {
+			for _, side := range sides {
+				ctx.dst.OnNewStack(func() {
+					clipBorderSegment(ctx.dst, style, fl(width), side, outlineBox, nil, nil)
+					ctx.drawRectBorder(outlineBox, pr.Rectangle{width, width, width, width},
+						style, styledColor(style, color, side))
+				})
+			}
 		}
 	}
 
