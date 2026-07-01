@@ -38,6 +38,14 @@ type GradientLayout struct {
 	Positions []Fl
 	Colors    []parser.RGBA
 
+	// Exponents, if non-nil, carries the CSS color-transition-hint
+	// interpolation exponent for the gap that starts at each stop (parallel
+	// to Positions/Colors; the last entry is unused). Value 0 means linear
+	// (the default). Lets the backend interpolate the hint curve natively
+	// (PDF Type 2 function exponent / per-pixel pow) instead of the caller
+	// pre-sampling the curve into extra stops. nil = all-linear.
+	Exponents []Fl
+
 	GradientKind
 
 	// used for ellipses radial gradients. 1 otherwise.

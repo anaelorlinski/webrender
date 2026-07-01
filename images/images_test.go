@@ -2,6 +2,7 @@ package images
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"testing"
 
@@ -101,4 +102,41 @@ func absFl(v properties.Fl) properties.Fl {
 		return -v
 	}
 	return v
+}
+
+func TestResolveColorHints(t *testing.T) {
+	black := Color{R: 0, G: 0, B: 0, A: 1}
+	white := Color{R: 1, G: 1, B: 1, A: 1}
+
+	// No hints: colors/positions unchanged, no exponents.
+	c := []Color{black, white}
+	p := []properties.Fl{0, 10}
+	oc, op, ex := resolveColorHints(c, p, []bool{false, false})
+	if len(oc) != 2 || len(op) != 2 {
+		t.Fatalf("no-hint case altered stops: %v %v", oc, op)
+	}
+	if ex != nil {
+		t.Errorf("no-hint case should produce nil exponents, got %v", ex)
+	}
+
+	// Midpoint hint → the hint entry is collapsed; two real stops remain and
+	// the gap exponent is ~1 (linear).
+	c = []Color{black, {}, white}
+	p = []properties.Fl{0, 5, 10} // hint at 5 == midpoint of [0,10]
+	oc, op, ex = resolveColorHints(c, p, []bool{false, true, false})
+	if len(oc) != 2 || oc[0] != black || oc[1] != white {
+		t.Fatalf("expected 2 real stops, got %v", oc)
+	}
+	if len(ex) == 0 || absFl(ex[0]-1) > 1e-6 {
+		t.Errorf("midpoint hint exponent should be 1 (linear), got %v", ex)
+	}
+
+	// Hint at 75% → exponent = ln(0.5)/ln(0.75) ≈ 2.409.
+	c = []Color{black, {}, white}
+	p = []properties.Fl{0, 7.5, 10}
+	_, _, ex = resolveColorHints(c, p, []bool{false, true, false})
+	want := properties.Fl(math.Log(0.5) / math.Log(0.75))
+	if len(ex) == 0 || absFl(ex[0]-want) > 1e-4 {
+		t.Errorf("hint at 75%% exponent = %v, want ≈ %v", ex, want)
+	}
 }

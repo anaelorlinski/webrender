@@ -63,11 +63,15 @@ func processColorStops(gradientLineSize pr.Float, positions_ []pr.Dimension) []p
 	return out
 }
 
-// hintSamples is the number of intermediate color stops generated when
-// expanding a single color transition hint. The backend renders discrete
-// stops (unlike the PDF exponential interpolation used elsewhere), so a hint
-// is approximated by sampling the transition curve. 16 is enough for a smooth
-// result at typical sizes while keeping the stop list small.
+// hintSamples is the number of intermediate color stops generated when a color
+// transition hint must be *sampled* into ordinary stops (repeating gradients,
+// where per-gap exponents can't survive the spread/reflect array surgery). 16
+// is enough for a smooth result at typical sizes while keeping the list small.
+//
+// For the common non-repeating case, hints are NOT sampled: resolveColorHints
+// collapses each hint into a single per-gap interpolation exponent carried
+// through GradientLayout.Exponents and interpolated natively by the backend
+// (PDF Type 2 function / raster pow). See resolveColorHints.
 const hintSamples = 16
 
 // interpolatePremul returns the color at fraction t in [0,1] between c0 and c1,
@@ -85,19 +89,106 @@ func interpolatePremul(c0, c1 Color, t utils.Fl) Color {
 	return Color{}
 }
 
-// expandColorHints removes color transition hints from a gradient by sampling
-// the transition curve they describe into ordinary color stops.
+// hintExponent maps a hint at normalized position h ∈ (0,1) within a gap to the
+// CSS Images 3 §3.4.2 interpolation exponent N such that color(t) =
+// lerp(a, b, t^N). h = 0.5 → N = 1 (linear). Clamped like WeasyPrint to avoid
+// Inf/0 blowups at the extremes.
+func hintExponent(h float64) pr.Fl {
+	if h <= 0 {
+		return 1 << 20 // ~ +inf: transition jumps to the far color immediately
+	}
+	if h >= 1 {
+		return 1.0 / (1 << 20) // ~ 0: stays at the near color until the end
+	}
+	return pr.Fl(math.Log(0.5) / math.Log(h))
+}
+
+// resolveColorHints removes color transition hints from a gradient without
+// sampling: each hint entry is dropped and replaced by an interpolation
+// exponent on the preceding real stop's gap. Returns the hint-free colors and
+// positions plus a parallel exponents slice (0 = linear) suitable for
+// GradientLayout.Exponents. isHint[i] marks entry i as a hint (only
+// positions[i] is meaningful).
 //
-// isHint[i] marks entry i as a hint (only positions[i] is meaningful). Between
-// the surrounding stops with colors cA (at pA) and cB (at pB), a hint at pH
-// places the 50% blend of cA and cB. Per CSS Images 3 §3.4.2 the color at a
-// point with fraction P of the way from pA to pB is:
-//
-//	C = P ^ (ln(0.5) / ln(H))    where H = (pH-pA)/(pB-pA)
-//	color = interpolate(cA, cB, C)
-//
-// Returns hint-free colors and positions of equal length.
+// This is the exact, resolution-independent path (backend interpolates t^N).
 // See http://drafts.csswg.org/csswg/css-images-3/#color-transition-hint
+func resolveColorHints(colors []Color, positions []pr.Fl, isHint []bool) ([]Color, []pr.Fl, []pr.Fl) {
+	outColors := make([]Color, 0, len(colors))
+	outPos := make([]pr.Fl, 0, len(positions))
+	var exps []pr.Fl // lazily allocated; stays nil when there are no hints
+
+	for i := range colors {
+		if isHint[i] {
+			// A hint sits between two real stops; parsing guarantees this.
+			// Attach its exponent to the gap starting at the previous real
+			// stop (the last one appended to outColors).
+			if i == 0 || i == len(colors)-1 || len(outColors) == 0 {
+				continue
+			}
+			pA, pB, pH := positions[i-1], positions[i+1], positions[i]
+			span := pB - pA
+			if span <= 0 {
+				continue
+			}
+			if exps == nil {
+				exps = make([]pr.Fl, len(outColors)) // fill gaps so far as linear
+			}
+			// Grow to match outColors, then set the exponent on the last gap.
+			for len(exps) < len(outColors) {
+				exps = append(exps, 0)
+			}
+			exps[len(outColors)-1] = hintExponent(float64((pH - pA) / span))
+			continue
+		}
+		outColors = append(outColors, colors[i])
+		outPos = append(outPos, positions[i])
+		if exps != nil {
+			for len(exps) < len(outColors) {
+				exps = append(exps, 0)
+			}
+		}
+	}
+	return outColors, outPos, exps
+}
+
+// prependExponent keeps the exponents slice aligned when a duplicate boundary
+// stop is prepended to colors (the new leading gap is linear → exponent 0).
+// nil in stays nil out (all-linear gradient, no per-gap exponents needed).
+func prependExponent(exps []pr.Fl, colors []Color) []pr.Fl {
+	if exps == nil {
+		return nil
+	}
+	return append([]pr.Fl{0}, exps...)
+}
+
+// alignExponents returns exps padded/truncated to len(colors) (one exponent
+// per stop, last unused), or nil when there are no non-linear gaps. Guards
+// against the exponents slice drifting out of sync with the final stop list
+// after boundary fixups; a length mismatch would silently mis-map hints.
+func alignExponents(exps []pr.Fl, colors []parser.RGBA) []pr.Fl {
+	if exps == nil {
+		return nil
+	}
+	// Any non-zero exponent worth keeping?
+	any := false
+	for _, e := range exps {
+		if e != 0 {
+			any = true
+			break
+		}
+	}
+	if !any {
+		return nil
+	}
+	out := make([]pr.Fl, len(colors))
+	copy(out, exps)
+	return out
+}
+
+// expandColorHints removes color transition hints by SAMPLING the transition
+// curve into ordinary stops. Used only for repeating gradients, where the
+// spread/reflect array surgery can't carry per-gap exponents. The common
+// non-repeating path uses resolveColorHints (exact) instead.
 func expandColorHints(colors []Color, positions []pr.Fl, isHint []bool) ([]Color, []pr.Fl) {
 	// Fast path: no hints.
 	hasHint := false
@@ -317,9 +408,16 @@ func (lg LinearGradient) Layout(width, height pr.Float) backend.GradientLayout {
 	colors := lg.colors
 	vectorLength := pr.Fl(pr.Abs(width*pr.Float(dx)) + pr.Abs(height*pr.Float(dy)))
 	positions := processColorStops(pr.Float(vectorLength), lg.stopPositions)
-	// Expand any color transition hints into sampled color stops before the
-	// boundary fixups below, which assume a hint-free stop list.
-	colors, positions = expandColorHints(colors, positions, lg.isHint)
+	// Color transition hints: for non-repeating gradients keep them exact by
+	// collapsing each into a per-gap interpolation exponent (backend does the
+	// t^N curve). Repeating gradients can't carry exponents through the
+	// spread surgery, so sample the curve into stops there.
+	var exponents []pr.Fl
+	if lg.repeating {
+		colors, positions = expandColorHints(colors, positions, lg.isHint)
+	} else {
+		colors, positions, exponents = resolveColorHints(colors, positions, lg.isHint)
+	}
 
 	if !lg.repeating {
 		// Add explicit colors at boundaries if needed, because PDF doesn’t
@@ -327,6 +425,7 @@ func (lg LinearGradient) Layout(width, height pr.Float) backend.GradientLayout {
 		if positions[0] == positions[1] {
 			positions = append([]pr.Fl{positions[0] - 1}, positions...)
 			colors = append([]parser.RGBA{colors[0]}, colors...)
+			exponents = prependExponent(exponents, colors)
 		}
 		if positions[len(positions)-2] == positions[len(positions)-1] {
 			positions = append(positions, positions[len(positions)-1]+1)
@@ -341,7 +440,9 @@ func (lg LinearGradient) Layout(width, height pr.Float) backend.GradientLayout {
 	startX := (pr.Fl(width) - dx*vectorLength) / 2
 	startY := (pr.Fl(height) - dy*vectorLength) / 2
 
-	return spread.LinearGradient(positions, colors, startX, startY, dx, dy, vectorLength)
+	out := spread.LinearGradient(positions, colors, startX, startY, dx, dy, vectorLength)
+	out.Exponents = alignExponents(exponents, out.Colors)
+	return out
 }
 
 type RadialGradient struct {
@@ -403,13 +504,21 @@ func (rg RadialGradient) Layout(width, height pr.Float) backend.GradientLayout {
 
 	colors := rg.colors
 	positions := processColorStops(sizeX, rg.stopPositions)
-	colors, positions = expandColorHints(colors, positions, rg.isHint)
+	// Color transition hints — see the linear Layout for the rationale.
+	// Non-repeating: exact per-gap exponents. Repeating: sample.
+	var exponents []pr.Fl
+	if rg.repeating {
+		colors, positions = expandColorHints(colors, positions, rg.isHint)
+	} else {
+		colors, positions, exponents = resolveColorHints(colors, positions, rg.isHint)
+	}
 	if !rg.repeating {
 		// Add explicit colors at boundaries if needed, because PDF doesn’t
 		// extend color stops that are not displayed
 		if positions[0] > 0 && positions[0] == positions[1] {
 			positions = append([]pr.Fl{0}, positions...)
 			colors = append([]parser.RGBA{colors[0]}, colors...)
+			exponents = prependExponent(exponents, colors)
 		}
 		if positions[len(positions)-2] == positions[len(positions)-1] {
 			positions = append(positions, positions[len(positions)-1]+1)
@@ -417,6 +526,12 @@ func (rg RadialGradient) Layout(width, height pr.Float) backend.GradientLayout {
 		}
 	}
 
+	if positions[0] < 0 {
+		// The negative-radius surgery below slices/reorders the stop list;
+		// per-gap exponents can't be kept in sync, so fall back to linear
+		// interpolation for this rare hint+negative-radius combination.
+		exponents = nil
+	}
 	if positions[0] < 0 {
 		// PDF does not like negative radiuses,
 		// shift into the positive realm.
@@ -474,6 +589,7 @@ func (rg RadialGradient) Layout(width, height pr.Float) backend.GradientLayout {
 	var fr, r pr.Fl = 0, 1
 	out := spread.RadialGradient(positions, colors, fx, fy, fr, cx, cy, r, pr.Fl(width)/scaleY, pr.Fl(height)/scaleY)
 
+	out.Exponents = alignExponents(exponents, out.Colors)
 	out.ScaleY = scaleY // restore the scale
 	return out
 }
